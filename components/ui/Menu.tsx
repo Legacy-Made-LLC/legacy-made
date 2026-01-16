@@ -1,4 +1,5 @@
 import { colors, spacing, typography } from "@/constants/theme";
+import { useClerk } from "@clerk/clerk-expo";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -42,9 +43,19 @@ function MenuItem({ label, onPress, icon }: MenuItemProps) {
 
 export function Menu({ visible, onClose }: MenuProps) {
   const insets = useSafeAreaInsets();
+  const { signOut } = useClerk();
   const [modalVisible, setModalVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const handleSignOut = async () => {
+    onClose();
+    try {
+      await signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -155,6 +166,15 @@ export function Menu({ visible, onClose }: MenuProps) {
               { paddingBottom: insets.bottom + spacing.lg },
             ]}
           >
+            <Pressable
+              onPress={handleSignOut}
+              style={({ pressed }) => [
+                styles.signOutButton,
+                pressed && styles.signOutButtonPressed,
+              ]}
+            >
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </Pressable>
             <Text style={styles.footerText}>Version 1.0.0</Text>
           </View>
         </View>
@@ -245,6 +265,20 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
+  },
+  signOutButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: -spacing.lg,
+    marginBottom: spacing.md,
+  },
+  signOutButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
+  },
+  signOutText: {
+    fontSize: typography.sizes.body,
+    color: colors.error,
+    fontWeight: typography.weights.medium,
   },
   footerText: {
     fontSize: typography.sizes.caption,
