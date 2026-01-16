@@ -1,0 +1,69 @@
+export interface Contact {
+  id: string;
+  name: string;
+  relationship: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  isPrimary?: boolean;
+}
+
+export interface FinancialAccount {
+  id: string;
+  accountName: string;
+  institution: string;
+  accountType:
+    | 'Checking'
+    | 'Savings'
+    | 'Retirement'
+    | 'Investment'
+    | 'Credit'
+    | 'Loan'
+    | 'Other';
+  accountNumberLast4?: string;
+  notes?: string;
+}
+
+export interface InsurancePolicy {
+  id: string;
+  policyName: string;
+  provider: string;
+  policyNumber?: string;
+  coverageAmount?: string;
+  beneficiary?: string;
+  notes?: string;
+}
+
+export interface LegalDocument {
+  id: string;
+  documentName: string;
+  location: string;
+  dateCreated?: string;
+  notes?: string;
+}
+
+export interface HomeResponsibility {
+  id: string;
+  itemName: string;
+  itemType: 'Property' | 'Vehicle' | 'Responsibility' | 'Other';
+  details?: string;
+  notes?: string;
+}
+
+export interface DigitalAccount {
+  id: string;
+  accountName: string;
+  platform: string;
+  username?: string;
+  accessNotes?: string;
+  importance: 'critical' | 'high' | 'medium' | 'low';
+}
+
+export interface Category {
+  id: string;
+  title: string;
+  description: string;
+  guidance: string;
+  icon: string;
+  route: string;
+}

@@ -1,53 +1,109 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Legacy Made Design System
+ * "Calm, human, respectful, clear, unhurried"
  */
 
-import { Platform } from 'react-native';
+export const colors = {
+  // Backgrounds
+  background: '#FAF9F7', // Warm off-white
+  surface: '#FFFFFF', // Pure white for cards
+  surfaceSecondary: '#F5F4F2', // Subtle gray for secondary surfaces
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+  // Text
+  textPrimary: '#1A1A1A', // Near-black for headings
+  textSecondary: '#6B6B6B', // Warm gray for body text
+  textTertiary: '#9B9B9B', // Light gray for placeholders/hints
 
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+  // Accents
+  primary: '#1C2541', // Deep navy for primary actions
+  primaryPressed: '#0F1629', // Darker navy for pressed state
+
+  // Semantic
+  success: '#4A7C59', // Muted green
+  warning: '#C17817', // Warm amber
+  error: '#A63D40', // Muted red
+
+  // Borders & Dividers
+  border: '#E8E6E3', // Soft warm gray
+  divider: '#F0EEEB', // Very light divider
+};
+
+export const typography = {
+  fontFamily: {
+    regular: 'DMSans_400Regular',
+    medium: 'DMSans_500Medium',
+    semibold: 'DMSans_600SemiBold',
+    bold: 'DMSans_700Bold',
+    serif: 'DMSerifDisplay_400Regular',
   },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+
+  sizes: {
+    displayLarge: 32, // Screen titles
+    displayMedium: 24, // Section headers
+    titleLarge: 20, // Card titles
+    titleMedium: 17, // List item titles
+    body: 16, // Body text
+    bodySmall: 14, // Secondary text
+    caption: 12, // Labels, hints
+    label: 11, // Uppercase labels
+  },
+
+  weights: {
+    regular: '400' as const,
+    medium: '500' as const,
+    semibold: '600' as const,
+  },
+
+  lineHeights: {
+    tight: 1.2,
+    normal: 1.5,
+    relaxed: 1.7,
   },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
+
+export const borderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  pill: 25,
+};
+
+export const shadows = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+};
+
+export const componentStyles = {
+  button: {
+    height: 52,
+    borderRadius: borderRadius.pill,
   },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  input: {
+    height: 52,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
   },
-});
+  textArea: {
+    minHeight: 100,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+  },
+  card: {
+    borderRadius: borderRadius.lg,
+    padding: 20,
+  },
+};
