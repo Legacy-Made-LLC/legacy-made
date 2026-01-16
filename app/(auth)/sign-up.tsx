@@ -1,110 +1,167 @@
-import { useSignUp } from '@clerk/clerk-expo'
-import { Link, useRouter } from 'expo-router'
-import * as React from 'react'
-import { Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useSignUp } from '@clerk/clerk-expo';
+import { Link, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { colors, spacing, typography } from '@/constants/theme';
 
 export default function SignUpScreen() {
-  const { isLoaded, signUp, setActive } = useSignUp()
-  const router = useRouter()
+  const { signUp, isLoaded } = useSignUp();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
-  const [emailAddress, setEmailAddress] = React.useState('')
-  const [password, setPassword] = React.useState('')
-  const [pendingVerification, setPendingVerification] = React.useState(false)
-  const [code, setCode] = React.useState('')
+  const [emailAddress, setEmailAddress] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Handle submission of sign-up form
-  const onSignUpPress = async () => {
-    if (!isLoaded) return
+  const onContinuePress = async () => {
+    if (!isLoaded) return;
 
-    // Start sign-up process using email and password provided
+    setIsLoading(true);
+    setError('');
+
     try {
+      // Create account and send OTP
       await signUp.create({
         emailAddress,
-        password,
-      })
+      });
 
-      // Send user an email with verification code
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
-      // Set 'pendingVerification' to true to display second form
-      // and capture OTP code
-      setPendingVerification(true)
-    } catch (err) {
-      // See Clerk docs: custom flows error handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
-    }
-  }
-
-  // Handle submission of verification form
-  const onVerifyPress = async () => {
-    if (!isLoaded) return
-
-    try {
-      // Use the code the user provided to attempt verification
-      const signUpAttempt = await signUp.attemptEmailAddressVerification({
-        code,
-      })
-
-      // If verification was completed, set the session to active
-      // and redirect the user
-      if (signUpAttempt.status === 'complete') {
-        await setActive({ session: signUpAttempt.createdSessionId })
-        router.replace('/')
+      // Navigate to OTP verification
+      router.push({
+        pathname: '/(auth)/verify-otp',
+        params: { email: emailAddress, mode: 'sign-up' },
+      });
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] };
+      if (clerkError.errors && clerkError.errors.length > 0) {
+        setError(clerkError.errors[0].message);
       } else {
-        // If the status is not complete, check why. User may need to
-        // complete further steps.
-        console.error(JSON.stringify(signUpAttempt, null, 2))
+        setError('An error occurred. Please try again.');
       }
-    } catch (err) {
-      // See Clerk docs: custom flows error handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      console.error(JSON.stringify(err, null, 2));
+    } finally {
+      setIsLoading(false);
     }
-  }
-
-  if (pendingVerification) {
-    return (
-      <>
-        <Text>Verify your email</Text>
-        <TextInput
-          value={code}
-          placeholder="Enter your verification code"
-          onChangeText={(code) => setCode(code)}
-        />
-        <TouchableOpacity onPress={onVerifyPress}>
-          <Text>Verify</Text>
-        </TouchableOpacity>
-      </>
-    )
-  }
+  };
 
   return (
-    <View>
-      <>
-        <Text>Sign up</Text>
-        <TextInput
-          autoCapitalize="none"
-          value={emailAddress}
-          placeholder="Enter email"
-          onChangeText={(email) => setEmailAddress(email)}
-        />
-        <TextInput
-          value={password}
-          placeholder="Enter password"
-          secureTextEntry={true}
-          onChangeText={(password) => setPassword(password)}
-        />
-        <TouchableOpacity onPress={onSignUpPress}>
-          <Text>Continue</Text>
-        </TouchableOpacity>
-        <View style={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
-          <Text>Already have an account?</Text>
-          <Link href="/sign-in">
-            <Text>Sign in</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>
+            {"Enter your email and we'll send you a code to get started."}
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <Input
+            label="Email"
+            value={emailAddress}
+            placeholder="Enter your email"
+            onChangeText={setEmailAddress}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoFocus
+          />
+
+          <Button
+            title={isLoading ? 'Sending code...' : 'Continue'}
+            onPress={onContinuePress}
+            disabled={isLoading || !emailAddress}
+            style={styles.button}
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <Link href="/(auth)/sign-in" asChild>
+            <Button title="Sign In" onPress={() => {}} variant="subtle" />
           </Link>
         </View>
-      </>
-    </View>
-  )
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  header: {
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontFamily: typography.fontFamily.serif,
+    fontSize: typography.sizes.displayLarge,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
+  },
+  form: {
+    flex: 1,
+  },
+  errorContainer: {
+    backgroundColor: colors.error + '10',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.error,
+  },
+  button: {
+    marginTop: spacing.sm,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+  },
+  footerText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+});

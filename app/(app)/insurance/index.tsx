@@ -5,34 +5,43 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { LoadingScreen, ErrorScreen } from '@/components/ui/LoadingScreen';
 import { useAppContext } from '@/data/store';
 import { categories } from '@/constants/categories';
 import { colors, typography, spacing } from '@/constants/theme';
 
-const category = categories.find((c) => c.id === 'contacts')!;
+const category = categories.find((c) => c.id === 'insurance')!;
 
-export default function ContactsListScreen() {
+export default function InsuranceListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useAppContext();
+  const { state, isLoading, error, refresh } = useAppContext();
 
-  const handleAddContact = () => {
-    router.push('/contacts/new');
+  const handleAdd = () => {
+    router.push('/insurance/new');
   };
 
-  const handleContactPress = (id: string) => {
-    router.push(`/contacts/${id}`);
+  const handleItemPress = (id: string) => {
+    router.push(`/insurance/${id}`);
   };
 
-  if (state.contacts.length === 0) {
+  if (isLoading) {
+    return <LoadingScreen message="Loading policies..." />;
+  }
+
+  if (error) {
+    return <ErrorScreen message={error} onRetry={refresh} />;
+  }
+
+  if (state.insurance.length === 0) {
     return (
       <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Text style={styles.emptyIcon}>👤</Text>
-        <Text style={styles.emptyTitle}>No contacts added yet</Text>
+        <Text style={styles.emptyIcon}>🛡️</Text>
+        <Text style={styles.emptyTitle}>No policies added yet</Text>
         <Text style={styles.emptyDescription}>
-          Add the first person your loved ones should reach out to.
+          Add your insurance policies so your loved ones know what coverage exists.
         </Text>
-        <Button title="Add Contact" onPress={handleAddContact} style={styles.emptyButton} />
+        <Button title="Add Policy" onPress={handleAdd} style={styles.emptyButton} />
       </View>
     );
   }
@@ -45,18 +54,18 @@ export default function ContactsListScreen() {
     >
       <GuidanceCard text={category.guidance} />
 
-      {state.contacts.map((contact) => (
+      {state.insurance.map((item) => (
         <PressableCard
-          key={contact.id}
-          onPress={() => handleContactPress(contact.id)}
+          key={item.id}
+          onPress={() => handleItemPress(item.id)}
           style={styles.card}
         >
           <View style={styles.cardContent}>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{contact.name}</Text>
+              <Text style={styles.cardTitle}>{item.policyName}</Text>
               <Text style={styles.cardSubtitle}>
-                {contact.relationship}
-                {contact.isPrimary && ' · Primary contact'}
+                {item.provider}
+                {item.coverageAmount && ` · ${item.coverageAmount}`}
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
@@ -64,8 +73,8 @@ export default function ContactsListScreen() {
         </PressableCard>
       ))}
 
-      <PressableCard onPress={handleAddContact} style={styles.addCard}>
-        <Text style={styles.addText}>+ Add Contact</Text>
+      <PressableCard onPress={handleAdd} style={styles.addCard}>
+        <Text style={styles.addText}>+ Add Policy</Text>
       </PressableCard>
     </ScrollView>
   );

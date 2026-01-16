@@ -5,34 +5,43 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { LoadingScreen, ErrorScreen } from '@/components/ui/LoadingScreen';
 import { useAppContext } from '@/data/store';
 import { categories } from '@/constants/categories';
 import { colors, typography, spacing } from '@/constants/theme';
 
-const category = categories.find((c) => c.id === 'documents')!;
+const category = categories.find((c) => c.id === 'finances')!;
 
-export default function DocumentsListScreen() {
+export default function FinancesListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useAppContext();
+  const { state, isLoading, error, refresh } = useAppContext();
 
   const handleAdd = () => {
-    router.push('/documents/new');
+    router.push('/finances/new');
   };
 
   const handleItemPress = (id: string) => {
-    router.push(`/documents/${id}`);
+    router.push(`/finances/${id}`);
   };
 
-  if (state.documents.length === 0) {
+  if (isLoading) {
+    return <LoadingScreen message="Loading accounts..." />;
+  }
+
+  if (error) {
+    return <ErrorScreen message={error} onRetry={refresh} />;
+  }
+
+  if (state.finances.length === 0) {
     return (
       <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Text style={styles.emptyIcon}>📄</Text>
-        <Text style={styles.emptyTitle}>No documents added yet</Text>
+        <Text style={styles.emptyIcon}>💰</Text>
+        <Text style={styles.emptyTitle}>No accounts added yet</Text>
         <Text style={styles.emptyDescription}>
-          Add your important legal documents so your loved ones know where to find them.
+          Add your first financial account so your loved ones know where everything is.
         </Text>
-        <Button title="Add Document" onPress={handleAdd} style={styles.emptyButton} />
+        <Button title="Add Account" onPress={handleAdd} style={styles.emptyButton} />
       </View>
     );
   }
@@ -45,7 +54,7 @@ export default function DocumentsListScreen() {
     >
       <GuidanceCard text={category.guidance} />
 
-      {state.documents.map((item) => (
+      {state.finances.map((item) => (
         <PressableCard
           key={item.id}
           onPress={() => handleItemPress(item.id)}
@@ -53,9 +62,10 @@ export default function DocumentsListScreen() {
         >
           <View style={styles.cardContent}>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{item.documentName}</Text>
-              <Text style={styles.cardSubtitle} numberOfLines={1}>
-                {item.location}
+              <Text style={styles.cardTitle}>{item.accountName}</Text>
+              <Text style={styles.cardSubtitle}>
+                {item.institution}
+                {item.accountNumberLast4 && ` · ****${item.accountNumberLast4}`}
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
@@ -64,7 +74,7 @@ export default function DocumentsListScreen() {
       ))}
 
       <PressableCard onPress={handleAdd} style={styles.addCard}>
-        <Text style={styles.addText}>+ Add Document</Text>
+        <Text style={styles.addText}>+ Add Account</Text>
       </PressableCard>
     </ScrollView>
   );

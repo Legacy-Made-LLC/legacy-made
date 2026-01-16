@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ScrollView,
-  View,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
-import { Button } from '@/components/ui/Button';
-import { useAppContext } from '@/data/store';
 import { colors, spacing } from '@/constants/theme';
+import { useAppContext } from '@/data/store';
 import type { Contact } from '@/data/types';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ContactDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +31,7 @@ export default function ContactDetailScreen() {
   const [phone, setPhone] = useState(existingContact?.phone ?? '');
   const [email, setEmail] = useState(existingContact?.email ?? '');
   const [notes, setNotes] = useState(existingContact?.notes ?? '');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -38,7 +39,7 @@ export default function ContactDetailScreen() {
     });
   }, [isNew, navigation]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter a name.');
       return;
@@ -56,12 +57,20 @@ export default function ContactDetailScreen() {
       notes: notes.trim() || undefined,
     };
 
-    if (isNew) {
-      addContact(contactData);
-    } else {
-      updateContact(id, contactData);
+    setIsSaving(true);
+    try {
+      if (isNew) {
+        await addContact(contactData);
+      } else {
+        await updateContact(id, contactData);
+      }
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save contact';
+      Alert.alert('Error', message);
+    } finally {
+      setIsSaving(false);
     }
-    router.back();
   };
 
   const handleDelete = () => {
@@ -73,9 +82,14 @@ export default function ContactDetailScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deleteContact(id);
-            router.back();
+          onPress: async () => {
+            try {
+              await deleteContact(id);
+              router.back();
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Failed to delete contact';
+              Alert.alert('Error', message);
+            }
           },
         },
       ]
@@ -135,7 +149,11 @@ export default function ContactDetailScreen() {
         />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save" onPress={handleSave} />
+          <Button
+            title={isSaving ? 'Saving...' : 'Save'}
+            onPress={handleSave}
+            disabled={isSaving}
+          />
         </View>
 
         {!isNew && (

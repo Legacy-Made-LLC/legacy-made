@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { LoadingScreen, ErrorScreen } from '@/components/ui/LoadingScreen';
 import { useAppContext } from '@/data/store';
 import { categories } from '@/constants/categories';
 import { colors, typography, spacing } from '@/constants/theme';
@@ -21,7 +22,7 @@ const importanceLabels = {
 export default function DigitalListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useAppContext();
+  const { state, isLoading, error, refresh } = useAppContext();
 
   const handleAdd = () => {
     router.push('/digital/new');
@@ -30,6 +31,14 @@ export default function DigitalListScreen() {
   const handleItemPress = (id: string) => {
     router.push(`/digital/${id}`);
   };
+
+  if (isLoading) {
+    return <LoadingScreen message="Loading accounts..." />;
+  }
+
+  if (error) {
+    return <ErrorScreen message={error} onRetry={refresh} />;
+  }
 
   if (state.digitalAccounts.length === 0) {
     return (

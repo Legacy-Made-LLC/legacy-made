@@ -1,66 +1,180 @@
-import { useSignIn } from '@clerk/clerk-expo'
-import { Link, useRouter } from 'expo-router'
-import React from 'react'
-import { Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useSignIn } from '@clerk/clerk-expo';
+import { Link, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function Page() {
-  const { signIn, setActive, isLoaded } = useSignIn()
-  const router = useRouter()
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { colors, spacing, typography } from '@/constants/theme';
 
-  const [emailAddress, setEmailAddress] = React.useState('')
-  const [password, setPassword] = React.useState('')
+export default function SignInScreen() {
+  const { signIn, isLoaded } = useSignIn();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
-  // Handle the submission of the sign-in form
-  const onSignInPress = async () => {
-    if (!isLoaded) return
+  const [emailAddress, setEmailAddress] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    // Start the sign-in process using the email and password provided
+  const onContinuePress = async () => {
+    if (!isLoaded) return;
+
+    setIsLoading(true);
+    setError('');
+
     try {
-      const signInAttempt = await signIn.create({
+      // Create sign-in attempt and send OTP
+      const { supportedFirstFactors } = await signIn.create({
         identifier: emailAddress,
-        password,
-      })
+      });
 
-      // If sign-in process is complete, set the created session as active
-      // and redirect the user
-      if (signInAttempt.status === 'complete') {
-        await setActive({ session: signInAttempt.createdSessionId })
-        router.replace('/')
+      // Find the email code factor
+      const emailCodeFactor = supportedFirstFactors?.find(
+        (factor) => factor.strategy === 'email_code'
+      );
+
+      if (emailCodeFactor && 'emailAddressId' in emailCodeFactor) {
+        // Send the OTP
+        await signIn.prepareFirstFactor({
+          strategy: 'email_code',
+          emailAddressId: emailCodeFactor.emailAddressId,
+        });
+
+        // Navigate to OTP verification
+        router.push({
+          pathname: '/(auth)/verify-otp',
+          params: { email: emailAddress, mode: 'sign-in' },
+        });
       } else {
-        // If the status isn't complete, check why. User might need to
-        // complete further steps.
-        console.error(JSON.stringify(signInAttempt, null, 2))
+        setError('Email sign-in is not available for this account.');
       }
-    } catch (err) {
-      // See Clerk docs: custom flows error handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] };
+      if (clerkError.errors && clerkError.errors.length > 0) {
+        setError(clerkError.errors[0].message);
+      } else {
+        setError('An error occurred. Please try again.');
+      }
+      console.error(JSON.stringify(err, null, 2));
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <View>
-      <Text>Sign in</Text>
-      <TextInput
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Enter email"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-      />
-      <TextInput
-        value={password}
-        placeholder="Enter password"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-      />
-      <TouchableOpacity onPress={onSignInPress}>
-        <Text>Continue</Text>
-      </TouchableOpacity>
-      <View style={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
-        <Link href="/sign-up">
-          <Text>Sign up</Text>
-        </Link>
-      </View>
-    </View>
-  )
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>
+            {"Enter your email and we'll send you a code to sign in."}
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <Input
+            label="Email"
+            value={emailAddress}
+            placeholder="Enter your email"
+            onChangeText={setEmailAddress}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoFocus
+          />
+
+          <Button
+            title={isLoading ? 'Sending code...' : 'Continue'}
+            onPress={onContinuePress}
+            disabled={isLoading || !emailAddress}
+            style={styles.button}
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>{"Don't have an account?"}</Text>
+          <Link href="/(auth)/sign-up" asChild>
+            <Button title="Create Account" onPress={() => {}} variant="subtle" />
+          </Link>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  header: {
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontFamily: typography.fontFamily.serif,
+    fontSize: typography.sizes.displayLarge,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
+  },
+  form: {
+    flex: 1,
+  },
+  errorContainer: {
+    backgroundColor: colors.error + '10',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.error,
+  },
+  button: {
+    marginTop: spacing.sm,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+  },
+  footerText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+});

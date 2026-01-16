@@ -16,76 +16,94 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Button } from '@/components/ui/Button';
 import { useAppContext } from '@/data/store';
 import { colors, typography, spacing, borderRadius } from '@/constants/theme';
-import type { HomeResponsibility } from '@/data/types';
+import type { FinancialAccount } from '@/data/types';
 
-const itemTypes: HomeResponsibility['itemType'][] = [
-  'Property',
-  'Vehicle',
-  'Responsibility',
+const accountTypes: FinancialAccount['accountType'][] = [
+  'Checking',
+  'Savings',
+  'Retirement',
+  'Investment',
+  'Credit',
+  'Loan',
   'Other',
 ];
 
-export default function HomeResponsibilityDetailScreen() {
+export default function FinanceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const {
-    getHomeResponsibility,
-    addHomeResponsibility,
-    updateHomeResponsibility,
-    deleteHomeResponsibility,
-  } = useAppContext();
+  const { getFinance, addFinance, updateFinance, deleteFinance } = useAppContext();
 
   const isNew = id === 'new';
-  const existing = isNew ? undefined : getHomeResponsibility(id);
+  const existing = isNew ? undefined : getFinance(id);
 
-  const [itemName, setItemName] = useState(existing?.itemName ?? '');
-  const [itemType, setItemType] = useState<HomeResponsibility['itemType']>(
-    existing?.itemType ?? 'Property'
+  const [accountName, setAccountName] = useState(existing?.accountName ?? '');
+  const [institution, setInstitution] = useState(existing?.institution ?? '');
+  const [accountType, setAccountType] = useState<FinancialAccount['accountType']>(
+    existing?.accountType ?? 'Checking'
   );
-  const [details, setDetails] = useState(existing?.details ?? '');
+  const [accountNumberLast4, setAccountNumberLast4] = useState(existing?.accountNumberLast4 ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Item' : 'Edit Item',
+      title: isNew ? 'Add Account' : 'Edit Account',
     });
   }, [isNew, navigation]);
 
-  const handleSave = () => {
-    if (!itemName.trim()) {
-      Alert.alert('Required Field', 'Please enter an item name.');
+  const handleSave = async () => {
+    if (!accountName.trim()) {
+      Alert.alert('Required Field', 'Please enter an account name.');
+      return;
+    }
+    if (!institution.trim()) {
+      Alert.alert('Required Field', 'Please enter an institution.');
       return;
     }
 
-    const data: Omit<HomeResponsibility, 'id'> = {
-      itemName: itemName.trim(),
-      itemType,
-      details: details.trim() || undefined,
+    const data: Omit<FinancialAccount, 'id'> = {
+      accountName: accountName.trim(),
+      institution: institution.trim(),
+      accountType,
+      accountNumberLast4: accountNumberLast4.trim() || undefined,
       notes: notes.trim() || undefined,
     };
 
-    if (isNew) {
-      addHomeResponsibility(data);
-    } else {
-      updateHomeResponsibility(id, data);
+    setIsSaving(true);
+    try {
+      if (isNew) {
+        await addFinance(data);
+      } else {
+        await updateFinance(id, data);
+      }
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save account';
+      Alert.alert('Error', message);
+    } finally {
+      setIsSaving(false);
     }
-    router.back();
   };
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Item',
-      `Are you sure you want to delete ${itemName}?`,
+      'Delete Account',
+      `Are you sure you want to delete ${accountName}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deleteHomeResponsibility(id);
-            router.back();
+          onPress: async () => {
+            try {
+              await deleteFinance(id);
+              router.back();
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Failed to delete account';
+              Alert.alert('Error', message);
+            }
           },
         },
       ]
@@ -105,28 +123,35 @@ export default function HomeResponsibilityDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Input
-          label="Item Name"
-          placeholder="e.g., Primary Residence"
-          value={itemName}
-          onChangeText={setItemName}
+          label="Account Name"
+          placeholder="e.g., Primary Checking"
+          value={accountName}
+          onChangeText={setAccountName}
+        />
+
+        <Input
+          label="Institution"
+          placeholder="e.g., Chase Bank"
+          value={institution}
+          onChangeText={setInstitution}
         />
 
         <View style={styles.fieldContainer}>
-          <Text style={styles.label}>Type</Text>
+          <Text style={styles.label}>Account Type</Text>
           <View style={styles.typeGrid}>
-            {itemTypes.map((type) => (
+            {accountTypes.map((type) => (
               <Pressable
                 key={type}
                 style={[
                   styles.typeButton,
-                  itemType === type && styles.typeButtonSelected,
+                  accountType === type && styles.typeButtonSelected,
                 ]}
-                onPress={() => setItemType(type)}
+                onPress={() => setAccountType(type)}
               >
                 <Text
                   style={[
                     styles.typeButtonText,
-                    itemType === type && styles.typeButtonTextSelected,
+                    accountType === type && styles.typeButtonTextSelected,
                   ]}
                 >
                   {type}
@@ -137,27 +162,33 @@ export default function HomeResponsibilityDetailScreen() {
         </View>
 
         <Input
-          label="Details (Optional)"
-          placeholder="e.g., 742 Evergreen Terrace, San Francisco, CA"
-          value={details}
-          onChangeText={setDetails}
+          label="Last 4 Digits (Optional)"
+          placeholder="e.g., 4521"
+          value={accountNumberLast4}
+          onChangeText={setAccountNumberLast4}
+          keyboardType="number-pad"
+          maxLength={4}
         />
 
         <TextArea
           label="Notes (Optional)"
-          placeholder="Any additional details about this item"
+          placeholder="Any additional details about this account"
           value={notes}
           onChangeText={setNotes}
         />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save" onPress={handleSave} />
+          <Button
+            title={isSaving ? 'Saving...' : 'Save'}
+            onPress={handleSave}
+            disabled={isSaving}
+          />
         </View>
 
         {!isNew && (
           <View style={styles.deleteContainer}>
             <Button
-              title="Delete Item"
+              title="Delete Account"
               variant="destructive"
               onPress={handleDelete}
             />

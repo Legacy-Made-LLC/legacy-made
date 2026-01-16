@@ -47,6 +47,7 @@ export default function DigitalAccountDetailScreen() {
     existing?.importance ?? 'medium'
   );
   const [accessNotes, setAccessNotes] = useState(existing?.accessNotes ?? '');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -54,7 +55,7 @@ export default function DigitalAccountDetailScreen() {
     });
   }, [isNew, navigation]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!accountName.trim()) {
       Alert.alert('Required Field', 'Please enter an account name.');
       return;
@@ -72,12 +73,20 @@ export default function DigitalAccountDetailScreen() {
       accessNotes: accessNotes.trim() || undefined,
     };
 
-    if (isNew) {
-      addDigitalAccount(data);
-    } else {
-      updateDigitalAccount(id, data);
+    setIsSaving(true);
+    try {
+      if (isNew) {
+        await addDigitalAccount(data);
+      } else {
+        await updateDigitalAccount(id, data);
+      }
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save account';
+      Alert.alert('Error', message);
+    } finally {
+      setIsSaving(false);
     }
-    router.back();
   };
 
   const handleDelete = () => {
@@ -89,9 +98,14 @@ export default function DigitalAccountDetailScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deleteDigitalAccount(id);
-            router.back();
+          onPress: async () => {
+            try {
+              await deleteDigitalAccount(id);
+              router.back();
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Failed to delete account';
+              Alert.alert('Error', message);
+            }
           },
         },
       ]
@@ -165,7 +179,11 @@ export default function DigitalAccountDetailScreen() {
         />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save" onPress={handleSave} />
+          <Button
+            title={isSaving ? 'Saving...' : 'Save'}
+            onPress={handleSave}
+            disabled={isSaving}
+          />
         </View>
 
         {!isNew && (

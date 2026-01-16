@@ -1,12 +1,23 @@
-import { useAuth } from '@clerk/clerk-expo'
-import { Redirect, Stack } from 'expo-router'
+import { useAuth } from "@clerk/clerk-expo";
+import { Redirect, Stack } from "expo-router";
 
-export default function AuthRoutesLayout() {
-  const { isSignedIn } = useAuth()
+import { colors } from "@/constants/theme";
+
+export default function AuthLayout() {
+  const { isSignedIn } = useAuth();
 
   if (isSignedIn) {
-    return <Redirect href={'/'} />
+    return <Redirect href="/(app)" />;
   }
 
-  return <Stack />
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: colors.background,
+        },
+      }}
+    />
+  );
 }

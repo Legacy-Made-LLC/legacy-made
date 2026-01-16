@@ -5,34 +5,43 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { LoadingScreen, ErrorScreen } from '@/components/ui/LoadingScreen';
 import { useAppContext } from '@/data/store';
 import { categories } from '@/constants/categories';
 import { colors, typography, spacing } from '@/constants/theme';
 
-const category = categories.find((c) => c.id === 'home-responsibilities')!;
+const category = categories.find((c) => c.id === 'contacts')!;
 
-export default function HomeResponsibilitiesListScreen() {
+export default function ContactsListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useAppContext();
+  const { state, isLoading, error, refresh } = useAppContext();
 
-  const handleAdd = () => {
-    router.push('/home-responsibilities/new');
+  const handleAddContact = () => {
+    router.push('/contacts/new');
   };
 
-  const handleItemPress = (id: string) => {
-    router.push(`/home-responsibilities/${id}`);
+  const handleContactPress = (id: string) => {
+    router.push(`/contacts/${id}`);
   };
 
-  if (state.homeResponsibilities.length === 0) {
+  if (isLoading) {
+    return <LoadingScreen message="Loading contacts..." />;
+  }
+
+  if (error) {
+    return <ErrorScreen message={error} onRetry={refresh} />;
+  }
+
+  if (state.contacts.length === 0) {
     return (
       <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Text style={styles.emptyIcon}>🏠</Text>
-        <Text style={styles.emptyTitle}>No items added yet</Text>
+        <Text style={styles.emptyIcon}>👤</Text>
+        <Text style={styles.emptyTitle}>No contacts added yet</Text>
         <Text style={styles.emptyDescription}>
-          Add your property, vehicles, and ongoing responsibilities.
+          Add the first person your loved ones should reach out to.
         </Text>
-        <Button title="Add Item" onPress={handleAdd} style={styles.emptyButton} />
+        <Button title="Add Contact" onPress={handleAddContact} style={styles.emptyButton} />
       </View>
     );
   }
@@ -45,18 +54,18 @@ export default function HomeResponsibilitiesListScreen() {
     >
       <GuidanceCard text={category.guidance} />
 
-      {state.homeResponsibilities.map((item) => (
+      {state.contacts.map((contact) => (
         <PressableCard
-          key={item.id}
-          onPress={() => handleItemPress(item.id)}
+          key={contact.id}
+          onPress={() => handleContactPress(contact.id)}
           style={styles.card}
         >
           <View style={styles.cardContent}>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{item.itemName}</Text>
+              <Text style={styles.cardTitle}>{contact.name}</Text>
               <Text style={styles.cardSubtitle}>
-                {item.itemType}
-                {item.details && ` · ${item.details}`}
+                {contact.relationship}
+                {contact.isPrimary && ' · Primary contact'}
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
@@ -64,8 +73,8 @@ export default function HomeResponsibilitiesListScreen() {
         </PressableCard>
       ))}
 
-      <PressableCard onPress={handleAdd} style={styles.addCard}>
-        <Text style={styles.addText}>+ Add Item</Text>
+      <PressableCard onPress={handleAddContact} style={styles.addCard}>
+        <Text style={styles.addText}>+ Add Contact</Text>
       </PressableCard>
     </ScrollView>
   );

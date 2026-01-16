@@ -5,34 +5,43 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { LoadingScreen, ErrorScreen } from '@/components/ui/LoadingScreen';
 import { useAppContext } from '@/data/store';
 import { categories } from '@/constants/categories';
 import { colors, typography, spacing } from '@/constants/theme';
 
-const category = categories.find((c) => c.id === 'insurance')!;
+const category = categories.find((c) => c.id === 'documents')!;
 
-export default function InsuranceListScreen() {
+export default function DocumentsListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useAppContext();
+  const { state, isLoading, error, refresh } = useAppContext();
 
   const handleAdd = () => {
-    router.push('/insurance/new');
+    router.push('/documents/new');
   };
 
   const handleItemPress = (id: string) => {
-    router.push(`/insurance/${id}`);
+    router.push(`/documents/${id}`);
   };
 
-  if (state.insurance.length === 0) {
+  if (isLoading) {
+    return <LoadingScreen message="Loading documents..." />;
+  }
+
+  if (error) {
+    return <ErrorScreen message={error} onRetry={refresh} />;
+  }
+
+  if (state.documents.length === 0) {
     return (
       <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Text style={styles.emptyIcon}>🛡️</Text>
-        <Text style={styles.emptyTitle}>No policies added yet</Text>
+        <Text style={styles.emptyIcon}>📄</Text>
+        <Text style={styles.emptyTitle}>No documents added yet</Text>
         <Text style={styles.emptyDescription}>
-          Add your insurance policies so your loved ones know what coverage exists.
+          Add your important legal documents so your loved ones know where to find them.
         </Text>
-        <Button title="Add Policy" onPress={handleAdd} style={styles.emptyButton} />
+        <Button title="Add Document" onPress={handleAdd} style={styles.emptyButton} />
       </View>
     );
   }
@@ -45,7 +54,7 @@ export default function InsuranceListScreen() {
     >
       <GuidanceCard text={category.guidance} />
 
-      {state.insurance.map((item) => (
+      {state.documents.map((item) => (
         <PressableCard
           key={item.id}
           onPress={() => handleItemPress(item.id)}
@@ -53,10 +62,9 @@ export default function InsuranceListScreen() {
         >
           <View style={styles.cardContent}>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{item.policyName}</Text>
-              <Text style={styles.cardSubtitle}>
-                {item.provider}
-                {item.coverageAmount && ` · ${item.coverageAmount}`}
+              <Text style={styles.cardTitle}>{item.documentName}</Text>
+              <Text style={styles.cardSubtitle} numberOfLines={1}>
+                {item.location}
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
@@ -65,7 +73,7 @@ export default function InsuranceListScreen() {
       ))}
 
       <PressableCard onPress={handleAdd} style={styles.addCard}>
-        <Text style={styles.addText}>+ Add Policy</Text>
+        <Text style={styles.addText}>+ Add Document</Text>
       </PressableCard>
     </ScrollView>
   );

@@ -62,6 +62,11 @@ The demo focuses on the **primary entry point** — helping users organize criti
 - **TypeScript**
 - **React Native** core components
 
+### Coding Standards
+
+- **Avoid `as any`** — Do not use `as any` type assertions. Find proper type solutions instead (use specific types, generics, or fix the underlying type issue).
+- Prefer type-safe solutions over type assertions in general.
+
 ### Project Structure
 
 ```

@@ -30,6 +30,7 @@ export default function DocumentDetailScreen() {
   const [location, setLocation] = useState(existing?.location ?? '');
   const [dateCreated, setDateCreated] = useState(existing?.dateCreated ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -37,7 +38,7 @@ export default function DocumentDetailScreen() {
     });
   }, [isNew, navigation]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!documentName.trim()) {
       Alert.alert('Required Field', 'Please enter a document name.');
       return;
@@ -54,12 +55,20 @@ export default function DocumentDetailScreen() {
       notes: notes.trim() || undefined,
     };
 
-    if (isNew) {
-      addDocument(data);
-    } else {
-      updateDocument(id, data);
+    setIsSaving(true);
+    try {
+      if (isNew) {
+        await addDocument(data);
+      } else {
+        await updateDocument(id, data);
+      }
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save document';
+      Alert.alert('Error', message);
+    } finally {
+      setIsSaving(false);
     }
-    router.back();
   };
 
   const handleDelete = () => {
@@ -71,9 +80,14 @@ export default function DocumentDetailScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deleteDocument(id);
-            router.back();
+          onPress: async () => {
+            try {
+              await deleteDocument(id);
+              router.back();
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Failed to delete document';
+              Alert.alert('Error', message);
+            }
           },
         },
       ]
@@ -121,7 +135,11 @@ export default function DocumentDetailScreen() {
         />
 
         <View style={styles.buttonContainer}>
-          <Button title="Save" onPress={handleSave} />
+          <Button
+            title={isSaving ? 'Saving...' : 'Save'}
+            onPress={handleSave}
+            disabled={isSaving}
+          />
         </View>
 
         {!isNew && (
