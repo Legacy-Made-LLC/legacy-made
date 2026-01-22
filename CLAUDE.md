@@ -1,10 +1,10 @@
-# Legacy Made — Expo Demo App
+# Legacy Made — Expo MVP App
 
 ## Project Overview
 
-Build a **demo iOS app** for Legacy Made using **Expo** (with Expo Router). This app helps people organize critical end-of-life information for their loved ones. The demo should validate the concept and showcase high-quality mobile development.
+Build an **MVP iOS app** for Legacy Made using **Expo** (with Expo Router). This app helps people organize critical end-of-life information for their loved ones.
 
-**Primary Goal:** Prove development capabilities to the founder. This may evolve into the production app.
+**Primary Goal:** Deliver a polished MVP that demonstrates core functionality and could serve as the foundation for the production app.
 
 **Target Platform:** iOS only for now (but structure code for future Android/web expansion).
 
@@ -29,11 +29,11 @@ It removes uncertainty and burden by answering questions families ask when someo
 
 ---
 
-## Demo Scope
+## MVP Scope
 
 ### Feature Focus: "Important Information" Pillar Only
 
-The demo focuses on the **primary entry point** — helping users organize critical details their loved ones would need.
+The MVP focuses on the **primary entry point** — helping users organize critical details their loved ones would need.
 
 **Six sections to include:**
 
@@ -748,7 +748,7 @@ Keep animations **subtle and calming**:
 
 ## Key Implementation Notes
 
-1. **Keep it simple:** This is a demo. Don't over-engineer. Focus on polish over features.
+1. **Keep it simple:** This is an MVP. Don't over-engineer. Focus on polish over features.
 
 2. **Prioritize feel over function:** The emotional experience matters more than complete functionality.
 
@@ -764,7 +764,7 @@ Keep animations **subtle and calming**:
 
 ## Definition of Done
 
-The demo is complete when:
+The MVP is complete when:
 
 - [ ] Dashboard displays all 6 category cards with accurate counts
 - [ ] Each category has a list view with mock items
@@ -782,10 +782,10 @@ The demo is complete when:
 
 ```bash
 # Create new Expo project with TypeScript
-npx create-expo-app@latest legacy-made-demo --template blank-typescript
+npx create-expo-app@latest legacy-made --template blank-typescript
 
 # Navigate to project
-cd legacy-made-demo
+cd legacy-made
 
 # Install Expo Router
 npx expo install expo-router react-native-safe-area-context react-native-screens expo-linking expo-constants expo-status-bar
