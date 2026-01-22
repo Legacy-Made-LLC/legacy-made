@@ -1,9 +1,11 @@
 import { useSignIn } from '@clerk/clerk-expo';
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -77,10 +79,21 @@ export default function SignInScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg },
+          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg },
         ]}
         keyboardShouldPersistTaps="handled"
       >
+        <Pressable
+          onPress={router.back}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && styles.backButtonPressed,
+          ]}
+          hitSlop={12}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </Pressable>
+
         <View style={styles.header}>
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>
@@ -118,7 +131,7 @@ export default function SignInScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>{"Don't have an account?"}</Text>
           <Link href="/(auth)/sign-up" asChild>
-            <Button title="Create Account" onPress={() => {}} variant="subtle" />
+            <Button title="Create Account" onPress={() => { }} variant="subtle" />
           </Link>
         </View>
       </ScrollView>
@@ -134,6 +147,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  backButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
   },
   header: {
     marginBottom: spacing.xl,

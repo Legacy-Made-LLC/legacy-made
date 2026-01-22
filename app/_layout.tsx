@@ -7,15 +7,16 @@ import {
   DMSans_700Bold,
   useFonts,
 } from "@expo-google-fonts/dm-sans";
-import { DMSerifDisplay_400Regular } from "@expo-google-fonts/dm-serif-display";
-import { Slot } from "expo-router";
+import { LibreBaskerville_400Regular, LibreBaskerville_500Medium, LibreBaskerville_600SemiBold, LibreBaskerville_700Bold } from "@expo-google-fonts/libre-baskerville";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
 import "react-native-reanimated";
 
-import { colors } from "@/constants/theme";
+import { DevMenu } from "@/components/dev/DevMenu";
+import Loader from "@/components/ui/Loader";
+import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
 import { AppProvider } from "@/data/store";
 
@@ -27,7 +28,10 @@ export default function RootLayout() {
     DMSans_500Medium,
     DMSans_600SemiBold,
     DMSans_700Bold,
-    DMSerifDisplay_400Regular,
+    LibreBaskerville_400Regular,
+    LibreBaskerville_500Medium,
+    LibreBaskerville_600SemiBold,
+    LibreBaskerville_700Bold,
   });
 
   useEffect(() => {
@@ -38,29 +42,23 @@ export default function RootLayout() {
 
   if (!fontsLoaded) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
+      <Loader />
     );
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache}>
-      <PlanProvider>
-        <AppProvider>
-          <Slot />
-          <StatusBar style="dark" />
-        </AppProvider>
-      </PlanProvider>
-    </ClerkProvider>
+    <OnboardingProvider>
+      <ClerkProvider tokenCache={tokenCache}>
+        <PlanProvider>
+          <AppProvider>
+            <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+              {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
+            </Stack>
+            <StatusBar style="dark" />
+            <DevMenu />
+          </AppProvider>
+        </PlanProvider>
+      </ClerkProvider>
+    </OnboardingProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.background,
-  },
-});

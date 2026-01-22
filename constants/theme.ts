@@ -15,8 +15,8 @@ export const colors = {
   textTertiary: '#9B9B9B', // Light gray for placeholders/hints
 
   // Accents
-  primary: '#1C2541', // Deep navy for primary actions
-  primaryPressed: '#0F1629', // Darker navy for pressed state
+  primary: '#8a9785', // Deep navy for primary actions
+  primaryPressed: '#7d8a79', // Darker navy for pressed state
 
   // Semantic
   success: '#4A7C59', // Muted green
@@ -34,7 +34,10 @@ export const typography = {
     medium: 'DMSans_500Medium',
     semibold: 'DMSans_600SemiBold',
     bold: 'DMSans_700Bold',
-    serif: 'DMSerifDisplay_400Regular',
+    serif: 'LibreBaskerville_400Regular',
+    serifMedium: 'LibreBaskerville_500Medium',
+    serifSemiBold: 'LibreBaskerville_600SemiBold',
+    serifBold: 'LibreBaskerville_700Bold',
   },
 
   sizes: {

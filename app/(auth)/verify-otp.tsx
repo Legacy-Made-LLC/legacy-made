@@ -119,7 +119,11 @@ export default function VerifyOtpScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
-            {"We sent a code to "}<Text style={styles.emailText}>{email}</Text>
+            We sent a verification code to{' '}
+            <Text style={styles.emailText}>{email}</Text>
+          </Text>
+          <Text style={styles.explanation}>
+            This helps us verify that it&apos;s really you and keeps your information secure.
           </Text>
         </View>
 
@@ -189,6 +193,13 @@ const styles = StyleSheet.create({
   emailText: {
     fontFamily: typography.fontFamily.semibold,
     color: colors.textPrimary,
+  },
+  explanation: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
+    marginTop: spacing.md,
   },
   form: {
     flex: 1,

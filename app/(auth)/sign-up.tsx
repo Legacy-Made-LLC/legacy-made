@@ -20,9 +20,13 @@ export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isFormValid = firstName.trim() && lastName.trim() && emailAddress.trim();
 
   const onContinuePress = async () => {
     if (!isLoaded) return;
@@ -31,9 +35,11 @@ export default function SignUpScreen() {
     setError('');
 
     try {
-      // Create account and send OTP
+      // Create account with name and email, then send OTP
       await signUp.create({
-        emailAddress,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        emailAddress: emailAddress.trim(),
       });
 
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
@@ -67,11 +73,12 @@ export default function SignUpScreen() {
           { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg },
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.title}>Tell us about you</Text>
           <Text style={styles.subtitle}>
-            {"Enter your email and we'll send you a code to get started."}
+            This helps us personalize your experience and keep your information secure.
           </Text>
         </View>
 
@@ -82,22 +89,47 @@ export default function SignUpScreen() {
             </View>
           ) : null}
 
+          <View style={styles.nameRow}>
+            <View style={styles.nameField}>
+              <Input
+                label="First Name"
+                value={firstName}
+                placeholder="First name"
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                textContentType="givenName"
+                autoFocus
+              />
+            </View>
+            <View style={styles.nameField}>
+              <Input
+                label="Last Name"
+                value={lastName}
+                placeholder="Last name"
+                onChangeText={setLastName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                textContentType="familyName"
+              />
+            </View>
+          </View>
+
           <Input
             label="Email"
             value={emailAddress}
-            placeholder="Enter your email"
+            placeholder="your@email.com"
             onChangeText={setEmailAddress}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
             textContentType="emailAddress"
-            autoFocus
           />
 
           <Button
-            title={isLoading ? 'Sending code...' : 'Continue'}
+            title={isLoading ? 'Creating account...' : 'Continue'}
             onPress={onContinuePress}
-            disabled={isLoading || !emailAddress}
+            disabled={isLoading || !isFormValid}
             style={styles.button}
           />
         </View>
@@ -138,6 +170,13 @@ const styles = StyleSheet.create({
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
   },
   form: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  nameField: {
     flex: 1,
   },
   errorContainer: {

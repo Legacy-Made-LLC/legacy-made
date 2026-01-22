@@ -66,6 +66,7 @@ The MVP focuses on the **primary entry point** — helping users organize critic
 
 - **Avoid `as any`** — Do not use `as any` type assertions. Find proper type solutions instead (use specific types, generics, or fix the underlying type issue).
 - Prefer type-safe solutions over type assertions in general.
+- **Data-driven animations** — When animating lists of items (stanzas, cards, list items, etc.), create animation values dynamically based on the data array length. Never hardcode animation values for a fixed number of items. This ensures animations automatically adapt when items are added or removed. Extract timing constants to a configuration object for easy tuning.
 
 ### Project Structure
 
@@ -139,8 +140,8 @@ export const colors = {
   textTertiary: "#9B9B9B", // Light gray for placeholders/hints
 
   // Accents
-  primary: "#1C2541", // Deep navy for primary actions
-  primaryPressed: "#0F1629", // Darker navy for pressed state
+  primary: "#8a9785", // Muted sage green for primary actions
+  primaryPressed: "#7d8a79", // Darker sage for pressed state
 
   // Semantic
   success: "#4A7C59", // Muted green
@@ -153,13 +154,26 @@ export const colors = {
 };
 ```
 
+### Four-Feature Color System
+
+Each main feature has a distinct pastel color identity that carries through the entire experience:
+
+| Feature | Color | Hex | Usage |
+|---------|-------|-----|-------|
+| **Information Vault** | Sage Green | `#8a9785` | Primary feature for organizing critical information |
+| **Wishes & Guidance** | Soft Lavender | TBD | Future feature for end-of-life wishes |
+| **Legacy Messages** | Soft Blue | TBD | Future feature for personal messages to loved ones |
+| **Family Access** | Warm Blush/Peach | TBD | Future feature for sharing access with family |
+
+This color system creates visual distinction between features while maintaining the calm, cohesive aesthetic. The sage green serves as the primary accent for the MVP (Information Vault pillar).
+
 ### Typography
 
 ```typescript
 export const typography = {
   // Use system fonts that feel warm
   fontFamily: {
-    serif: "Georgia", // For main headings (warm, human)
+    serif: "LibreBaskerville", // For main headings (warm, human)
     sans: "System", // San Francisco on iOS
   },
 
@@ -205,9 +219,9 @@ export const spacing = {
 
 **Buttons:**
 
-- Primary: Deep navy (#1C2541), white text, pill-shaped (borderRadius: 25), height: 52px
-- Secondary: White background, navy border, navy text
-- Subtle: Transparent background, navy text
+- Primary: Sage green (#8a9785), white text, pill-shaped (borderRadius: 25), height: 52px
+- Secondary: White background, sage border, sage text
+- Subtle: Transparent background, sage text
 - Disabled: Gray background (#E8E6E3), gray text
 
 **Cards:**
@@ -222,7 +236,7 @@ export const spacing = {
 - Height: 52px
 - Border: 1px solid #E8E6E3
 - Border radius: 12px
-- Focus border: #1C2541
+- Focus border: #8a9785
 - Placeholder color: #9B9B9B
 - Label: Uppercase, 11px, #6B6B6B, letter-spacing: 1px
 
@@ -756,7 +770,7 @@ Keep animations **subtle and calming**:
 
 4. **Consistent spacing:** Use the spacing scale religiously. Generous whitespace is key to the calm feel.
 
-5. **Typography hierarchy:** Use the serif font (Georgia) for main headings to add warmth. Sans-serif for everything else.
+5. **Typography hierarchy:** Use the serif font (Libre Baskerville) for main headings to add warmth. Sans-serif (DM Sans) for everything else.
 
 6. **Test on device:** The iPhone simulator is fine, but test on a real device if possible. Touch feedback matters.
 

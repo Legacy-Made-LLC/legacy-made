@@ -1,16 +1,19 @@
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, typography } from "@/constants/theme";
 
+const iconSize = 26;
+
 // Home icon with special circular background
-function HomeTabIcon() {
+function HomeTabIcon({ focused }: { focused: boolean }) {
+  if (focused) {
+    return <Image source={require("@/assets/images/muted-green-logo-rounded-rectangle-filled.png")} style={styles.homeIcon} />
+  }
   return (
-    <View style={styles.homeIconContainer}>
-      <Feather name="user" size={22} color="#FFFFFF" />
-    </View>
+    <Image source={require("@/assets/images/muted-green-logo-rounded-rectangle.png")} style={styles.homeIcon} />
   );
 }
 
@@ -41,9 +44,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="information"
         options={{
-          title: "Information",
-          tabBarIcon: ({ color }) => (
-            <Feather name="clipboard" size={22} color={color} />
+          title: "Info",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "document-text" : "document-text-outline"}
+              size={iconSize}
+              color={color}
+            />
           ),
         }}
       />
@@ -51,8 +58,12 @@ export default function TabsLayout() {
         name="wishes"
         options={{
           title: "Wishes",
-          tabBarIcon: ({ color }) => (
-            <Feather name="heart" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "heart" : "heart-outline"}
+              size={iconSize}
+              color={color}
+            />
           ),
         }}
       />
@@ -60,16 +71,19 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: () => <HomeTabIcon />,
-          tabBarLabel: () => null, // Hide label for home tab
+          tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="legacy"
         options={{
           title: "Legacy",
-          tabBarIcon: ({ color }) => (
-            <Feather name="video" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "videocam" : "videocam-outline"}
+              size={iconSize}
+              color={color}
+            />
           ),
         }}
       />
@@ -77,8 +91,12 @@ export default function TabsLayout() {
         name="family"
         options={{
           title: "Family",
-          tabBarIcon: ({ color }) => (
-            <Feather name="users" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "people" : "people-outline"}
+              size={iconSize}
+              color={color}
+            />
           ),
         }}
       />
@@ -87,18 +105,11 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  homeIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#5C6B5D", // Sage green from the image
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: -12, // Elevate above the tab bar
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+  homeIcon: {
+    width: iconSize + 5,
+    height: iconSize + 5,
   },
+  homeIconFocused: {
+    opacity: 0.8,
+  }
 });

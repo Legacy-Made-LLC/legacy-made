@@ -65,5 +65,10 @@ export interface Category {
   description: string;
   guidance: string;
   icon: string;
+  ionIcon: string;
   route: string;
+  /** Data key used to look up item count from app state */
+  stateKey?: 'contacts' | 'finances' | 'insurance' | 'documents' | 'homeResponsibilities' | 'digitalAccounts';
+  /** Filter function name for subset counting (e.g., primary contacts vs all contacts) */
+  filterType?: 'primary' | 'secondary';
 }

@@ -6,16 +6,8 @@ import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { categories } from "@/constants/categories";
 import { colors, spacing, typography } from "@/constants/theme";
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
-  const greeting = getGreeting();
 
   return (
     <ScrollView
@@ -26,9 +18,11 @@ export default function InformationScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.welcome}>
-        <Text style={styles.greeting}>{greeting}</Text>
-        <Text style={styles.pageTitle}>Your Legacy Plan</Text>
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Information Vault</Text>
+        <Text style={styles.description}>
+          Accounts, documents, and contacts —{"\n"}organized for when it matters
+        </Text>
       </View>
 
       <View style={styles.categories}>
@@ -47,23 +41,24 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
-  welcome: {
+  header: {
     marginBottom: spacing.xl,
     alignItems: "center",
   },
-  greeting: {
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
-    marginBottom: 2,
+  pageTitle: {
+    fontFamily: typography.fontFamily.serifBold,
+    fontSize: 24,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
     textAlign: "center",
   },
-  pageTitle: {
-    fontFamily: typography.fontFamily.serif,
-    fontSize: 28,
-    color: colors.textPrimary,
+  description: {
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
     textAlign: "center",
+    lineHeight: typography.sizes.body * typography.lineHeights.normal,
   },
   categories: {
     gap: spacing.xs,

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,7 +12,7 @@ export default function LegacyScreen() {
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Feather name="video" size={40} color={colors.textTertiary} />
+          <Ionicons name="videocam-outline" size={40} color={colors.textTertiary} />
         </View>
         <Text style={styles.title}>Legacy Messages</Text>
         <Text style={styles.subtitle}>

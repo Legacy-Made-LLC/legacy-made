@@ -1,25 +1,44 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { Redirect, Stack } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { Onboarding } from "@/components/onboarding/Onboarding";
 import { Header } from "@/components/ui/Header";
 import { Menu } from "@/components/ui/Menu";
 import { colors, typography } from "@/constants/theme";
+import { useOnboardingContext } from "@/data/OnboardingContext";
+import { usePlan } from "@/data/PlanProvider";
+import { useAppContext } from "@/data/store";
 
 export default function AppLayout() {
   const { isSignedIn } = useAuth();
+  const { pendingContact, clearPendingContact } = useOnboardingContext();
+  const { planId } = usePlan();
+  const { addContact, refresh } = useAppContext();
 
   const [menuVisible, setMenuVisible] = useState(false);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const hasSavedPendingContact = useRef(false);
+
+  // Save the pending contact from onboarding after authentication and plan is ready
+  useEffect(() => {
+    if (pendingContact && planId && !hasSavedPendingContact.current) {
+      hasSavedPendingContact.current = true;
+      addContact({
+        name: pendingContact.name,
+        relationship: pendingContact.relationship,
+        phone: pendingContact.phone,
+        email: pendingContact.email,
+        isPrimary: true,
+      }).then(() => {
+        clearPendingContact();
+        // Refresh data to ensure the new contact is visible
+        refresh();
+      });
+    }
+  }, [pendingContact, planId, addContact, clearPendingContact, refresh]);
 
   if (!isSignedIn) {
     return <Redirect href="/(auth)" />;
-  }
-
-  if (!onboardingComplete) {
-    return <Onboarding onComplete={() => setOnboardingComplete(true)} />;
   }
 
   return (
