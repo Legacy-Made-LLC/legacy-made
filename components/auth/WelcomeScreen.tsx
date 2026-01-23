@@ -1,10 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
-import { colors, spacing, typography } from '@/constants/theme';
+import { borderRadius, colors, spacing, typography } from '@/constants/theme';
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
@@ -13,6 +14,11 @@ export function WelcomeScreen() {
     <View style={[styles.container, { paddingTop: insets.top + spacing.xxl }]}>
       <View style={styles.content}>
         <View style={styles.header}>
+          <Image
+            source={require('@/assets/images/muted-green-circle-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Legacy Made</Text>
           <Text style={styles.subtitle}>
             Organize what matters most{'\n'}so your family is never left guessing.
@@ -21,7 +27,9 @@ export function WelcomeScreen() {
 
         <View style={styles.features}>
           <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>📋</Text>
+            <View style={styles.featureIconContainer}>
+              <Ionicons name="document-text-outline" size={22} color={colors.textTertiary} />
+            </View>
             <View style={styles.featureText}>
               <Text style={styles.featureTitle}>Important Information</Text>
               <Text style={styles.featureDescription}>
@@ -31,7 +39,9 @@ export function WelcomeScreen() {
           </View>
 
           <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>💝</Text>
+            <View style={styles.featureIconContainer}>
+              <Ionicons name="heart-outline" size={22} color={colors.textTertiary} />
+            </View>
             <View style={styles.featureText}>
               <Text style={styles.featureTitle}>Calm & Human</Text>
               <Text style={styles.featureDescription}>
@@ -41,7 +51,9 @@ export function WelcomeScreen() {
           </View>
 
           <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🔒</Text>
+            <View style={styles.featureIconContainer}>
+              <Ionicons name="lock-closed-outline" size={22} color={colors.textTertiary} />
+            </View>
             <View style={styles.featureText}>
               <Text style={styles.featureTitle}>Private & Secure</Text>
               <Text style={styles.featureDescription}>
@@ -74,19 +86,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   header: {
-    marginBottom: spacing.xxl,
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  logo: {
+    width: 48,
+    height: 48,
+    marginBottom: spacing.sm,
   },
   title: {
     fontFamily: typography.fontFamily.serif,
-    fontSize: typography.sizes.displayLarge + 8,
+    fontSize: typography.sizes.displayLarge,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   subtitle: {
     fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.titleLarge,
+    fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    lineHeight: typography.sizes.titleLarge * typography.lineHeights.relaxed,
+    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
+    textAlign: 'center',
   },
   features: {
     gap: spacing.lg,
@@ -96,12 +116,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
   },
-  featureIcon: {
-    fontSize: 28,
-    marginTop: 2,
+  featureIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   featureText: {
     flex: 1,
+    paddingTop: spacing.xs,
   },
   featureTitle: {
     fontFamily: typography.fontFamily.semibold,
@@ -111,9 +136,9 @@ const styles = StyleSheet.create({
   },
   featureDescription: {
     fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.body,
+    fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
-    lineHeight: typography.sizes.body * typography.lineHeights.normal,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
   buttons: {
     paddingHorizontal: spacing.lg,

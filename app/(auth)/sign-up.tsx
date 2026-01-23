@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FormInput, signUpSchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
 import { colors, spacing, typography } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SignUpScreen() {
   const { signUp, isLoaded } = useSignUp();
@@ -82,6 +84,14 @@ export default function SignUpScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <Pressable
+          onPress={router.back}
+          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+          hitSlop={12}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </Pressable>
+
         <View style={styles.header}>
           <Text style={styles.title}>Tell us about you</Text>
           <Text style={styles.subtitle}>
@@ -173,6 +183,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  backButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
   },
   header: {
     marginBottom: spacing.xl,
