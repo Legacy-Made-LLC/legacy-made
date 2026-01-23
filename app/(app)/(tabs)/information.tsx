@@ -4,12 +4,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SectionCard } from "@/components/vault/SectionCard";
 import { vaultSections } from "@/constants/vault";
-import { useVaultEntryCounts } from "@/hooks/useVaultEntries";
+import { useEntryCountsQuery } from "@/hooks/queries";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
-  const { counts } = useVaultEntryCounts();
+  const { data: counts = {} } = useEntryCountsQuery();
 
   return (
     <ScrollView

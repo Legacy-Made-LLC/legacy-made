@@ -8,16 +8,18 @@ import { Menu } from "@/components/ui/Menu";
 import { colors, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
-import { useAppContext } from "@/data/store";
+import { useCreateEntry } from "@/hooks/queries";
 
 export default function AppLayout() {
   const { isSignedIn } = useAuth();
   const { pendingContact, clearPendingContact } = useOnboardingContext();
   const { planId } = usePlan();
-  const { addContact, refresh } = useAppContext();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
+
+  // Create entry mutation for saving onboarding contact
+  const createContactMutation = useCreateEntry('contacts.primary');
 
   // Save the pending contact from onboarding after authentication and plan is ready
   useEffect(() => {
@@ -25,19 +27,24 @@ export default function AppLayout() {
       hasSavedPendingContact.current = true;
       // Combine firstName and lastName for the Contact type
       const fullName = `${pendingContact.firstName} ${pendingContact.lastName}`.trim();
-      addContact({
-        name: fullName,
-        relationship: pendingContact.relationship,
-        phone: pendingContact.phone,
-        email: pendingContact.email,
-        isPrimary: true,
+
+      createContactMutation.mutateAsync({
+        title: fullName,
+        notes: undefined,
+        metadata: {
+          firstName: pendingContact.firstName,
+          lastName: pendingContact.lastName,
+          relationship: pendingContact.relationship,
+          phone: pendingContact.phone,
+          email: pendingContact.email,
+          isPrimary: true,
+        },
       }).then(() => {
         clearPendingContact();
-        // Refresh data to ensure the new contact is visible
-        refresh();
+        // TanStack Query handles cache invalidation automatically
       });
     }
-  }, [pendingContact, planId, addContact, clearPendingContact, refresh]);
+  }, [pendingContact, planId, createContactMutation, clearPendingContact]);
 
   if (!isSignedIn) {
     return <Redirect href="/(auth)" />;

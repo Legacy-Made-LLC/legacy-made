@@ -9,9 +9,10 @@ import {
   View,
 } from "react-native";
 
+import { useQueryClient, useIsFetching } from "@tanstack/react-query";
+
 import { borderRadius, colors, shadows, spacing, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useAppContext } from "@/data/store";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DevAction {
@@ -31,7 +32,9 @@ export function DevMenu() {
     setHasCompletedInitialOnboarding,
     resetOnboardingState,
   } = useOnboardingContext();
-  const { refresh, isLoading } = useAppContext();
+  const queryClient = useQueryClient();
+  const isFetching = useIsFetching();
+  const isLoading = isFetching > 0;
 
   const insets = useSafeAreaInsets();
 
@@ -60,7 +63,7 @@ export function DevMenu() {
   };
 
   const handleRefreshData = async () => {
-    await refresh();
+    await queryClient.invalidateQueries();
     setIsOpen(false);
   };
 

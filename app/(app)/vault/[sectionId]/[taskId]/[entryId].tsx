@@ -8,13 +8,13 @@
  * entryId = <uuid> for editing an existing entry
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getTask } from '@/constants/vault';
 import { getFormComponent } from '@/components/vault/registry';
 import { colors, typography, spacing } from '@/constants/theme';
-import { useVaultEntry, useVaultEntriesMutations } from '@/hooks/useVaultEntries';
+import { useEntryQuery, useCreateEntry, useUpdateEntry, useDeleteEntry } from '@/hooks/queries';
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -31,39 +31,37 @@ export default function EntryScreen() {
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
 
   // Fetch entry data if editing
-  const { entry, isLoading } = useVaultEntry(isNew ? undefined : entryId);
+  const { data: entry, isLoading } = useEntryQuery(isNew ? undefined : entryId);
 
   // Mutations
-  const { createEntry, updateEntry, deleteEntry } = useVaultEntriesMutations(task?.taskKey);
-  const [isSaving, setIsSaving] = useState(false);
+  const createMutation = useCreateEntry(task?.taskKey);
+  const updateMutation = useUpdateEntry(task?.taskKey);
+  const deleteMutation = useDeleteEntry(task?.taskKey);
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   // Handle save
   const handleSave = useCallback(
     async (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => {
       if (!task) return;
 
-      setIsSaving(true);
-      try {
-        if (isNew) {
-          await createEntry(data);
-        } else {
-          await updateEntry(entryId, data);
-        }
-        router.back();
-      } finally {
-        setIsSaving(false);
+      if (isNew) {
+        await createMutation.mutateAsync(data);
+      } else {
+        await updateMutation.mutateAsync({ entryId, data });
       }
+      router.back();
     },
-    [task, isNew, entryId, createEntry, updateEntry, router]
+    [task, isNew, entryId, createMutation, updateMutation, router]
   );
 
   // Handle delete
   const handleDelete = useCallback(async () => {
     if (!entryId || isNew) return;
 
-    await deleteEntry(entryId);
+    await deleteMutation.mutateAsync(entryId);
     router.back();
-  }, [entryId, isNew, deleteEntry, router]);
+  }, [entryId, isNew, deleteMutation, router]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {

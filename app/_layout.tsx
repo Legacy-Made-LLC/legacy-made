@@ -18,7 +18,7 @@ import { DevMenu } from "@/components/dev/DevMenu";
 import Loader from "@/components/ui/Loader";
 import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
-import { AppProvider } from "@/data/store";
+import { QueryProvider } from "@/providers/QueryProvider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -49,15 +49,15 @@ export default function RootLayout() {
   return (
     <OnboardingProvider>
       <ClerkProvider tokenCache={tokenCache}>
-        <PlanProvider>
-          <AppProvider>
+        <QueryProvider>
+          <PlanProvider>
             <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
               {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
             </Stack>
             <StatusBar style="dark" />
             <DevMenu />
-          </AppProvider>
-        </PlanProvider>
+          </PlanProvider>
+        </QueryProvider>
       </ClerkProvider>
     </OnboardingProvider>
   );

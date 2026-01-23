@@ -5,13 +5,13 @@
  * list component for that task type.
  */
 
-import React, { useLayoutEffect, useCallback } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { getSection, getTask } from '@/constants/vault';
 import { getListComponent } from '@/components/vault/registry';
 import { colors, typography, spacing } from '@/constants/theme';
-import { useVaultEntries } from '@/hooks/useVaultEntries';
+import { useEntriesQuery } from '@/hooks/queries';
 
 export default function TaskScreen() {
   const { sectionId, taskId } = useLocalSearchParams<{
@@ -37,14 +37,7 @@ export default function TaskScreen() {
   const ListComponent = task ? getListComponent(task.taskKey) : undefined;
 
   // Fetch entries for this task
-  const { entries, isLoading, error, refresh } = useVaultEntries(task?.taskKey);
-
-  // Refresh entries when the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh])
-  );
+  const { data: entries = [], isLoading } = useEntriesQuery(task?.taskKey);
 
   // Handle navigation
   const handleEntryPress = (entryId: string) => {

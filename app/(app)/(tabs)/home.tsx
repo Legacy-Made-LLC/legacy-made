@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PressableCard } from "@/components/ui/Card";
 import { borderRadius, colors, shadows, spacing, typography } from "@/constants/theme";
-import { useAppContext } from "@/data/store";
+import { useEntryCountsQuery } from "@/hooks/queries";
 
 // Pillar definitions for the home screen
 const pillars = [
@@ -54,16 +54,10 @@ const pillars = [
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state } = useAppContext();
+  const { data: counts = {} } = useEntryCountsQuery();
 
-  // Calculate Information pillar progress (sum of all 6 categories)
-  const informationCount =
-    state.contacts.length +
-    state.finances.length +
-    state.insurance.length +
-    state.documents.length +
-    state.homeResponsibilities.length +
-    state.digitalAccounts.length;
+  // Calculate Information pillar progress (sum of all categories)
+  const informationCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
 
   // Get progress for each pillar
   const getPillarProgress = (pillarId: string) => {
