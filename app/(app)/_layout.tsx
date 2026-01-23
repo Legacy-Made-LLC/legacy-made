@@ -23,8 +23,10 @@ export default function AppLayout() {
   useEffect(() => {
     if (pendingContact && planId && !hasSavedPendingContact.current) {
       hasSavedPendingContact.current = true;
+      // Combine firstName and lastName for the Contact type
+      const fullName = `${pendingContact.firstName} ${pendingContact.lastName}`.trim();
       addContact({
-        name: pendingContact.name,
+        name: fullName,
         relationship: pendingContact.relationship,
         phone: pendingContact.phone,
         email: pendingContact.email,

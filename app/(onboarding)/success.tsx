@@ -9,7 +9,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function SuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { contactName } = useOnboardingContext();
+  const { contactFirstName, contactLastName } = useOnboardingContext();
+  const contactName = `${contactFirstName} ${contactLastName}`.trim();
 
   const checkmarkScale = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;

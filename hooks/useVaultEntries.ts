@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '@/api';
 import { usePlan } from '@/data/PlanProvider';
-import type { VaultEntry } from '@/components/vault/registry';
+import type { Entry } from '@/api/types';
 
 /**
  * Hook to fetch entries for a specific task
@@ -18,7 +18,7 @@ export function useVaultEntries(taskKey: string | undefined) {
   const { planId } = usePlan();
   const { entries: entriesApi } = useApi();
 
-  const [entries, setEntries] = useState<VaultEntry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,15 +32,8 @@ export function useVaultEntries(taskKey: string | undefined) {
     setError(null);
 
     try {
-      // Fetch entries filtered by taskKey
       const result = await entriesApi.listByTaskKey(planId, taskKey);
-      // Map API entries to VaultEntry format
-      const vaultEntries: VaultEntry[] = result.map((entry) => ({
-        ...entry,
-        taskKey: (entry as unknown as VaultEntry).taskKey || taskKey,
-        metadata: entry.metadata as unknown as Record<string, unknown>,
-      }));
-      setEntries(vaultEntries);
+      setEntries(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch entries';
       setError(message);
@@ -66,14 +59,15 @@ export function useVaultEntries(taskKey: string | undefined) {
  * Hook to fetch a single entry by ID
  */
 export function useVaultEntry(entryId: string | undefined) {
+  const { planId } = usePlan();
   const { entries: entriesApi } = useApi();
 
-  const [entry, setEntry] = useState<VaultEntry | undefined>(undefined);
+  const [entry, setEntry] = useState<Entry | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchEntry = useCallback(async () => {
-    if (!entryId) {
+    if (!planId || !entryId) {
       setEntry(undefined);
       return;
     }
@@ -82,14 +76,8 @@ export function useVaultEntry(entryId: string | undefined) {
     setError(null);
 
     try {
-      const result = await entriesApi.get(entryId);
-      // Map API entry to VaultEntry format
-      const vaultEntry: VaultEntry = {
-        ...result,
-        taskKey: (result as unknown as VaultEntry).taskKey,
-        metadata: result.metadata as unknown as Record<string, unknown>,
-      };
-      setEntry(vaultEntry);
+      const result = await entriesApi.get(planId, entryId);
+      setEntry(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch entry';
       setError(message);
@@ -97,7 +85,7 @@ export function useVaultEntry(entryId: string | undefined) {
     } finally {
       setIsLoading(false);
     }
-  }, [entryId, entriesApi]);
+  }, [planId, entryId, entriesApi]);
 
   useEffect(() => {
     fetchEntry();
@@ -119,12 +107,18 @@ export function useVaultEntriesMutations(taskKey: string | undefined) {
   const { entries: entriesApi } = useApi();
 
   const createEntry = useCallback(
-    async (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => {
+    async (data: { title?: string; notes?: string; metadata: Record<string, unknown> }) => {
       if (!planId || !taskKey) {
         throw new Error('Plan ID and task key are required');
       }
 
-      return entriesApi.createWithTaskKey(planId, taskKey, data);
+      return entriesApi.create({
+        planId,
+        taskKey,
+        title: data.title,
+        notes: data.notes,
+        metadata: data.metadata,
+      });
     },
     [planId, taskKey, entriesApi]
   );
@@ -134,16 +128,22 @@ export function useVaultEntriesMutations(taskKey: string | undefined) {
       entryId: string,
       data: { title?: string; notes?: string; metadata?: Record<string, unknown> }
     ) => {
-      return entriesApi.update(entryId, data);
+      if (!planId) {
+        throw new Error('Plan ID is required');
+      }
+      return entriesApi.update(planId, entryId, data);
     },
-    [entriesApi]
+    [planId, entriesApi]
   );
 
   const deleteEntry = useCallback(
     async (entryId: string) => {
-      return entriesApi.delete(entryId);
+      if (!planId) {
+        throw new Error('Plan ID is required');
+      }
+      return entriesApi.delete(planId, entryId);
     },
-    [entriesApi]
+    [planId, entriesApi]
   );
 
   return {

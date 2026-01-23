@@ -25,7 +25,8 @@ export default function VerifyOtpScreen() {
     userEmail,
     otpCode,
     setOtpCode,
-    contactName,
+    contactFirstName,
+    contactLastName,
     contactPhone,
     contactRelationship,
     contactEmail,
@@ -53,7 +54,8 @@ export default function VerifyOtpScreen() {
 
         // Save the pending contact for later
         setPendingContact({
-          name: contactName.trim(),
+          firstName: contactFirstName.trim(),
+          lastName: contactLastName.trim(),
           phone: contactPhone.trim(),
           relationship: contactRelationship.trim(),
           email: contactEmail.trim() || undefined,

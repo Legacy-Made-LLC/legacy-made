@@ -370,18 +370,6 @@ export const onboardingStyles = StyleSheet.create({
   },
 });
 
-// Relationship options for dropdown
-export const RELATIONSHIP_OPTIONS = [
-  "Spouse / Partner",
-  "Child",
-  "Sibling",
-  "Parent",
-  "Close Friend",
-  "Attorney",
-  "Financial Advisor",
-  "Other",
-];
-
 // Intro messages for the animated intro screen
 export const INTRO_MESSAGES = [
   "If something happened, would the people you love know what to do next?",
@@ -397,19 +385,3 @@ export const INTRO_ANIMATION = {
   INITIAL_OFFSET: 20,
   CONTAINER_OFFSET_PER_ITEM: 20,
 };
-
-// Format phone number as (XXX) XXX-XXXX
-export function formatPhoneNumber(value: string): string {
-  const numbers = value.replace(/\D/g, "");
-  const limited = numbers.slice(0, 10);
-
-  if (limited.length === 0) {
-    return "";
-  } else if (limited.length <= 3) {
-    return `(${limited}`;
-  } else if (limited.length <= 6) {
-    return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
-  } else {
-    return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
-  }
-}

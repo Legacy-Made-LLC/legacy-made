@@ -10,7 +10,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const ONBOARDING_COMPLETE_KEY = "legacy_made_onboarding_complete";
 
 export interface PendingContact {
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   relationship: string;
   email?: string;
@@ -28,8 +29,10 @@ interface OnboardingContextType {
   clearPendingContact: () => void;
 
   // Contact form state
-  contactName: string;
-  setContactName: (value: string) => void;
+  contactFirstName: string;
+  setContactFirstName: (value: string) => void;
+  contactLastName: string;
+  setContactLastName: (value: string) => void;
   contactPhone: string;
   setContactPhone: (value: string) => void;
   contactRelationship: string;
@@ -104,7 +107,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   };
 
   // Contact form state
-  const [contactName, setContactName] = useState("");
+  const [contactFirstName, setContactFirstName] = useState("");
+  const [contactLastName, setContactLastName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactRelationship, setContactRelationship] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -122,7 +126,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   };
 
   const resetOnboardingState = () => {
-    setContactName("");
+    setContactFirstName("");
+    setContactLastName("");
     setContactPhone("");
     setContactRelationship("");
     setContactEmail("");
@@ -141,8 +146,10 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         pendingContact,
         setPendingContact,
         clearPendingContact,
-        contactName,
-        setContactName,
+        contactFirstName,
+        setContactFirstName,
+        contactLastName,
+        setContactLastName,
         contactPhone,
         setContactPhone,
         contactRelationship,

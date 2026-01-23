@@ -5,11 +5,11 @@
  * list component for that task type.
  */
 
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { getSection, getTask } from '@/constants/vault';
-import { getListComponent, type VaultEntry } from '@/components/vault/registry';
+import { getListComponent } from '@/components/vault/registry';
 import { colors, typography, spacing } from '@/constants/theme';
 import { useVaultEntries } from '@/hooks/useVaultEntries';
 
@@ -38,6 +38,13 @@ export default function TaskScreen() {
 
   // Fetch entries for this task
   const { entries, isLoading, error, refresh } = useVaultEntries(task?.taskKey);
+
+  // Refresh entries when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   // Handle navigation
   const handleEntryPress = (entryId: string) => {

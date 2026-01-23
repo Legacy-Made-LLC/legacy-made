@@ -7,13 +7,13 @@
 
 import type {
   Entry,
+  CreateEntryRequest,
   ContactMetadata,
   FinancialMetadata,
   InsuranceMetadata,
   LegalDocumentMetadata,
   HomeMetadata,
   DigitalAccessMetadata,
-  CreateEntryRequest,
 } from './types';
 
 import type {
@@ -41,7 +41,7 @@ export function entryToContact(entry: Entry<ContactMetadata>): Contact {
     phone: metadata.phone,
     email: metadata.email,
     notes: metadata.reason || entry.notes || undefined,
-    isPrimary: entry.priority === 'primary',
+    isPrimary: metadata.isPrimary ?? false,
   };
 }
 
@@ -59,10 +59,9 @@ export function contactToCreateRequest(
 
   return {
     planId,
-    category: 'contact',
+    taskKey: contact.isPrimary ? 'contacts.primary' : 'contacts.backup',
     title: contact.name,
     notes: contact.notes,
-    priority: contact.isPrimary ? 'primary' : undefined,
     metadata: {
       firstName,
       lastName,
@@ -70,6 +69,7 @@ export function contactToCreateRequest(
       phone: contact.phone,
       email: contact.email,
       reason: contact.notes,
+      isPrimary: contact.isPrimary,
     },
   };
 }
@@ -85,7 +85,7 @@ export function entryToFinancialAccount(entry: Entry<FinancialMetadata>): Financ
   const { metadata } = entry;
   return {
     id: entry.id,
-    accountName: entry.title,
+    accountName: entry.title || '',
     institution: metadata.institution,
     accountType: mapAccountType(metadata.accountType),
     accountNumberLast4: metadata.accountNumber,
@@ -115,7 +115,7 @@ export function financialAccountToCreateRequest(
 ): CreateEntryRequest<FinancialMetadata> {
   return {
     planId,
-    category: 'financial',
+    taskKey: 'financial',
     title: account.accountName,
     notes: account.notes,
     metadata: {
@@ -138,7 +138,7 @@ export function entryToInsurancePolicy(entry: Entry<InsuranceMetadata>): Insuran
   const { metadata } = entry;
   return {
     id: entry.id,
-    policyName: entry.title,
+    policyName: entry.title || '',
     provider: metadata.provider,
     policyNumber: metadata.policyNumber,
     coverageAmount: metadata.coverageDetails,
@@ -156,7 +156,7 @@ export function insurancePolicyToCreateRequest(
 ): CreateEntryRequest<InsuranceMetadata> {
   return {
     planId,
-    category: 'insurance',
+    taskKey: 'insurance',
     title: policy.policyName,
     notes: policy.notes,
     metadata: {
@@ -179,7 +179,7 @@ export function entryToLegalDocument(entry: Entry<LegalDocumentMetadata>): Legal
   const { metadata } = entry;
   return {
     id: entry.id,
-    documentName: entry.title,
+    documentName: entry.title || '',
     location: metadata.location,
     dateCreated: entry.createdAt ? entry.createdAt.split('T')[0] : undefined,
     notes: metadata.notes || entry.notes || undefined,
@@ -195,7 +195,7 @@ export function legalDocumentToCreateRequest(
 ): CreateEntryRequest<LegalDocumentMetadata> {
   return {
     planId,
-    category: 'legal_document',
+    taskKey: 'documents',
     title: doc.documentName,
     notes: doc.notes,
     metadata: {
@@ -217,7 +217,7 @@ export function entryToHomeResponsibility(entry: Entry<HomeMetadata>): HomeRespo
   const { metadata } = entry;
   return {
     id: entry.id,
-    itemName: entry.title,
+    itemName: entry.title || '',
     itemType: mapItemType(metadata.responsibilityType),
     details: metadata.accountInfo || metadata.provider,
     notes: metadata.notes || entry.notes || undefined,
@@ -246,7 +246,7 @@ export function homeResponsibilityToCreateRequest(
 ): CreateEntryRequest<HomeMetadata> {
   return {
     planId,
-    category: 'home',
+    taskKey: 'property',
     title: item.itemName,
     notes: item.notes,
     metadata: {
@@ -268,44 +268,12 @@ export function entryToDigitalAccount(entry: Entry<DigitalAccessMetadata>): Digi
   const { metadata } = entry;
   return {
     id: entry.id,
-    accountName: entry.title,
+    accountName: entry.title || '',
     platform: metadata.service,
     username: metadata.username,
     accessNotes: metadata.notes || entry.notes || undefined,
-    importance: mapImportance(entry.priority),
+    importance: metadata.importance ?? 'low',
   };
-}
-
-/**
- * Map API priority to app's importance level
- */
-function mapImportance(priority: string | null): DigitalAccount['importance'] {
-  switch (priority) {
-    case 'primary':
-      return 'critical';
-    case 'secondary':
-      return 'high';
-    case 'backup':
-      return 'medium';
-    default:
-      return 'low';
-  }
-}
-
-/**
- * Map app importance to API priority
- */
-function importanceToPriority(importance: DigitalAccount['importance']): 'primary' | 'secondary' | 'backup' | undefined {
-  switch (importance) {
-    case 'critical':
-      return 'primary';
-    case 'high':
-      return 'secondary';
-    case 'medium':
-      return 'backup';
-    default:
-      return undefined;
-  }
 }
 
 /**
@@ -317,14 +285,14 @@ export function digitalAccountToCreateRequest(
 ): CreateEntryRequest<DigitalAccessMetadata> {
   return {
     planId,
-    category: 'digital_access',
+    taskKey: 'digital',
     title: account.accountName,
     notes: account.accessNotes,
-    priority: importanceToPriority(account.importance),
     metadata: {
       service: account.platform,
       username: account.username,
       notes: account.accessNotes,
+      importance: account.importance,
     },
   };
 }

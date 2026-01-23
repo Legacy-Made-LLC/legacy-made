@@ -4,8 +4,6 @@
 
 // Types
 export type {
-  EntryCategory,
-  EntryPriority,
   Entry,
   ContactMetadata,
   FinancialMetadata,
@@ -13,13 +11,6 @@ export type {
   LegalDocumentMetadata,
   HomeMetadata,
   DigitalAccessMetadata,
-  EntryMetadata,
-  ContactEntry,
-  FinancialEntry,
-  InsuranceEntry,
-  LegalDocumentEntry,
-  HomeEntry,
-  DigitalAccessEntry,
   CreateEntryRequest,
   UpdateEntryRequest,
   ListEntriesParams,

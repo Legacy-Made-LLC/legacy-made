@@ -36,12 +36,15 @@ import {
   entryToLegalDocument,
   entryToHomeResponsibility,
   entryToDigitalAccount,
-  type ContactMetadata,
-  type FinancialMetadata,
-  type InsuranceMetadata,
-  type LegalDocumentMetadata,
-  type HomeMetadata,
-  type DigitalAccessMetadata,
+} from '@/api';
+import type {
+  Entry,
+  ContactMetadata,
+  FinancialMetadata,
+  InsuranceMetadata,
+  LegalDocumentMetadata,
+  HomeMetadata,
+  DigitalAccessMetadata,
 } from '@/api';
 
 interface AppState {
@@ -123,30 +126,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      // Fetch all categories in parallel
+      // Fetch all entries by taskKey in parallel
       const [
-        contactEntries,
+        primaryContactEntries,
+        backupContactEntries,
         financialEntries,
         insuranceEntries,
         documentEntries,
-        homeEntries,
+        propertyEntries,
         digitalEntries,
       ] = await Promise.all([
-        entries.listContacts(planId),
-        entries.listFinancial(planId),
-        entries.listInsurance(planId),
-        entries.listLegalDocuments(planId),
-        entries.listHome(planId),
-        entries.listDigitalAccess(planId),
+        entries.listByTaskKey(planId, 'contacts.primary'),
+        entries.listByTaskKey(planId, 'contacts.backup'),
+        entries.listByTaskKey(planId, 'financial'),
+        entries.listByTaskKey(planId, 'insurance'),
+        entries.listByTaskKey(planId, 'documents'),
+        entries.listByTaskKey(planId, 'property'),
+        entries.listByTaskKey(planId, 'digital'),
       ]);
 
+      // Combine primary and backup contacts
+      const allContactEntries = [...primaryContactEntries, ...backupContactEntries];
+
       setState({
-        contacts: entriesToContacts(contactEntries),
-        finances: entriesToFinancialAccounts(financialEntries),
-        insurance: entriesToInsurancePolicies(insuranceEntries),
-        documents: entriesToLegalDocuments(documentEntries),
-        homeResponsibilities: entriesToHomeResponsibilities(homeEntries),
-        digitalAccounts: entriesToDigitalAccounts(digitalEntries),
+        contacts: entriesToContacts(allContactEntries as unknown as Entry<ContactMetadata>[]),
+        finances: entriesToFinancialAccounts(financialEntries as unknown as Entry<FinancialMetadata>[]),
+        insurance: entriesToInsurancePolicies(insuranceEntries as unknown as Entry<InsuranceMetadata>[]),
+        documents: entriesToLegalDocuments(documentEntries as unknown as Entry<LegalDocumentMetadata>[]),
+        homeResponsibilities: entriesToHomeResponsibilities(propertyEntries as unknown as Entry<HomeMetadata>[]),
+        digitalAccounts: entriesToDigitalAccounts(digitalEntries as unknown as Entry<DigitalAccessMetadata>[]),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load data';
@@ -170,7 +178,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!planId) return;
 
       const request = contactToCreateRequest(contact, planId);
-      const entry = await entries.create<ContactMetadata>(request);
+      const entry = await entries.create(request);
       const newContact = entryToContact(entry);
 
       setState((prev) => ({
@@ -183,6 +191,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateContact = useCallback(
     async (id: string, contact: Partial<Contact>) => {
+      if (!planId) return;
+
       // Optimistic update
       setState((prev) => ({
         ...prev,
@@ -190,10 +200,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }));
 
       try {
-        await entries.update(id, {
+        await entries.update(planId, id, {
           title: contact.name,
           notes: contact.notes,
-          priority: contact.isPrimary ? 'primary' : undefined,
           metadata: {
             ...(contact.name && {
               firstName: contact.name.split(' ')[0] || '',
@@ -203,6 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...(contact.phone && { phone: contact.phone }),
             ...(contact.email && { email: contact.email }),
             ...(contact.notes && { reason: contact.notes }),
+            ...(contact.isPrimary !== undefined && { isPrimary: contact.isPrimary }),
           },
         });
       } catch {
@@ -210,11 +220,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const deleteContact = useCallback(
     async (id: string) => {
+      if (!planId) return;
+
       // Optimistic update
       setState((prev) => ({
         ...prev,
@@ -222,13 +234,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }));
 
       try {
-        await entries.delete(id);
+        await entries.delete(planId, id);
       } catch {
         // Revert on error - refetch data
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const getContact = useCallback(
@@ -245,7 +257,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!planId) return;
 
       const request = financialAccountToCreateRequest(account, planId);
-      const entry = await entries.create<FinancialMetadata>(request);
+      const entry = await entries.create(request);
       const newAccount = entryToFinancialAccount(entry);
 
       setState((prev) => ({
@@ -258,13 +270,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateFinance = useCallback(
     async (id: string, account: Partial<FinancialAccount>) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         finances: prev.finances.map((f) => (f.id === id ? { ...f, ...account } : f)),
       }));
 
       try {
-        await entries.update(id, {
+        await entries.update(planId, id, {
           title: account.accountName,
           notes: account.notes,
           metadata: {
@@ -278,23 +292,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const deleteFinance = useCallback(
     async (id: string) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         finances: prev.finances.filter((f) => f.id !== id),
       }));
 
       try {
-        await entries.delete(id);
+        await entries.delete(planId, id);
       } catch {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const getFinance = useCallback(
@@ -311,7 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!planId) return;
 
       const request = insurancePolicyToCreateRequest(policy, planId);
-      const entry = await entries.create<InsuranceMetadata>(request);
+      const entry = await entries.create(request);
       const newPolicy = entryToInsurancePolicy(entry);
 
       setState((prev) => ({
@@ -324,13 +340,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateInsurance = useCallback(
     async (id: string, policy: Partial<InsurancePolicy>) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         insurance: prev.insurance.map((i) => (i.id === id ? { ...i, ...policy } : i)),
       }));
 
       try {
-        await entries.update(id, {
+        await entries.update(planId, id, {
           title: policy.policyName,
           notes: policy.notes,
           metadata: {
@@ -344,23 +362,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const deleteInsurance = useCallback(
     async (id: string) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         insurance: prev.insurance.filter((i) => i.id !== id),
       }));
 
       try {
-        await entries.delete(id);
+        await entries.delete(planId, id);
       } catch {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const getInsurance = useCallback(
@@ -377,7 +397,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!planId) return;
 
       const request = legalDocumentToCreateRequest(doc, planId);
-      const entry = await entries.create<LegalDocumentMetadata>(request);
+      const entry = await entries.create(request);
       const newDoc = entryToLegalDocument(entry);
 
       setState((prev) => ({
@@ -390,13 +410,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateDocument = useCallback(
     async (id: string, doc: Partial<LegalDocument>) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         documents: prev.documents.map((d) => (d.id === id ? { ...d, ...doc } : d)),
       }));
 
       try {
-        await entries.update(id, {
+        await entries.update(planId, id, {
           title: doc.documentName,
           notes: doc.notes,
           metadata: {
@@ -409,23 +431,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const deleteDocument = useCallback(
     async (id: string) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         documents: prev.documents.filter((d) => d.id !== id),
       }));
 
       try {
-        await entries.delete(id);
+        await entries.delete(planId, id);
       } catch {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const getDocument = useCallback(
@@ -442,7 +466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!planId) return;
 
       const request = homeResponsibilityToCreateRequest(item, planId);
-      const entry = await entries.create<HomeMetadata>(request);
+      const entry = await entries.create(request);
       const newItem = entryToHomeResponsibility(entry);
 
       setState((prev) => ({
@@ -455,6 +479,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateHomeResponsibility = useCallback(
     async (id: string, item: Partial<HomeResponsibility>) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         homeResponsibilities: prev.homeResponsibilities.map((h) =>
@@ -463,7 +489,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }));
 
       try {
-        await entries.update(id, {
+        await entries.update(planId, id, {
           title: item.itemName,
           notes: item.notes,
           metadata: {
@@ -476,23 +502,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const deleteHomeResponsibility = useCallback(
     async (id: string) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         homeResponsibilities: prev.homeResponsibilities.filter((h) => h.id !== id),
       }));
 
       try {
-        await entries.delete(id);
+        await entries.delete(planId, id);
       } catch {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const getHomeResponsibility = useCallback(
@@ -509,7 +537,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!planId) return;
 
       const request = digitalAccountToCreateRequest(account, planId);
-      const entry = await entries.create<DigitalAccessMetadata>(request);
+      const entry = await entries.create(request);
       const newAccount = entryToDigitalAccount(entry);
 
       setState((prev) => ({
@@ -522,6 +550,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateDigitalAccount = useCallback(
     async (id: string, account: Partial<DigitalAccount>) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         digitalAccounts: prev.digitalAccounts.map((d) =>
@@ -530,44 +560,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }));
 
       try {
-        const priorityMap: Record<string, 'primary' | 'secondary' | 'backup' | undefined> = {
-          critical: 'primary',
-          high: 'secondary',
-          medium: 'backup',
-          low: undefined,
-        };
-
-        await entries.update(id, {
+        await entries.update(planId, id, {
           title: account.accountName,
           notes: account.accessNotes,
-          priority: account.importance ? priorityMap[account.importance] : undefined,
           metadata: {
             ...(account.platform && { service: account.platform }),
             ...(account.username && { username: account.username }),
             ...(account.accessNotes && { notes: account.accessNotes }),
+            ...(account.importance && { importance: account.importance }),
           },
         });
       } catch {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const deleteDigitalAccount = useCallback(
     async (id: string) => {
+      if (!planId) return;
+
       setState((prev) => ({
         ...prev,
         digitalAccounts: prev.digitalAccounts.filter((d) => d.id !== id),
       }));
 
       try {
-        await entries.delete(id);
+        await entries.delete(planId, id);
       } catch {
         fetchAllData();
       }
     },
-    [entries, fetchAllData]
+    [planId, entries, fetchAllData]
   );
 
   const getDigitalAccount = useCallback(

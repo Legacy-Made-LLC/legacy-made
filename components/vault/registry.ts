@@ -6,6 +6,7 @@
  */
 
 import type { ComponentType } from 'react';
+import type { Entry } from '@/api/types';
 
 // ============================================================================
 // List Component Registry
@@ -32,25 +33,6 @@ import { PetForm } from './forms/PetForm';
 import { DigitalForm } from './forms/DigitalForm';
 
 // ============================================================================
-// Entry Type (matches backend structure with taskKey)
-// ============================================================================
-
-export interface VaultEntry {
-  id: string;
-  planId: string;
-  /** Task key (new system) or can be derived from category during transition */
-  taskKey?: string;
-  /** Category (old system, used for backward compatibility) */
-  category?: string;
-  title: string;
-  notes: string | null;
-  sortOrder: number;
-  metadata: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// ============================================================================
 // List Component Types
 // ============================================================================
 
@@ -58,7 +40,7 @@ export interface EntryListProps {
   /** The task key for this list */
   taskKey: string;
   /** Entries to display */
-  entries: VaultEntry[];
+  entries: Entry[];
   /** Whether data is loading */
   isLoading: boolean;
   /** Callback when an entry is pressed */
@@ -77,7 +59,7 @@ export interface EntryFormProps {
   /** Entry ID if editing, undefined if creating new */
   entryId?: string;
   /** Initial data for the form (when editing) */
-  initialData?: VaultEntry;
+  initialData?: Entry;
   /** Callback when form is saved */
   onSave: (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => Promise<void>;
   /** Callback when entry is deleted (only for editing) */

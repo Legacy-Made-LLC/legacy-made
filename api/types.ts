@@ -2,19 +2,9 @@
  * API Types - Match the backend's Entry model and metadata schemas
  */
 
-// Entry categories as defined in the API
-export type EntryCategory =
-  | 'contact'
-  | 'financial'
-  | 'insurance'
-  | 'legal_document'
-  | 'home'
-  | 'digital_access';
-
-// Priority levels for entries
-export type EntryPriority = 'primary' | 'secondary' | 'backup';
-
-// Category-specific metadata types
+// ============================================================================
+// Metadata Types
+// ============================================================================
 
 export interface ContactMetadata {
   firstName: string;
@@ -24,6 +14,8 @@ export interface ContactMetadata {
   email?: string;
   address?: string;
   reason?: string;
+  /** Whether this is a primary contact */
+  isPrimary?: boolean;
 }
 
 export interface FinancialMetadata {
@@ -62,66 +54,71 @@ export interface DigitalAccessMetadata {
   username?: string;
   recoveryEmail?: string;
   notes?: string;
+  /** Importance level: critical, high, medium, low */
+  importance?: 'critical' | 'high' | 'medium' | 'low';
 }
 
-// Union type for all metadata
-export type EntryMetadata =
-  | ContactMetadata
-  | FinancialMetadata
-  | InsuranceMetadata
-  | LegalDocumentMetadata
-  | HomeMetadata
-  | DigitalAccessMetadata;
+// ============================================================================
+// Entry Types
+// ============================================================================
 
-// Base Entry type from API
-export interface Entry<T extends EntryMetadata = EntryMetadata> {
+/**
+ * Base Entry type from API
+ * Generic parameter T allows specifying the expected metadata type
+ */
+export interface Entry<T = Record<string, unknown>> {
   id: string;
   planId: string;
-  category: EntryCategory;
-  title: string;
+  /** Task key for the vault structure (e.g., "contacts.primary", "financial") */
+  taskKey: string;
+  /** Optional title - may be null since each entry type presents data differently */
+  title: string | null;
   notes: string | null;
-  priority: EntryPriority | null;
   sortOrder: number;
   metadata: T;
   createdAt: string;
   updatedAt: string;
 }
 
-// Typed entries for each category
-export type ContactEntry = Entry<ContactMetadata> & { category: 'contact' };
-export type FinancialEntry = Entry<FinancialMetadata> & { category: 'financial' };
-export type InsuranceEntry = Entry<InsuranceMetadata> & { category: 'insurance' };
-export type LegalDocumentEntry = Entry<LegalDocumentMetadata> & { category: 'legal_document' };
-export type HomeEntry = Entry<HomeMetadata> & { category: 'home' };
-export type DigitalAccessEntry = Entry<DigitalAccessMetadata> & { category: 'digital_access' };
+// ============================================================================
+// Request Types
+// ============================================================================
 
-// Request types for creating entries
-export interface CreateEntryRequest<T extends EntryMetadata = EntryMetadata> {
+/**
+ * Request type for creating entries
+ */
+export interface CreateEntryRequest<T = Record<string, unknown>> {
   planId: string;
-  category: EntryCategory;
-  title: string;
+  taskKey: string;
+  /** Optional title - may be omitted since each entry type presents data differently */
+  title?: string;
   notes?: string;
-  priority?: EntryPriority;
   sortOrder?: number;
   metadata: T;
 }
 
-// Request types for updating entries
-export interface UpdateEntryRequest<T extends EntryMetadata = EntryMetadata> {
+/**
+ * Request type for updating entries
+ */
+export interface UpdateEntryRequest<T = Record<string, unknown>> {
   title?: string;
   notes?: string;
-  priority?: EntryPriority | null;
   sortOrder?: number;
   metadata?: Partial<T>;
 }
 
-// Query parameters for listing entries
+/**
+ * Query parameters for listing entries
+ */
 export interface ListEntriesParams {
   planId: string;
-  category?: EntryCategory;
+  taskKey?: string;
 }
 
-// API response types
+// ============================================================================
+// Response Types
+// ============================================================================
+
 export interface ApiError {
   statusCode: number;
   message: string;
@@ -132,7 +129,10 @@ export interface DeleteResponse {
   deleted: boolean;
 }
 
-// Plan type (for future use)
+// ============================================================================
+// Plan Type
+// ============================================================================
+
 export interface Plan {
   id: string;
   userId: string;

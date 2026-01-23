@@ -11,14 +11,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Text,
+  Pressable,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
+import { ContactFormFields, type ContactFormData } from '@/components/forms/ContactFormFields';
+import { colors, spacing, typography } from '@/constants/theme';
 import type { EntryFormProps } from '../registry';
 
 interface ContactMetadata {
@@ -28,6 +28,7 @@ interface ContactMetadata {
   phone?: string;
   email?: string;
   reason?: string;
+  isPrimary?: boolean;
 }
 
 export function ContactForm({
@@ -43,15 +44,29 @@ export function ContactForm({
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
 
-  // Parse initial metadata
-  const initialMetadata = initialData?.metadata as ContactMetadata | undefined;
+  const [formData, setFormData] = useState<ContactFormData>({
+    firstName: '',
+    lastName: '',
+    relationship: '',
+    phone: '',
+    email: '',
+    reason: '',
+  });
 
-  const [firstName, setFirstName] = useState(initialMetadata?.firstName ?? '');
-  const [lastName, setLastName] = useState(initialMetadata?.lastName ?? '');
-  const [relationship, setRelationship] = useState(initialMetadata?.relationship ?? '');
-  const [phone, setPhone] = useState(initialMetadata?.phone ?? '');
-  const [email, setEmail] = useState(initialMetadata?.email ?? '');
-  const [reason, setReason] = useState(initialMetadata?.reason ?? initialData?.notes ?? '');
+  // Update form data when initialData loads
+  useEffect(() => {
+    if (initialData) {
+      const metadata = initialData.metadata as unknown as ContactMetadata | undefined;
+      setFormData({
+        firstName: metadata?.firstName ?? '',
+        lastName: metadata?.lastName ?? '',
+        relationship: metadata?.relationship ?? '',
+        phone: metadata?.phone ?? '',
+        email: metadata?.email ?? '',
+        reason: metadata?.reason ?? initialData.notes ?? '',
+      });
+    }
+  }, [initialData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -60,29 +75,30 @@ export function ContactForm({
   }, [isNew, navigation]);
 
   const handleSave = async () => {
-    if (!firstName.trim()) {
+    if (!formData.firstName.trim()) {
       Alert.alert('Required Field', 'Please enter a first name.');
       return;
     }
-    if (!relationship.trim()) {
-      Alert.alert('Required Field', 'Please enter a relationship.');
+    if (!formData.relationship.trim()) {
+      Alert.alert('Required Field', 'Please select a relationship.');
       return;
     }
 
-    const title = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const title = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
     const metadata: ContactMetadata = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      relationship: relationship.trim(),
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      reason: reason.trim() || undefined,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      relationship: formData.relationship.trim(),
+      phone: formData.phone.trim() || undefined,
+      email: formData.email.trim() || undefined,
+      reason: formData.reason.trim() || undefined,
+      isPrimary: taskKey === 'contacts.primary',
     };
 
     try {
       await onSave({
         title,
-        notes: reason.trim() || undefined,
+        notes: formData.reason.trim() || undefined,
         metadata: metadata as unknown as Record<string, unknown>,
       });
     } catch (err) {
@@ -94,7 +110,7 @@ export function ContactForm({
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const name = `${firstName} ${lastName}`.trim() || 'this contact';
+    const name = `${formData.firstName} ${formData.lastName}`.trim() || 'this contact';
     Alert.alert(
       'Delete Contact',
       `Are you sure you want to delete ${name}?`,
@@ -118,82 +134,113 @@ export function ContactForm({
 
   return (
     <KeyboardAvoidingView
-      style={formStyles.container}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
-        style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="First Name"
-          placeholder="Enter first name"
-          value={firstName}
-          onChangeText={setFirstName}
-          autoCapitalize="words"
+        <ContactFormFields
+          data={formData}
+          onChange={setFormData}
+          showReasonField={true}
+          phoneRequired={false}
         />
 
-        <Input
-          label="Last Name"
-          placeholder="Enter last name"
-          value={lastName}
-          onChangeText={setLastName}
-          autoCapitalize="words"
-        />
-
-        <Input
-          label="Relationship"
-          placeholder="e.g., Sister, Attorney, Friend"
-          value={relationship}
-          onChangeText={setRelationship}
-          autoCapitalize="words"
-        />
-
-        <Input
-          label="Phone (Optional)"
-          placeholder="(555) 123-4567"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
-
-        <Input
-          label="Email (Optional)"
-          placeholder="email@example.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        <TextArea
-          label="Why this person? (Optional)"
-          placeholder="What makes them the right contact?"
-          value={reason}
-          onChangeText={setReason}
-        />
-
-        <View style={formStyles.buttonContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save'}
+        <View style={styles.buttonContainer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.primaryButtonPressed,
+              isSaving && styles.primaryButtonDisabled,
+            ]}
             onPress={handleSave}
             disabled={isSaving}
-          />
+          >
+            <Text
+              style={[
+                styles.primaryButtonText,
+                isSaving && styles.primaryButtonTextDisabled,
+              ]}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </Text>
+          </Pressable>
         </View>
 
         {!isNew && onDelete && (
-          <View style={formStyles.deleteContainer}>
-            <Button
-              title="Delete Contact"
-              variant="destructive"
+          <View style={styles.deleteContainer}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.deleteButtonPressed,
+              ]}
               onPress={handleDelete}
-            />
+            >
+              <Text style={styles.deleteButtonText}>Delete Contact</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+  },
+  buttonContainer: {
+    marginTop: spacing.lg,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryButtonPressed: {
+    backgroundColor: colors.primaryPressed,
+    transform: [{ scale: 0.98 }],
+  },
+  primaryButtonDisabled: {
+    backgroundColor: colors.border,
+  },
+  primaryButtonText: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.body,
+    color: colors.surface,
+  },
+  primaryButtonTextDisabled: {
+    color: colors.textTertiary,
+  },
+  deleteContainer: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
+  },
+  deleteButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  deleteButtonPressed: {
+    opacity: 0.7,
+  },
+  deleteButtonText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.body,
+    color: colors.error,
+  },
+});
