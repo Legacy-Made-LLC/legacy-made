@@ -55,11 +55,11 @@ export const onboardingStyles = StyleSheet.create({
   },
   stanzaContainer: {
     marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   stanzaText: {
-    fontFamily: typography.fontFamily.regular,
-    fontSize: 18,
+    fontFamily: typography.fontFamily.serifMedium,
+    fontSize: 16,
     color: colors.textPrimary,
     textAlign: "center",
     lineHeight: 18 * typography.lineHeights.relaxed,
@@ -283,6 +283,18 @@ export const onboardingStyles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  // Icon Container (for intro screens)
+  iconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary + "15",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: spacing.xl,
+  },
+
   // Success Screen
   successCheckmark: {
     width: 80,
@@ -379,9 +391,10 @@ export const INTRO_MESSAGES = [
 
 // Animation timing constants
 export const INTRO_ANIMATION = {
-  STANZA_DELAY: 1200,
-  FADE_DURATION: 600,
-  MOVE_DURATION: 400,
+  STANZA_DELAY_INITIAL: 300,
+  STANZA_DELAY: 3000, // 1200,
+  FADE_DURATION: 800, // 600,
+  MOVE_DURATION: 500, // 400,
   INITIAL_OFFSET: 20,
   CONTAINER_OFFSET_PER_ITEM: 20,
 };

@@ -98,32 +98,33 @@ export function ContactFormFields({
 
   return (
     <>
-      {/* First Name */}
-      <View style={styles.formField}>
-        <Text style={styles.formLabel}>FIRST NAME</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="Enter first name"
-          placeholderTextColor={colors.textTertiary}
-          value={data.firstName}
-          onChangeText={(v) => updateField('firstName', v)}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
-      </View>
+      {/* First Name & Last Name - Two columns */}
+      <View style={styles.nameRow}>
+        <View style={styles.nameField}>
+          <Text style={styles.formLabel}>FIRST NAME</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="First name"
+            placeholderTextColor={colors.textTertiary}
+            value={data.firstName}
+            onChangeText={(v) => updateField('firstName', v)}
+            autoCapitalize="words"
+            autoCorrect={false}
+          />
+        </View>
 
-      {/* Last Name */}
-      <View style={styles.formField}>
-        <Text style={styles.formLabel}>LAST NAME</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="Enter last name"
-          placeholderTextColor={colors.textTertiary}
-          value={data.lastName}
-          onChangeText={(v) => updateField('lastName', v)}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
+        <View style={styles.nameField}>
+          <Text style={styles.formLabel}>LAST NAME</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="Last name"
+            placeholderTextColor={colors.textTertiary}
+            value={data.lastName}
+            onChangeText={(v) => updateField('lastName', v)}
+            autoCapitalize="words"
+            autoCorrect={false}
+          />
+        </View>
       </View>
 
       {/* Phone */}
@@ -240,6 +241,14 @@ export function ContactFormFields({
 }
 
 const styles = StyleSheet.create({
+  nameRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  nameField: {
+    flex: 1,
+  },
   formField: {
     marginBottom: spacing.lg,
   },

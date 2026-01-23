@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
+import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -26,6 +28,9 @@ export default function ContactIntroScreen() {
 
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="call-outline" size={32} color={colors.primary} />
+          </View>
           <Text style={styles.headingSerif}>
             Let&apos;s take the first step together.
           </Text>

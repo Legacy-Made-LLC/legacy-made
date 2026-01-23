@@ -32,6 +32,7 @@ export default function IntroScreen() {
 
   useEffect(() => {
     const {
+      STANZA_DELAY_INITIAL,
       STANZA_DELAY,
       FADE_DURATION,
       MOVE_DURATION,
@@ -40,7 +41,7 @@ export default function IntroScreen() {
 
     // Animate each item in sequence
     itemAnimations.forEach((anim, index) => {
-      const delay = index * STANZA_DELAY;
+      const delay = index * STANZA_DELAY + STANZA_DELAY_INITIAL;
 
       setTimeout(() => {
         // Calculate container position (moves up as each item appears)
