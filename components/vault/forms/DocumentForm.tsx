@@ -2,7 +2,7 @@
  * DocumentForm - Form for creating/editing legal document entries
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ScrollView,
   View,
@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
+import { FormInput, FormTextArea, documentSchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
 import { spacing } from '@/constants/theme';
 import { formStyles } from './formStyles';
@@ -41,12 +41,10 @@ interface DocumentMetadata {
 }
 
 export function DocumentForm({
-  taskKey,
   entryId,
   initialData,
   onSave,
   onDelete,
-  onCancel,
   isSaving,
 }: EntryFormProps) {
   const navigation = useNavigation();
@@ -55,13 +53,50 @@ export function DocumentForm({
 
   const initialMetadata = initialData?.metadata as DocumentMetadata | undefined;
 
-  const [documentName, setDocumentName] = useState(initialData?.title ?? '');
-  const [documentType, setDocumentType] = useState<DocumentType>(
-    initialMetadata?.documentType ?? 'Will'
+  const defaultValues = useMemo(
+    () => ({
+      documentName: initialData?.title ?? '',
+      documentType: (initialMetadata?.documentType ?? 'Will') as string,
+      location: initialMetadata?.location ?? '',
+      holder: initialMetadata?.holder ?? '',
+      notes: initialMetadata?.notes ?? initialData?.notes ?? '',
+    }),
+    [initialData, initialMetadata]
   );
-  const [location, setLocation] = useState(initialMetadata?.location ?? '');
-  const [holder, setHolder] = useState(initialMetadata?.holder ?? '');
-  const [notes, setNotes] = useState(initialMetadata?.notes ?? initialData?.notes ?? '');
+
+  const form = useForm({
+    defaultValues,
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: documentSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const metadata: DocumentMetadata = {
+        documentType: value.documentType as DocumentType,
+        location: value.location.trim(),
+        holder: value.holder.trim() || undefined,
+        notes: value.notes.trim() || undefined,
+      };
+
+      try {
+        await onSave({
+          title: value.documentName.trim(),
+          notes: value.notes.trim() || undefined,
+          metadata: metadata as unknown as Record<string, unknown>,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save document';
+        Alert.alert('Error', message);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -69,38 +104,10 @@ export function DocumentForm({
     });
   }, [isNew, navigation]);
 
-  const handleSave = async () => {
-    if (!documentName.trim()) {
-      Alert.alert('Required Field', 'Please enter a document name.');
-      return;
-    }
-    if (!location.trim()) {
-      Alert.alert('Required Field', 'Please enter the document location.');
-      return;
-    }
-
-    const metadata: DocumentMetadata = {
-      documentType,
-      location: location.trim(),
-      holder: holder.trim() || undefined,
-      notes: notes.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: documentName.trim(),
-        notes: notes.trim() || undefined,
-        metadata: metadata as unknown as Record<string, unknown>,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save document';
-      Alert.alert('Error', message);
-    }
-  };
-
   const handleDelete = () => {
     if (!onDelete) return;
 
+    const documentName = form.getFieldValue('documentName');
     Alert.alert(
       'Delete Document',
       `Are you sure you want to delete ${documentName || 'this document'}?`,
@@ -134,74 +141,90 @@ export function DocumentForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="Document Name"
-          placeholder="e.g., Last Will and Testament"
-          value={documentName}
-          onChangeText={setDocumentName}
-        />
+        <form.Field name="documentName">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Document Name"
+              placeholder="e.g., Last Will and Testament"
+            />
+          )}
+        </form.Field>
 
-        <View style={formStyles.fieldContainer}>
-          <Text style={formStyles.label}>Document Type</Text>
-          <View style={formStyles.typeGrid}>
-            {documentTypes.map((type) => (
-              <Pressable
-                key={type}
-                style={[
-                  formStyles.typeButton,
-                  documentType === type && formStyles.typeButtonSelected,
-                ]}
-                onPress={() => setDocumentType(type)}
-              >
-                <Text
-                  style={[
-                    formStyles.typeButtonText,
-                    documentType === type && formStyles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <form.Field name="documentType">
+          {(field) => (
+            <View style={formStyles.fieldContainer}>
+              <Text style={formStyles.label}>Document Type</Text>
+              <View style={formStyles.typeGrid}>
+                {documentTypes.map((type) => (
+                  <Pressable
+                    key={type}
+                    style={[
+                      formStyles.typeButton,
+                      field.state.value === type && formStyles.typeButtonSelected,
+                    ]}
+                    onPress={() => field.handleChange(type)}
+                  >
+                    <Text
+                      style={[
+                        formStyles.typeButtonText,
+                        field.state.value === type && formStyles.typeButtonTextSelected,
+                      ]}
+                    >
+                      {type}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </form.Field>
 
-        <Input
-          label="Location"
-          placeholder="e.g., Safe deposit box at Chase Bank"
-          value={location}
-          onChangeText={setLocation}
-        />
+        <form.Field name="location">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Location"
+              placeholder="e.g., Safe deposit box at Chase Bank"
+            />
+          )}
+        </form.Field>
 
-        <Input
-          label="Who Has a Copy? (Optional)"
-          placeholder="e.g., Attorney David Park"
-          value={holder}
-          onChangeText={setHolder}
-        />
+        <form.Field name="holder">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Who Has a Copy? (Optional)"
+              placeholder="e.g., Attorney David Park"
+            />
+          )}
+        </form.Field>
 
-        <TextArea
-          label="Notes (Optional)"
-          placeholder="Any additional details about this document"
-          value={notes}
-          onChangeText={setNotes}
-        />
+        <form.Field name="notes">
+          {(field) => (
+            <FormTextArea
+              field={field}
+              label="Notes (Optional)"
+              placeholder="Any additional details about this document"
+            />
+          )}
+        </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save'}
-            onPress={handleSave}
-            disabled={isSaving}
-          />
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                onPress={() => form.handleSubmit()}
+                disabled={isSaving || isSubmitting || !canSubmit}
+              />
+            )}
+          </form.Subscribe>
         </View>
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button
-              title="Delete Document"
-              variant="destructive"
-              onPress={handleDelete}
-            />
+            <Button title="Delete Document" variant="destructive" onPress={handleDelete} />
           </View>
         )}
       </ScrollView>

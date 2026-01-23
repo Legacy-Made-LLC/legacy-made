@@ -2,7 +2,7 @@
  * DigitalForm - Form for creating/editing digital access entries
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ScrollView,
   View,
@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
+import { FormInput, FormTextArea, digitalSchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
 import { spacing } from '@/constants/theme';
 import { formStyles } from './formStyles';
@@ -34,12 +34,10 @@ interface DigitalMetadata {
 }
 
 export function DigitalForm({
-  taskKey,
   entryId,
   initialData,
   onSave,
   onDelete,
-  onCancel,
   isSaving,
 }: EntryFormProps) {
   const navigation = useNavigation();
@@ -48,15 +46,50 @@ export function DigitalForm({
 
   const initialMetadata = initialData?.metadata as DigitalMetadata | undefined;
 
-  const [accountName, setAccountName] = useState(initialData?.title ?? '');
-  const [service, setService] = useState(initialMetadata?.service ?? '');
-  const [username, setUsername] = useState(initialMetadata?.username ?? '');
-  const [importance, setImportance] = useState<ImportanceLevel>(
-    initialMetadata?.importance ?? 'Medium'
+  const defaultValues = useMemo(
+    () => ({
+      accountName: initialData?.title ?? '',
+      service: initialMetadata?.service ?? '',
+      username: initialMetadata?.username ?? '',
+      importance: (initialMetadata?.importance ?? 'Medium') as string,
+      accessNotes: initialMetadata?.notes ?? initialData?.notes ?? '',
+    }),
+    [initialData, initialMetadata]
   );
-  const [accessNotes, setAccessNotes] = useState(
-    initialMetadata?.notes ?? initialData?.notes ?? ''
-  );
+
+  const form = useForm({
+    defaultValues,
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: digitalSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const metadata: DigitalMetadata = {
+        service: value.service.trim(),
+        username: value.username.trim() || undefined,
+        importance: value.importance as ImportanceLevel,
+        notes: value.accessNotes.trim() || undefined,
+      };
+
+      try {
+        await onSave({
+          title: value.accountName.trim(),
+          notes: value.accessNotes.trim() || undefined,
+          metadata: metadata as unknown as Record<string, unknown>,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save account';
+        Alert.alert('Error', message);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -64,57 +97,25 @@ export function DigitalForm({
     });
   }, [isNew, navigation]);
 
-  const handleSave = async () => {
-    if (!accountName.trim()) {
-      Alert.alert('Required Field', 'Please enter an account name.');
-      return;
-    }
-    if (!service.trim()) {
-      Alert.alert('Required Field', 'Please enter the service/platform.');
-      return;
-    }
-
-    const metadata: DigitalMetadata = {
-      service: service.trim(),
-      username: username.trim() || undefined,
-      importance,
-      notes: accessNotes.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: accountName.trim(),
-        notes: accessNotes.trim() || undefined,
-        metadata: metadata as unknown as Record<string, unknown>,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save account';
-      Alert.alert('Error', message);
-    }
-  };
-
   const handleDelete = () => {
     if (!onDelete) return;
 
-    Alert.alert(
-      'Delete Account',
-      `Are you sure you want to delete ${accountName || 'this account'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDelete();
-            } catch (err) {
-              const message = err instanceof Error ? err.message : 'Failed to delete account';
-              Alert.alert('Error', message);
-            }
-          },
+    const accountName = form.getFieldValue('accountName');
+    Alert.alert('Delete Account', `Are you sure you want to delete ${accountName || 'this account'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await onDelete();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to delete account';
+            Alert.alert('Error', message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -129,76 +130,88 @@ export function DigitalForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="Account Name"
-          placeholder="e.g., Primary Email"
-          value={accountName}
-          onChangeText={setAccountName}
-        />
+        <form.Field name="accountName">
+          {(field) => (
+            <FormInput field={field} label="Account Name" placeholder="e.g., Primary Email" />
+          )}
+        </form.Field>
 
-        <Input
-          label="Service/Platform"
-          placeholder="e.g., Gmail, 1Password, Apple ID"
-          value={service}
-          onChangeText={setService}
-        />
+        <form.Field name="service">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Service/Platform"
+              placeholder="e.g., Gmail, 1Password, Apple ID"
+            />
+          )}
+        </form.Field>
 
-        <Input
-          label="Username/Email (Optional)"
-          placeholder="e.g., email@example.com"
-          value={username}
-          onChangeText={setUsername}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        <form.Field name="username">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Username/Email (Optional)"
+              placeholder="e.g., email@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          )}
+        </form.Field>
 
-        <View style={formStyles.fieldContainer}>
-          <Text style={formStyles.label}>Importance</Text>
-          <View style={formStyles.typeGrid}>
-            {importanceLevels.map((level) => (
-              <Pressable
-                key={level}
-                style={[
-                  formStyles.typeButton,
-                  importance === level && formStyles.typeButtonSelected,
-                ]}
-                onPress={() => setImportance(level)}
-              >
-                <Text
-                  style={[
-                    formStyles.typeButtonText,
-                    importance === level && formStyles.typeButtonTextSelected,
-                  ]}
-                >
-                  {level}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <form.Field name="importance">
+          {(field) => (
+            <View style={formStyles.fieldContainer}>
+              <Text style={formStyles.label}>Importance</Text>
+              <View style={formStyles.typeGrid}>
+                {importanceLevels.map((level) => (
+                  <Pressable
+                    key={level}
+                    style={[
+                      formStyles.typeButton,
+                      field.state.value === level && formStyles.typeButtonSelected,
+                    ]}
+                    onPress={() => field.handleChange(level)}
+                  >
+                    <Text
+                      style={[
+                        formStyles.typeButtonText,
+                        field.state.value === level && formStyles.typeButtonTextSelected,
+                      ]}
+                    >
+                      {level}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </form.Field>
 
-        <TextArea
-          label="How to Access (Optional)"
-          placeholder="Where can the password be found? Don't store the actual password here."
-          value={accessNotes}
-          onChangeText={setAccessNotes}
-        />
+        <form.Field name="accessNotes">
+          {(field) => (
+            <FormTextArea
+              field={field}
+              label="How to Access (Optional)"
+              placeholder="Where can the password be found? Don't store the actual password here."
+            />
+          )}
+        </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save'}
-            onPress={handleSave}
-            disabled={isSaving}
-          />
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                onPress={() => form.handleSubmit()}
+                disabled={isSaving || isSubmitting || !canSubmit}
+              />
+            )}
+          </form.Subscribe>
         </View>
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button
-              title="Delete Account"
-              variant="destructive"
-              onPress={handleDelete}
-            />
+            <Button title="Delete Account" variant="destructive" onPress={handleDelete} />
           </View>
         )}
       </ScrollView>

@@ -2,7 +2,7 @@
  * PropertyForm - Form for creating/editing property and vehicle entries
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ScrollView,
   View,
@@ -14,20 +14,14 @@ import {
 } from 'react-native';
 import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
+import { FormInput, FormTextArea, propertySchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
 import { spacing } from '@/constants/theme';
 import { formStyles } from './formStyles';
 import type { EntryFormProps } from '../registry';
 
-const propertyTypes = [
-  'Real Estate',
-  'Vehicle',
-  'Storage Unit',
-  'Recurring Bill',
-  'Other',
-] as const;
+const propertyTypes = ['Real Estate', 'Vehicle', 'Storage Unit', 'Recurring Bill', 'Other'] as const;
 
 type PropertyType = (typeof propertyTypes)[number];
 
@@ -40,12 +34,10 @@ interface PropertyMetadata {
 }
 
 export function PropertyForm({
-  taskKey,
   entryId,
   initialData,
   onSave,
   onDelete,
-  onCancel,
   isSaving,
 }: EntryFormProps) {
   const navigation = useNavigation();
@@ -54,12 +46,48 @@ export function PropertyForm({
 
   const initialMetadata = initialData?.metadata as PropertyMetadata | undefined;
 
-  const [itemName, setItemName] = useState(initialData?.title ?? '');
-  const [propertyType, setPropertyType] = useState<PropertyType>(
-    initialMetadata?.responsibilityType ?? 'Real Estate'
+  const defaultValues = useMemo(
+    () => ({
+      itemName: initialData?.title ?? '',
+      propertyType: (initialMetadata?.responsibilityType ?? 'Real Estate') as string,
+      accountInfo: initialMetadata?.accountInfo ?? '',
+      notes: initialMetadata?.notes ?? initialData?.notes ?? '',
+    }),
+    [initialData, initialMetadata]
   );
-  const [accountInfo, setAccountInfo] = useState(initialMetadata?.accountInfo ?? '');
-  const [notes, setNotes] = useState(initialMetadata?.notes ?? initialData?.notes ?? '');
+
+  const form = useForm({
+    defaultValues,
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: propertySchema,
+    },
+    onSubmit: async ({ value }) => {
+      const metadata: PropertyMetadata = {
+        responsibilityType: value.propertyType as PropertyType,
+        accountInfo: value.accountInfo.trim() || undefined,
+        notes: value.notes.trim() || undefined,
+      };
+
+      try {
+        await onSave({
+          title: value.itemName.trim(),
+          notes: value.notes.trim() || undefined,
+          metadata: metadata as unknown as Record<string, unknown>,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save property';
+        Alert.alert('Error', message);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -67,52 +95,25 @@ export function PropertyForm({
     });
   }, [isNew, navigation]);
 
-  const handleSave = async () => {
-    if (!itemName.trim()) {
-      Alert.alert('Required Field', 'Please enter a name.');
-      return;
-    }
-
-    const metadata: PropertyMetadata = {
-      responsibilityType: propertyType,
-      accountInfo: accountInfo.trim() || undefined,
-      notes: notes.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: itemName.trim(),
-        notes: notes.trim() || undefined,
-        metadata: metadata as unknown as Record<string, unknown>,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save property';
-      Alert.alert('Error', message);
-    }
-  };
-
   const handleDelete = () => {
     if (!onDelete) return;
 
-    Alert.alert(
-      'Delete Property',
-      `Are you sure you want to delete ${itemName || 'this item'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDelete();
-            } catch (err) {
-              const message = err instanceof Error ? err.message : 'Failed to delete property';
-              Alert.alert('Error', message);
-            }
-          },
+    const itemName = form.getFieldValue('itemName');
+    Alert.alert('Delete Property', `Are you sure you want to delete ${itemName || 'this item'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await onDelete();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to delete property';
+            Alert.alert('Error', message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -127,67 +128,76 @@ export function PropertyForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="Name"
-          placeholder="e.g., Primary Residence, Honda CR-V"
-          value={itemName}
-          onChangeText={setItemName}
-        />
+        <form.Field name="itemName">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Name"
+              placeholder="e.g., Primary Residence, Honda CR-V"
+            />
+          )}
+        </form.Field>
 
-        <View style={formStyles.fieldContainer}>
-          <Text style={formStyles.label}>Type</Text>
-          <View style={formStyles.typeGrid}>
-            {propertyTypes.map((type) => (
-              <Pressable
-                key={type}
-                style={[
-                  formStyles.typeButton,
-                  propertyType === type && formStyles.typeButtonSelected,
-                ]}
-                onPress={() => setPropertyType(type)}
-              >
-                <Text
-                  style={[
-                    formStyles.typeButtonText,
-                    propertyType === type && formStyles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <form.Field name="propertyType">
+          {(field) => (
+            <View style={formStyles.fieldContainer}>
+              <Text style={formStyles.label}>Type</Text>
+              <View style={formStyles.typeGrid}>
+                {propertyTypes.map((type) => (
+                  <Pressable
+                    key={type}
+                    style={[
+                      formStyles.typeButton,
+                      field.state.value === type && formStyles.typeButtonSelected,
+                    ]}
+                    onPress={() => field.handleChange(type)}
+                  >
+                    <Text
+                      style={[
+                        formStyles.typeButtonText,
+                        field.state.value === type && formStyles.typeButtonTextSelected,
+                      ]}
+                    >
+                      {type}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </form.Field>
 
-        <Input
-          label="Details (Optional)"
-          placeholder="e.g., Address, license plate, account number"
-          value={accountInfo}
-          onChangeText={setAccountInfo}
-        />
+        <form.Field name="accountInfo">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Details (Optional)"
+              placeholder="e.g., Address, license plate, account number"
+            />
+          )}
+        </form.Field>
 
-        <TextArea
-          label="Notes (Optional)"
-          placeholder="Any additional details"
-          value={notes}
-          onChangeText={setNotes}
-        />
+        <form.Field name="notes">
+          {(field) => (
+            <FormTextArea field={field} label="Notes (Optional)" placeholder="Any additional details" />
+          )}
+        </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save'}
-            onPress={handleSave}
-            disabled={isSaving}
-          />
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                onPress={() => form.handleSubmit()}
+                disabled={isSaving || isSubmitting || !canSubmit}
+              />
+            )}
+          </form.Subscribe>
         </View>
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button
-              title="Delete Property"
-              variant="destructive"
-              onPress={handleDelete}
-            />
+            <Button title="Delete Property" variant="destructive" onPress={handleDelete} />
           </View>
         )}
       </ScrollView>

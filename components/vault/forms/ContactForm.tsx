@@ -4,21 +4,23 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
-import React, { useState, useEffect } from 'react';
+import { contactSchema } from '@/components/forms';
+import { ContactFormFieldsWithForm } from '@/components/forms/ContactFormFields';
+import { colors, spacing, typography } from '@/constants/theme';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
+import { useNavigation } from 'expo-router';
+import React, { useEffect, useMemo } from 'react';
 import {
-  ScrollView,
-  View,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  Text,
   Pressable,
+  ScrollView,
   StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ContactFormFields, type ContactFormData } from '@/components/forms/ContactFormFields';
-import { colors, spacing, typography } from '@/constants/theme';
 import type { EntryFormProps } from '../registry';
 
 interface ContactMetadata {
@@ -31,41 +33,79 @@ interface ContactMetadata {
   isPrimary?: boolean;
 }
 
+interface ContactFormValues {
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  phone: string;
+  email: string;
+  reason: string;
+}
+
 export function ContactForm({
   taskKey,
   entryId,
   initialData,
   onSave,
   onDelete,
-  onCancel,
   isSaving,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
 
-  const [formData, setFormData] = useState<ContactFormData>({
-    firstName: '',
-    lastName: '',
-    relationship: '',
-    phone: '',
-    email: '',
-    reason: '',
+  // Extract initial values from initialData
+  const initialMetadata = initialData?.metadata as unknown as ContactMetadata | undefined;
+
+  const defaultValues = useMemo<ContactFormValues>(
+    () => ({
+      firstName: initialMetadata?.firstName ?? '',
+      lastName: initialMetadata?.lastName ?? '',
+      relationship: initialMetadata?.relationship ?? '',
+      phone: initialMetadata?.phone ?? '',
+      email: initialMetadata?.email ?? '',
+      reason: initialMetadata?.reason ?? initialData?.notes ?? '',
+    }),
+    [initialMetadata, initialData?.notes]
+  );
+
+  const form = useForm({
+    defaultValues,
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: contactSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const title = `${value.firstName.trim()} ${value.lastName.trim()}`.trim();
+      const metadata: ContactMetadata = {
+        firstName: value.firstName.trim(),
+        lastName: value.lastName.trim(),
+        relationship: value.relationship.trim(),
+        phone: value.phone.trim() || undefined,
+        email: value.email.trim() || undefined,
+        reason: value.reason.trim() || undefined,
+        isPrimary: taskKey === 'contacts.primary',
+      };
+
+      try {
+        await onSave({
+          title,
+          notes: value.reason.trim() || undefined,
+          metadata: metadata as unknown as Record<string, unknown>,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save contact';
+        Alert.alert('Error', message);
+      }
+    },
   });
 
-  // Update form data when initialData loads
+  // Reset form when initialData changes
   useEffect(() => {
     if (initialData) {
-      const metadata = initialData.metadata as unknown as ContactMetadata | undefined;
-      setFormData({
-        firstName: metadata?.firstName ?? '',
-        lastName: metadata?.lastName ?? '',
-        relationship: metadata?.relationship ?? '',
-        phone: metadata?.phone ?? '',
-        email: metadata?.email ?? '',
-        reason: metadata?.reason ?? initialData.notes ?? '',
-      });
+      form.reset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   useEffect(() => {
@@ -74,62 +114,27 @@ export function ContactForm({
     });
   }, [isNew, navigation]);
 
-  const handleSave = async () => {
-    if (!formData.firstName.trim()) {
-      Alert.alert('Required Field', 'Please enter a first name.');
-      return;
-    }
-    if (!formData.relationship.trim()) {
-      Alert.alert('Required Field', 'Please select a relationship.');
-      return;
-    }
-
-    const title = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-    const metadata: ContactMetadata = {
-      firstName: formData.firstName.trim(),
-      lastName: formData.lastName.trim(),
-      relationship: formData.relationship.trim(),
-      phone: formData.phone.trim() || undefined,
-      email: formData.email.trim() || undefined,
-      reason: formData.reason.trim() || undefined,
-      isPrimary: taskKey === 'contacts.primary',
-    };
-
-    try {
-      await onSave({
-        title,
-        notes: formData.reason.trim() || undefined,
-        metadata: metadata as unknown as Record<string, unknown>,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save contact';
-      Alert.alert('Error', message);
-    }
-  };
-
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const name = `${formData.firstName} ${formData.lastName}`.trim() || 'this contact';
-    Alert.alert(
-      'Delete Contact',
-      `Are you sure you want to delete ${name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDelete();
-            } catch (err) {
-              const message = err instanceof Error ? err.message : 'Failed to delete contact';
-              Alert.alert('Error', message);
-            }
-          },
+    const firstName = form.getFieldValue('firstName');
+    const lastName = form.getFieldValue('lastName');
+    const name = `${firstName} ${lastName}`.trim() || 'this contact';
+    Alert.alert('Delete Contact', `Are you sure you want to delete ${name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await onDelete();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to delete contact';
+            Alert.alert('Error', message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -144,41 +149,37 @@ export function ContactForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <ContactFormFields
-          data={formData}
-          onChange={setFormData}
-          showReasonField={true}
-          phoneRequired={false}
-        />
+        <ContactFormFieldsWithForm form={form} showReasonField={true} phoneRequired={false} />
 
         <View style={styles.buttonContainer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && styles.primaryButtonPressed,
-              isSaving && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSave}
-            disabled={isSaving}
-          >
-            <Text
-              style={[
-                styles.primaryButtonText,
-                isSaving && styles.primaryButtonTextDisabled,
-              ]}
-            >
-              {isSaving ? 'Saving...' : 'Save'}
-            </Text>
-          </Pressable>
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.primaryButtonPressed,
+                  (isSaving || isSubmitting || !canSubmit) && styles.primaryButtonDisabled,
+                ]}
+                onPress={() => form.handleSubmit()}
+                disabled={isSaving || isSubmitting || !canSubmit}
+              >
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    (isSaving || isSubmitting) && styles.primaryButtonTextDisabled,
+                  ]}
+                >
+                  {isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                </Text>
+              </Pressable>
+            )}
+          </form.Subscribe>
         </View>
 
         {!isNew && onDelete && (
           <View style={styles.deleteContainer}>
             <Pressable
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.deleteButtonPressed,
-              ]}
+              style={({ pressed }) => [styles.deleteButton, pressed && styles.deleteButtonPressed]}
               onPress={handleDelete}
             >
               <Text style={styles.deleteButtonText}>Delete Contact</Text>

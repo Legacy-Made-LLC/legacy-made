@@ -1,18 +1,15 @@
-import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
-import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
-import { ContactFormFields, type ContactFormData } from "@/components/forms/ContactFormFields";
-import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useRouter } from "expo-router";
-import React from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+  ContactFormFieldsWithForm
+} from '@/components/forms/ContactFormFields';
+import { contactSchemaWithRequiredPhone } from '@/components/forms';
+import { OnboardingHeader } from '@/components/onboarding/OnboardingHeader';
+import { onboardingStyles as styles } from '@/components/onboarding/onboardingStyles';
+import { useOnboardingContext } from '@/data/OnboardingContext';
+import { revalidateLogic, useForm, useStore } from '@tanstack/react-form';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ContactFormScreen() {
   const router = useRouter();
@@ -30,42 +27,48 @@ export default function ContactFormScreen() {
     setContactEmail,
   } = useOnboardingContext();
 
-  // Build the form data object for the shared component
-  const formData: ContactFormData = {
-    firstName: contactFirstName,
-    lastName: contactLastName,
-    relationship: contactRelationship,
-    phone: contactPhone,
-    email: contactEmail,
-    reason: '', // Not used in onboarding
-  };
+  const form = useForm({
+    defaultValues: {
+      firstName: contactFirstName,
+      lastName: contactLastName,
+      relationship: contactRelationship,
+      phone: contactPhone,
+      email: contactEmail,
+      reason: '', // Not used in onboarding
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: contactSchemaWithRequiredPhone,
+    },
+    onSubmit: async ({ value }) => {
+      // Update context with final values
+      setContactFirstName(value.firstName);
+      setContactLastName(value.lastName);
+      setContactPhone(value.phone);
+      setContactRelationship(value.relationship);
+      setContactEmail(value.email);
+      router.push('/(onboarding)/success');
+    },
+  });
 
-  // Handle form data changes from the shared component
-  const handleFormChange = (data: ContactFormData) => {
-    setContactFirstName(data.firstName);
-    setContactLastName(data.lastName);
-    setContactPhone(data.phone);
-    setContactRelationship(data.relationship);
-    setContactEmail(data.email);
-  };
+  // Sync form changes to context so values persist during navigation
+  const formValues = useStore(form.store, (state) => state.values);
 
-  const isValid =
-    contactFirstName.trim().length > 0 &&
-    contactPhone.trim().length > 0 &&
-    contactRelationship.trim().length > 0;
-
-  const handleSave = () => {
-    if (isValid) {
-      router.push("/(onboarding)/success");
-    }
-  };
+  React.useEffect(() => {
+    // Only sync if values have changed
+    if (formValues.firstName !== contactFirstName) setContactFirstName(formValues.firstName);
+    if (formValues.lastName !== contactLastName) setContactLastName(formValues.lastName);
+    if (formValues.phone !== contactPhone) setContactPhone(formValues.phone);
+    if (formValues.relationship !== contactRelationship) setContactRelationship(formValues.relationship);
+    if (formValues.email !== contactEmail) setContactEmail(formValues.email);
+  }, [formValues, contactFirstName, contactLastName, contactPhone, contactRelationship, contactEmail, setContactFirstName, setContactLastName, setContactPhone, setContactRelationship, setContactEmail]);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <OnboardingHeader showBackButton />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
       >
         <ScrollView
@@ -79,32 +82,31 @@ export default function ContactFormScreen() {
             This is the first person your family would reach out to.
           </Text>
 
-          <ContactFormFields
-            data={formData}
-            onChange={handleFormChange}
-            showReasonField={false}
-            phoneRequired={true}
-          />
+          <ContactFormFieldsWithForm form={form} showReasonField={false} phoneRequired={true} />
 
           <View style={styles.formButtonContainer}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.primaryButtonPressed,
-                !isValid && styles.primaryButtonDisabled,
-              ]}
-              onPress={handleSave}
-              disabled={!isValid}
-            >
-              <Text
-                style={[
-                  styles.primaryButtonText,
-                  !isValid && styles.primaryButtonTextDisabled,
-                ]}
-              >
-                Save and Continue
-              </Text>
-            </Pressable>
+            <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              {([canSubmit, isSubmitting]) => (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    pressed && styles.primaryButtonPressed,
+                    (!canSubmit || isSubmitting) && styles.primaryButtonDisabled,
+                  ]}
+                  onPress={() => form.handleSubmit()}
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  <Text
+                    style={[
+                      styles.primaryButtonText,
+                      !canSubmit && styles.primaryButtonTextDisabled,
+                    ]}
+                  >
+                    Save and Continue
+                  </Text>
+                </Pressable>
+              )}
+            </form.Subscribe>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

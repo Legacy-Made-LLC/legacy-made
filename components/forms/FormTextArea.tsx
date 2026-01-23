@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -13,28 +13,48 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import type { AnyFieldApi } from '@tanstack/react-form';
 import { colors, typography, spacing, componentStyles } from '@/constants/theme';
+import { getErrorMessage } from './form-utils';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-interface TextAreaProps extends Omit<TextInputProps, 'style' | 'multiline'> {
+interface FormTextAreaProps
+  extends Omit<TextInputProps, 'style' | 'value' | 'onChangeText' | 'onBlur' | 'multiline'> {
+  field: AnyFieldApi;
   label: string;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function TextArea({ label, containerStyle, ...props }: TextAreaProps) {
+export function FormTextArea({ field, label, containerStyle, ...props }: FormTextAreaProps) {
+  const [isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue(colors.border);
+
+  const hasError = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+  const errorMessage = hasError ? getErrorMessage(field.state.meta.errors[0]) : null;
 
   const animatedStyle = useAnimatedStyle(() => ({
     borderColor: borderColor.value,
   }));
 
+  // Single source of truth for border color - updates whenever focus or error state changes
+  React.useEffect(() => {
+    let targetColor: string;
+    if (isFocused) {
+      targetColor = hasError ? colors.error : colors.primary;
+    } else {
+      targetColor = hasError ? colors.error : colors.border;
+    }
+    borderColor.value = withTiming(targetColor, { duration: 200 });
+  }, [hasError, isFocused, borderColor]);
+
   const handleFocus = () => {
-    borderColor.value = withTiming(colors.primary, { duration: 200 });
+    setIsFocused(true);
   };
 
   const handleBlur = () => {
-    borderColor.value = withTiming(colors.border, { duration: 200 });
+    setIsFocused(false);
+    field.handleBlur();
   };
 
   return (
@@ -44,11 +64,14 @@ export function TextArea({ label, containerStyle, ...props }: TextAreaProps) {
         {...props}
         multiline
         textAlignVertical="top"
+        value={field.state.value ?? ''}
+        onChangeText={(text) => field.handleChange(text)}
         style={[styles.textArea, animatedStyle]}
         placeholderTextColor={colors.textTertiary}
         onFocus={handleFocus}
         onBlur={handleBlur}
       />
+      {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
     </View>
   );
 }
@@ -69,10 +92,16 @@ const styles = StyleSheet.create({
     minHeight: componentStyles.textArea.minHeight,
     borderWidth: componentStyles.textArea.borderWidth,
     borderRadius: componentStyles.textArea.borderRadius,
+    borderColor: colors.border, // Default border color (animated style will override)
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  errorText: {
+    fontSize: typography.sizes.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
 });

@@ -8,13 +8,15 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   Modal,
   ScrollView,
   StyleSheet,
 } from 'react-native';
 import { colors, spacing, typography } from '@/constants/theme';
+import { formatPhoneNumber, getErrorMessage } from './form-utils';
+import { FormInput } from './FormInput';
+import { FormTextArea } from './FormTextArea';
 
 // Relationship options for dropdown
 export const RELATIONSHIP_OPTIONS = [
@@ -28,23 +30,8 @@ export const RELATIONSHIP_OPTIONS = [
   'Accountant',
   'Doctor',
   'Other',
-];
+] as const;
 
-// Format phone number as (XXX) XXX-XXXX
-export function formatPhoneNumber(value: string): string {
-  const numbers = value.replace(/\D/g, '');
-  const limited = numbers.slice(0, 10);
-
-  if (limited.length === 0) {
-    return '';
-  } else if (limited.length <= 3) {
-    return `(${limited}`;
-  } else if (limited.length <= 6) {
-    return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
-  } else {
-    return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
-  }
-}
 
 export interface ContactFormData {
   firstName: string;
@@ -55,186 +42,182 @@ export interface ContactFormData {
   reason: string;
 }
 
-interface ContactFormFieldsProps {
-  /** Current form data */
-  data: ContactFormData;
-  /** Callback when any field changes */
-  onChange: (data: ContactFormData) => void;
-  /** Whether to show the "Why this person?" field */
+// ============================================================================
+// TanStack Form Version
+// ============================================================================
+
+interface ContactFormFieldsWithFormProps {
+  /** TanStack Form instance - uses any to avoid complex generic constraints */
+   
+  form: any;
   showReasonField?: boolean;
-  /** Whether phone is required */
   phoneRequired?: boolean;
-  /** Custom label for the reason field */
   reasonLabel?: string;
-  /** Custom placeholder for the reason field */
   reasonPlaceholder?: string;
 }
 
-export function ContactFormFields({
-  data,
-  onChange,
+export function ContactFormFieldsWithForm({
+  form,
   showReasonField = true,
   phoneRequired = false,
   reasonLabel = 'Why this person? (Optional)',
   reasonPlaceholder = 'What makes them the right contact?',
-}: ContactFormFieldsProps) {
+}: ContactFormFieldsWithFormProps) {
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
-
-  const updateField = <K extends keyof ContactFormData>(
-    field: K,
-    value: ContactFormData[K]
-  ) => {
-    onChange({ ...data, [field]: value });
-  };
-
-  const handlePhoneChange = (value: string) => {
-    updateField('phone', formatPhoneNumber(value));
-  };
-
-  const handleSelectRelationship = (option: string) => {
-    updateField('relationship', option);
-    setShowRelationshipPicker(false);
-  };
 
   return (
     <>
       {/* First Name & Last Name - Two columns */}
       <View style={styles.nameRow}>
         <View style={styles.nameField}>
-          <Text style={styles.formLabel}>FIRST NAME</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="First name"
-            placeholderTextColor={colors.textTertiary}
-            value={data.firstName}
-            onChangeText={(v) => updateField('firstName', v)}
-            autoCapitalize="words"
-            autoCorrect={false}
-          />
+          <form.Field name="firstName">
+            {(field: Parameters<typeof FormInput>[0]['field']) => (
+              <FormInput
+                field={field}
+                label="First Name"
+                placeholder="First name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                containerStyle={styles.nameFieldInput}
+              />
+            )}
+          </form.Field>
         </View>
 
         <View style={styles.nameField}>
-          <Text style={styles.formLabel}>LAST NAME</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="Last name"
-            placeholderTextColor={colors.textTertiary}
-            value={data.lastName}
-            onChangeText={(v) => updateField('lastName', v)}
-            autoCapitalize="words"
-            autoCorrect={false}
-          />
+          <form.Field name="lastName">
+            {(field: Parameters<typeof FormInput>[0]['field']) => (
+              <FormInput
+                field={field}
+                label="Last Name"
+                placeholder="Last name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                containerStyle={styles.nameFieldInput}
+              />
+            )}
+          </form.Field>
         </View>
       </View>
 
       {/* Phone */}
-      <View style={styles.formField}>
-        <Text style={styles.formLabel}>
-          PHONE{phoneRequired ? '' : ' (OPTIONAL)'}
-        </Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="(555) 123-4567"
-          placeholderTextColor={colors.textTertiary}
-          value={data.phone}
-          onChangeText={handlePhoneChange}
-          keyboardType="phone-pad"
-          autoCorrect={false}
-          maxLength={14}
-        />
-      </View>
+      <form.Field name="phone">
+        {(field: Parameters<typeof FormInput>[0]['field']) => (
+          <FormInput
+            field={field}
+            label={phoneRequired ? 'Phone' : 'Phone (Optional)'}
+            placeholder="(555) 123-4567"
+            keyboardType="phone-pad"
+            autoCorrect={false}
+            maxLength={14}
+            onValueChange={(v) => field.handleChange(formatPhoneNumber(v))}
+          />
+        )}
+      </form.Field>
 
-      {/* Relationship - Dropdown */}
-      <View style={styles.formField}>
-        <Text style={styles.formLabel}>RELATIONSHIP</Text>
-        <Pressable
-          style={styles.dropdownButton}
-          onPress={() => setShowRelationshipPicker(true)}
-        >
-          <Text
-            style={[
-              styles.dropdownButtonText,
-              !data.relationship && styles.dropdownPlaceholder,
-            ]}
-          >
-            {data.relationship || 'Select relationship'}
-          </Text>
-          <Text style={styles.dropdownChevron}>›</Text>
-        </Pressable>
-      </View>
+      {/* Relationship - Dropdown (custom component, can't use FormInput) */}
+      <form.Field name="relationship">
+        {(field: Parameters<typeof FormInput>[0]['field']) => {
+          const hasError = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+          const errorMessage = hasError ? getErrorMessage(field.state.meta.errors[0]) : null;
 
-      {/* Relationship Picker Modal */}
-      <Modal
-        visible={showRelationshipPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowRelationshipPicker(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowRelationshipPicker(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Relationship</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {RELATIONSHIP_OPTIONS.map((option) => (
-                <Pressable
-                  key={option}
-                  style={({ pressed }) => [
-                    styles.modalOption,
-                    pressed && styles.modalOptionPressed,
-                    data.relationship === option && styles.modalOptionSelected,
+          return (
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>RELATIONSHIP</Text>
+              <Pressable
+                style={[styles.dropdownButton, hasError && styles.dropdownError]}
+                onPress={() => setShowRelationshipPicker(true)}
+              >
+                <Text
+                  style={[
+                    styles.dropdownButtonText,
+                    !field.state.value && styles.dropdownPlaceholder,
                   ]}
-                  onPress={() => handleSelectRelationship(option)}
                 >
-                  <Text
-                    style={[
-                      styles.modalOptionText,
-                      data.relationship === option && styles.modalOptionTextSelected,
-                    ]}
-                  >
-                    {option}
-                  </Text>
-                  {data.relationship === option && (
-                    <Text style={styles.modalCheckmark}>✓</Text>
-                  )}
+                  {field.state.value || 'Select relationship'}
+                </Text>
+                <Text style={styles.dropdownChevron}>›</Text>
+              </Pressable>
+              {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+              {/* Relationship Picker Modal */}
+              <Modal
+                visible={showRelationshipPicker}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowRelationshipPicker(false)}
+              >
+                <Pressable
+                  style={styles.modalOverlay}
+                  onPress={() => {
+                    setShowRelationshipPicker(false);
+                    field.handleBlur();
+                  }}
+                >
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Relationship</Text>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                      {RELATIONSHIP_OPTIONS.map((option) => (
+                        <Pressable
+                          key={option}
+                          style={({ pressed }) => [
+                            styles.modalOption,
+                            pressed && styles.modalOptionPressed,
+                            field.state.value === option && styles.modalOptionSelected,
+                          ]}
+                          onPress={() => {
+                            field.handleChange(option);
+                            setShowRelationshipPicker(false);
+                            field.handleBlur();
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.modalOptionText,
+                              field.state.value === option && styles.modalOptionTextSelected,
+                            ]}
+                          >
+                            {option}
+                          </Text>
+                          {field.state.value === option && (
+                            <Text style={styles.modalCheckmark}>✓</Text>
+                          )}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </Pressable>
-      </Modal>
+              </Modal>
+            </View>
+          );
+        }}
+      </form.Field>
 
       {/* Email */}
-      <View style={styles.formField}>
-        <Text style={styles.formLabel}>EMAIL (OPTIONAL)</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="email@example.com"
-          placeholderTextColor={colors.textTertiary}
-          value={data.email}
-          onChangeText={(v) => updateField('email', v)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
+      <form.Field name="email">
+        {(field: Parameters<typeof FormInput>[0]['field']) => (
+          <FormInput
+            field={field}
+            label="Email (Optional)"
+            placeholder="email@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        )}
+      </form.Field>
 
       {/* Why this person? (Optional) */}
       {showReasonField && (
-        <View style={styles.formField}>
-          <Text style={styles.formLabel}>{reasonLabel.toUpperCase()}</Text>
-          <TextInput
-            style={[styles.formInput, styles.textArea]}
-            placeholder={reasonPlaceholder}
-            placeholderTextColor={colors.textTertiary}
-            value={data.reason}
-            onChangeText={(v) => updateField('reason', v)}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
+        <form.Field name="reason">
+          {(field: Parameters<typeof FormTextArea>[0]['field']) => (
+            <FormTextArea
+              field={field}
+              label={reasonLabel}
+              placeholder={reasonPlaceholder}
+            />
+          )}
+        </form.Field>
       )}
     </>
   );
@@ -244,13 +227,16 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   nameField: {
     flex: 1,
   },
+  nameFieldInput: {
+    marginBottom: 0, // Override FormInput's default margin since nameRow handles spacing
+  },
   formField: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   formLabel: {
     fontFamily: typography.fontFamily.medium,
@@ -258,22 +244,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     letterSpacing: 1,
     marginBottom: spacing.sm,
+    textTransform: 'uppercase',
   },
-  formInput: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-    height: 52,
-  },
-  textArea: {
-    height: 100,
-    paddingTop: spacing.md,
+  errorText: {
+    fontSize: typography.sizes.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
 
   // Dropdown
@@ -287,6 +263,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  dropdownError: {
+    borderColor: colors.error,
   },
   dropdownButtonText: {
     fontFamily: typography.fontFamily.regular,

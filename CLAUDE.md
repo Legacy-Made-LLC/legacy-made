@@ -10,6 +10,20 @@ Build an **MVP iOS app** for Legacy Made using **Expo** (with Expo Router). This
 
 ---
 
+## MCP Tools Configuration
+
+### Serena
+
+When using Serena MCP tools, always activate the project using the Docker path:
+
+```
+/workspace/legacy-made
+```
+
+**Do NOT use the local macOS path** (`/Users/jared/Projects/...`). Serena runs in a Docker container and requires the container path.
+
+---
+
 ## What Legacy Made Is
 
 Legacy Made is a **guided digital platform** that helps people organize critical end-of-life information and provide clear direction to their loved ones — in a way that feels **calm, human, and manageable**.
@@ -65,8 +79,21 @@ The MVP focuses on the **primary entry point** — helping users organize critic
 ### Coding Standards
 
 - **Avoid `as any`** — Do not use `as any` type assertions. Find proper type solutions instead (use specific types, generics, or fix the underlying type issue).
-- Prefer type-safe solutions over type assertions in general.
+- **Minimize type assertions** — Prefer type-safe solutions over type assertions in general. When assertions are unavoidable, use the most specific type possible (e.g., `as AccountType` rather than `as string`).
+- **No eslint-disable comments** — Do not suppress linter warnings with `eslint-disable` comments. Fix the underlying issue instead.
 - **Data-driven animations** — When animating lists of items (stanzas, cards, list items, etc.), create animation values dynamically based on the data array length. Never hardcode animation values for a fixed number of items. This ensures animations automatically adapt when items are added or removed. Extract timing constants to a configuration object for easy tuning.
+
+### Linting
+
+**Always run the linter after making changes:**
+
+```bash
+npm run lint
+```
+
+- Fix all errors before committing
+- Warnings should also be addressed (unused variables, imports, etc.)
+- Do not ignore errors with `eslint-disable` comments
 
 ### Project Structure
 

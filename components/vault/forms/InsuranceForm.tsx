@@ -2,7 +2,7 @@
  * InsuranceForm - Form for creating/editing insurance policy entries
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ScrollView,
   View,
@@ -14,21 +14,14 @@ import {
 } from 'react-native';
 import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
+import { FormInput, FormTextArea, insuranceSchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
 import { spacing } from '@/constants/theme';
 import { formStyles } from './formStyles';
 import type { EntryFormProps } from '../registry';
 
-const policyTypes = [
-  'Life',
-  'Health',
-  'Home',
-  'Auto',
-  'Disability',
-  'Other',
-] as const;
+const policyTypes = ['Life', 'Health', 'Home', 'Auto', 'Disability', 'Other'] as const;
 
 type PolicyType = (typeof policyTypes)[number];
 
@@ -41,12 +34,10 @@ interface InsuranceMetadata {
 }
 
 export function InsuranceForm({
-  taskKey,
   entryId,
   initialData,
   onSave,
   onDelete,
-  onCancel,
   isSaving,
 }: EntryFormProps) {
   const navigation = useNavigation();
@@ -55,14 +46,51 @@ export function InsuranceForm({
 
   const initialMetadata = initialData?.metadata as InsuranceMetadata | undefined;
 
-  const [policyName, setPolicyName] = useState(initialData?.title ?? '');
-  const [provider, setProvider] = useState(initialMetadata?.provider ?? '');
-  const [policyType, setPolicyType] = useState<PolicyType>(
-    initialMetadata?.policyType ?? 'Life'
+  const defaultValues = useMemo(
+    () => ({
+      policyName: initialData?.title ?? '',
+      provider: initialMetadata?.provider ?? '',
+      policyType: (initialMetadata?.policyType ?? 'Life') as string,
+      policyNumber: initialMetadata?.policyNumber ?? '',
+      coverageDetails: initialMetadata?.coverageDetails ?? '',
+      notes: initialData?.notes ?? '',
+    }),
+    [initialData, initialMetadata]
   );
-  const [policyNumber, setPolicyNumber] = useState(initialMetadata?.policyNumber ?? '');
-  const [coverageDetails, setCoverageDetails] = useState(initialMetadata?.coverageDetails ?? '');
-  const [notes, setNotes] = useState(initialData?.notes ?? '');
+
+  const form = useForm({
+    defaultValues,
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: insuranceSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const metadata: InsuranceMetadata = {
+        provider: value.provider.trim(),
+        policyType: value.policyType as PolicyType,
+        policyNumber: value.policyNumber.trim() || undefined,
+        coverageDetails: value.coverageDetails.trim() || undefined,
+      };
+
+      try {
+        await onSave({
+          title: value.policyName.trim(),
+          notes: value.notes.trim() || undefined,
+          metadata: metadata as unknown as Record<string, unknown>,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save policy';
+        Alert.alert('Error', message);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -70,57 +98,25 @@ export function InsuranceForm({
     });
   }, [isNew, navigation]);
 
-  const handleSave = async () => {
-    if (!policyName.trim()) {
-      Alert.alert('Required Field', 'Please enter a policy name.');
-      return;
-    }
-    if (!provider.trim()) {
-      Alert.alert('Required Field', 'Please enter a provider.');
-      return;
-    }
-
-    const metadata: InsuranceMetadata = {
-      provider: provider.trim(),
-      policyType,
-      policyNumber: policyNumber.trim() || undefined,
-      coverageDetails: coverageDetails.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: policyName.trim(),
-        notes: notes.trim() || undefined,
-        metadata: metadata as unknown as Record<string, unknown>,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save policy';
-      Alert.alert('Error', message);
-    }
-  };
-
   const handleDelete = () => {
     if (!onDelete) return;
 
-    Alert.alert(
-      'Delete Policy',
-      `Are you sure you want to delete ${policyName || 'this policy'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDelete();
-            } catch (err) {
-              const message = err instanceof Error ? err.message : 'Failed to delete policy';
-              Alert.alert('Error', message);
-            }
-          },
+    const policyName = form.getFieldValue('policyName');
+    Alert.alert('Delete Policy', `Are you sure you want to delete ${policyName || 'this policy'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await onDelete();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to delete policy';
+            Alert.alert('Error', message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -135,81 +131,88 @@ export function InsuranceForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="Policy Name"
-          placeholder="e.g., Life Insurance"
-          value={policyName}
-          onChangeText={setPolicyName}
-        />
+        <form.Field name="policyName">
+          {(field) => (
+            <FormInput field={field} label="Policy Name" placeholder="e.g., Life Insurance" />
+          )}
+        </form.Field>
 
-        <Input
-          label="Provider"
-          placeholder="e.g., Northwestern Mutual"
-          value={provider}
-          onChangeText={setProvider}
-        />
+        <form.Field name="provider">
+          {(field) => (
+            <FormInput field={field} label="Provider" placeholder="e.g., Northwestern Mutual" />
+          )}
+        </form.Field>
 
-        <View style={formStyles.fieldContainer}>
-          <Text style={formStyles.label}>Policy Type</Text>
-          <View style={formStyles.typeGrid}>
-            {policyTypes.map((type) => (
-              <Pressable
-                key={type}
-                style={[
-                  formStyles.typeButton,
-                  policyType === type && formStyles.typeButtonSelected,
-                ]}
-                onPress={() => setPolicyType(type)}
-              >
-                <Text
-                  style={[
-                    formStyles.typeButtonText,
-                    policyType === type && formStyles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <form.Field name="policyType">
+          {(field) => (
+            <View style={formStyles.fieldContainer}>
+              <Text style={formStyles.label}>Policy Type</Text>
+              <View style={formStyles.typeGrid}>
+                {policyTypes.map((type) => (
+                  <Pressable
+                    key={type}
+                    style={[
+                      formStyles.typeButton,
+                      field.state.value === type && formStyles.typeButtonSelected,
+                    ]}
+                    onPress={() => field.handleChange(type)}
+                  >
+                    <Text
+                      style={[
+                        formStyles.typeButtonText,
+                        field.state.value === type && formStyles.typeButtonTextSelected,
+                      ]}
+                    >
+                      {type}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </form.Field>
 
-        <Input
-          label="Policy Number (Optional)"
-          placeholder="e.g., LF-2847592"
-          value={policyNumber}
-          onChangeText={setPolicyNumber}
-        />
+        <form.Field name="policyNumber">
+          {(field) => (
+            <FormInput field={field} label="Policy Number (Optional)" placeholder="e.g., LF-2847592" />
+          )}
+        </form.Field>
 
-        <Input
-          label="Coverage Amount (Optional)"
-          placeholder="e.g., $500,000"
-          value={coverageDetails}
-          onChangeText={setCoverageDetails}
-        />
+        <form.Field name="coverageDetails">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Coverage Amount (Optional)"
+              placeholder="e.g., $500,000"
+            />
+          )}
+        </form.Field>
 
-        <TextArea
-          label="Notes (Optional)"
-          placeholder="Any additional details about this policy"
-          value={notes}
-          onChangeText={setNotes}
-        />
+        <form.Field name="notes">
+          {(field) => (
+            <FormTextArea
+              field={field}
+              label="Notes (Optional)"
+              placeholder="Any additional details about this policy"
+            />
+          )}
+        </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save'}
-            onPress={handleSave}
-            disabled={isSaving}
-          />
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                onPress={() => form.handleSubmit()}
+                disabled={isSaving || isSubmitting || !canSubmit}
+              />
+            )}
+          </form.Subscribe>
         </View>
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button
-              title="Delete Policy"
-              variant="destructive"
-              onPress={handleDelete}
-            />
+            <Button title="Delete Policy" variant="destructive" onPress={handleDelete} />
           </View>
         )}
       </ScrollView>

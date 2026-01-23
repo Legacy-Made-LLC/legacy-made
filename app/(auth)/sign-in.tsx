@@ -1,5 +1,6 @@
 import { useSignIn } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -13,8 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FormInput, signInSchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { colors, spacing, typography } from '@/constants/theme';
 
 export default function SignInScreen() {
@@ -22,54 +23,62 @@ export default function SignInScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [emailAddress, setEmailAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const onContinuePress = async () => {
-    if (!isLoaded) return;
+  const form = useForm({
+    defaultValues: {
+      email: '',
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: signInSchema,
+    },
+    onSubmit: async ({ value }) => {
+      if (!isLoaded) return;
 
-    setIsLoading(true);
-    setError('');
+      setIsLoading(true);
+      setError('');
 
-    try {
-      // Create sign-in attempt and send OTP
-      const { supportedFirstFactors } = await signIn.create({
-        identifier: emailAddress,
-      });
-
-      // Find the email code factor
-      const emailCodeFactor = supportedFirstFactors?.find(
-        (factor) => factor.strategy === 'email_code'
-      );
-
-      if (emailCodeFactor && 'emailAddressId' in emailCodeFactor) {
-        // Send the OTP
-        await signIn.prepareFirstFactor({
-          strategy: 'email_code',
-          emailAddressId: emailCodeFactor.emailAddressId,
+      try {
+        // Create sign-in attempt and send OTP
+        const { supportedFirstFactors } = await signIn.create({
+          identifier: value.email,
         });
 
-        // Navigate to OTP verification
-        router.push({
-          pathname: '/(auth)/verify-otp',
-          params: { email: emailAddress, mode: 'sign-in' },
-        });
-      } else {
-        setError('Email sign-in is not available for this account.');
+        // Find the email code factor
+        const emailCodeFactor = supportedFirstFactors?.find(
+          (factor) => factor.strategy === 'email_code'
+        );
+
+        if (emailCodeFactor && 'emailAddressId' in emailCodeFactor) {
+          // Send the OTP
+          await signIn.prepareFirstFactor({
+            strategy: 'email_code',
+            emailAddressId: emailCodeFactor.emailAddressId,
+          });
+
+          // Navigate to OTP verification
+          router.push({
+            pathname: '/(auth)/verify-otp',
+            params: { email: value.email, mode: 'sign-in' },
+          });
+        } else {
+          setError('Email sign-in is not available for this account.');
+        }
+      } catch (err: unknown) {
+        const clerkError = err as { errors?: { message: string }[] };
+        if (clerkError.errors && clerkError.errors.length > 0) {
+          setError(clerkError.errors[0].message);
+        } else {
+          setError('An error occurred. Please try again.');
+        }
+        console.error(JSON.stringify(err, null, 2));
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err: unknown) {
-      const clerkError = err as { errors?: { message: string }[] };
-      if (clerkError.errors && clerkError.errors.length > 0) {
-        setError(clerkError.errors[0].message);
-      } else {
-        setError('An error occurred. Please try again.');
-      }
-      console.error(JSON.stringify(err, null, 2));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
   return (
     <KeyboardAvoidingView
@@ -85,10 +94,7 @@ export default function SignInScreen() {
       >
         <Pressable
           onPress={router.back}
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed && styles.backButtonPressed,
-          ]}
+          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
           hitSlop={12}
         >
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
@@ -108,24 +114,31 @@ export default function SignInScreen() {
             </View>
           ) : null}
 
-          <Input
-            label="Email"
-            value={emailAddress}
-            placeholder="Enter your email"
-            onChangeText={setEmailAddress}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            autoFocus
-          />
+          <form.Field name="email">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Email"
+                placeholder="Enter your email"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                autoFocus
+              />
+            )}
+          </form.Field>
 
-          <Button
-            title={isLoading ? 'Sending code...' : 'Continue'}
-            onPress={onContinuePress}
-            disabled={isLoading || !emailAddress}
-            style={styles.button}
-          />
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                title={isLoading || isSubmitting ? 'Sending code...' : 'Continue'}
+                onPress={() => form.handleSubmit()}
+                disabled={isLoading || isSubmitting || !canSubmit}
+                style={styles.button}
+              />
+            )}
+          </form.Subscribe>
         </View>
 
         <View style={styles.footer}>

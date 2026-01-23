@@ -1,10 +1,12 @@
-import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
-import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
-import { colors } from "@/constants/theme";
-import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useSignUp } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { FormInput, signUpSchema } from '@/components/forms';
+import { OnboardingHeader } from '@/components/onboarding/OnboardingHeader';
+import { onboardingStyles as styles } from '@/components/onboarding/onboardingStyles';
+import { colors } from '@/constants/theme';
+import { useOnboardingContext } from '@/data/OnboardingContext';
+import { useSignUp } from '@clerk/clerk-expo';
+import { revalidateLogic, useForm } from '@tanstack/react-form';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -13,10 +15,9 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AccountCreationScreen() {
   const router = useRouter();
@@ -33,44 +34,54 @@ export default function AccountCreationScreen() {
   } = useOnboardingContext();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  const isValid =
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    userEmail.trim().length > 0 &&
-    userEmail.includes("@");
+  const form = useForm({
+    defaultValues: {
+      firstName,
+      lastName,
+      email: userEmail,
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: signUpSchema,
+    },
+    onSubmit: async ({ value }) => {
+      if (!isLoaded) return;
 
-  const handleCreateAccount = async () => {
-    if (!isLoaded) return;
+      setIsLoading(true);
+      setError('');
 
-    setIsLoading(true);
-    setError("");
+      try {
+        // Update context with form values
+        setFirstName(value.firstName.trim());
+        setLastName(value.lastName.trim());
+        setUserEmail(value.email.trim());
 
-    try {
-      await signUp.create({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        emailAddress: userEmail.trim(),
-      });
+        await signUp.create({
+          firstName: value.firstName.trim(),
+          lastName: value.lastName.trim(),
+          emailAddress: value.email.trim(),
+        });
 
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      router.push("/(onboarding)/verify-otp");
-    } catch (err: unknown) {
-      const clerkError = err as { errors?: { message: string }[] };
-      if (clerkError.errors && clerkError.errors.length > 0) {
-        setError(clerkError.errors[0].message);
-      } else {
-        setError("An error occurred. Please try again.");
+        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        router.push('/(onboarding)/verify-otp');
+      } catch (err: unknown) {
+        const clerkError = err as { errors?: { message: string }[] };
+        if (clerkError.errors && clerkError.errors.length > 0) {
+          setError(clerkError.errors[0].message);
+        } else {
+          setError('An error occurred. Please try again.');
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
   const handleSignIn = () => {
     setHasCompletedInitialOnboarding(true);
-    router.replace("/(auth)/sign-in");
+    router.replace('/(auth)/sign-in');
   };
 
   return (
@@ -78,7 +89,7 @@ export default function AccountCreationScreen() {
       <OnboardingHeader showBackButton />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
       >
         <ScrollView
@@ -89,8 +100,7 @@ export default function AccountCreationScreen() {
         >
           <Text style={styles.formTitle}>Tell us about you</Text>
           <Text style={styles.formSubtitle}>
-            This helps us personalize your experience and keep your information
-            secure.
+            This helps us personalize your experience and keep your information secure.
           </Text>
 
           {error ? (
@@ -101,90 +111,106 @@ export default function AccountCreationScreen() {
 
           <View style={styles.nameRow}>
             <View style={styles.nameField}>
-              <Text style={styles.formLabel}>FIRST NAME</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="First"
-                placeholderTextColor={colors.textTertiary}
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-                autoCorrect={false}
-                textContentType="givenName"
-              />
+              <form.Field
+                name="firstName"
+                listeners={{
+                  onChange: ({ value }) => setFirstName(value),
+                }}
+              >
+                {(field) => (
+                  <FormInput
+                    field={field}
+                    label="First Name"
+                    placeholder="First"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    textContentType="givenName"
+                  />
+                )}
+              </form.Field>
             </View>
             <View style={styles.nameField}>
-              <Text style={styles.formLabel}>LAST NAME</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Last"
-                placeholderTextColor={colors.textTertiary}
-                value={lastName}
-                onChangeText={setLastName}
-                autoCapitalize="words"
-                autoCorrect={false}
-                textContentType="familyName"
-              />
+              <form.Field
+                name="lastName"
+                listeners={{
+                  onChange: ({ value }) => setLastName(value),
+                }}
+              >
+                {(field) => (
+                  <FormInput
+                    field={field}
+                    label="Last Name"
+                    placeholder="Last"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    textContentType="familyName"
+                  />
+                )}
+              </form.Field>
             </View>
           </View>
 
-          <View style={styles.formField}>
-            <Text style={styles.formLabel}>EMAIL</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="your@email.com"
-              placeholderTextColor={colors.textTertiary}
-              value={userEmail}
-              onChangeText={setUserEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-            />
-          </View>
+          <form.Field
+            name="email"
+            listeners={{
+              onChange: ({ value }) => setUserEmail(value),
+            }}
+          >
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Email"
+                placeholder="your@email.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="emailAddress"
+              />
+            )}
+          </form.Field>
 
           <View style={styles.formButtonContainer}>
             <Text style={styles.verificationExplanation}>
               We&apos;ll send a code to your email to verify it&apos;s you.
             </Text>
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.primaryButtonPressed,
-                (!isValid || isLoading) && styles.primaryButtonDisabled,
-              ]}
-              onPress={handleCreateAccount}
-              disabled={!isValid || isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={colors.surface} />
-              ) : (
-                <Text
-                  style={[
-                    styles.primaryButtonText,
-                    !isValid && styles.primaryButtonTextDisabled,
+            <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              {([canSubmit, isSubmitting]) => (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    pressed && styles.primaryButtonPressed,
+                    (!canSubmit || isLoading || isSubmitting) && styles.primaryButtonDisabled,
                   ]}
+                  onPress={() => form.handleSubmit()}
+                  disabled={!canSubmit || isLoading || isSubmitting}
                 >
-                  Send verification code
-                </Text>
+                  {isLoading || isSubmitting ? (
+                    <ActivityIndicator color={colors.surface} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        !canSubmit && styles.primaryButtonTextDisabled,
+                      ]}
+                    >
+                      Send verification code
+                    </Text>
+                  )}
+                </Pressable>
               )}
-            </Pressable>
+            </form.Subscribe>
             <Text style={styles.termsText}>
-              By continuing, you agree to our{" "}
+              By continuing, you agree to our{' '}
               <Text
                 style={styles.termsLink}
-                onPress={() =>
-                  Linking.openURL("https://legacymade.com/terms-of-service")
-                }
+                onPress={() => Linking.openURL('https://legacymade.com/terms-of-service')}
               >
                 Terms of Service
-              </Text>{" "}
-              and{" "}
+              </Text>{' '}
+              and{' '}
               <Text
                 style={styles.termsLink}
-                onPress={() =>
-                  Linking.openURL("https://legacymade.com/privacy-policy")
-                }
+                onPress={() => Linking.openURL('https://legacymade.com/privacy-policy')}
               >
                 Privacy Policy
               </Text>
@@ -194,7 +220,7 @@ export default function AccountCreationScreen() {
 
           <View style={styles.signInContainer}>
             <Text style={styles.signInText}>
-              Already have an account?{" "}
+              Already have an account?{' '}
               <Text style={styles.signInLink} onPress={handleSignIn}>
                 Sign In
               </Text>

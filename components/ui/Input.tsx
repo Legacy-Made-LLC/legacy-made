@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   TextInput,
@@ -23,7 +23,6 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
 }
 
 export function Input({ label, containerStyle, ...props }: InputProps) {
-  const [isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue(colors.border);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -31,12 +30,10 @@ export function Input({ label, containerStyle, ...props }: InputProps) {
   }));
 
   const handleFocus = () => {
-    setIsFocused(true);
     borderColor.value = withTiming(colors.primary, { duration: 200 });
   };
 
   const handleBlur = () => {
-    setIsFocused(false);
     borderColor.value = withTiming(colors.border, { duration: 200 });
   };
 
