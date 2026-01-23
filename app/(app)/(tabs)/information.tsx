@@ -3,9 +3,9 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SectionCard } from "@/components/vault/SectionCard";
+import { colors, spacing, typography } from "@/constants/theme";
 import { vaultSections } from "@/constants/vault";
 import { useEntryCountsQuery } from "@/hooks/queries";
-import { colors, spacing, typography } from "@/constants/theme";
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing } from '@/constants/theme';
@@ -10,7 +11,7 @@ export function GuidanceCard({ text }: GuidanceCardProps) {
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Text style={styles.icon}>💡</Text>
+        <Ionicons name="bulb-outline" size={18} color={colors.textSecondary} />
       </View>
       <Text style={styles.text}>{text}</Text>
     </View>
@@ -28,9 +29,6 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginRight: spacing.sm,
-  },
-  icon: {
-    fontSize: 16,
   },
   text: {
     flex: 1,

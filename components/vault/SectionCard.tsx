@@ -5,13 +5,13 @@
  * Handles navigation based on whether the section has one or multiple tasks.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { PressableCard } from '@/components/ui/Card';
-import { colors, typography, spacing, borderRadius } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
 import type { VaultSection } from '@/constants/vault';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 interface SectionCardProps {
   section: VaultSection;
@@ -19,18 +19,17 @@ interface SectionCardProps {
   counts: Record<string, number>;
 }
 
+// Animation configuration
+const PROGRESS_ANIMATION_DURATION = 400;
+
 export function SectionCard({ section, counts }: SectionCardProps) {
   const router = useRouter();
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   const handlePress = () => {
     // Navigate to the section (it will redirect to single task if applicable)
     router.push(`/vault/${section.id}`);
   };
-
-  // Calculate total entries for this section
-  const totalEntries = section.tasks.reduce((sum, task) => {
-    return sum + (counts[task.taskKey] || 0);
-  }, 0);
 
   // Calculate completion for this section
   // Goal: at least 1 entry per task
@@ -39,6 +38,15 @@ export function SectionCard({ section, counts }: SectionCardProps) {
   ).length;
   const goalCount = section.tasks.length;
   const progress = goalCount > 0 ? completedTasks / goalCount : 0;
+
+  // Animate progress bar when progress changes
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: PROGRESS_ANIMATION_DURATION,
+      useNativeDriver: false, // width animation can't use native driver
+    }).start();
+  }, [progress, progressAnim]);
 
   return (
     <PressableCard onPress={handlePress} style={styles.card}>
@@ -60,10 +68,15 @@ export function SectionCard({ section, counts }: SectionCardProps) {
           </View>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View
+              <Animated.View
                 style={[
                   styles.progressFill,
-                  { width: `${progress * 100}%` },
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
                 ]}
               />
             </View>

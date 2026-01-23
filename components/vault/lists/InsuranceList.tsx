@@ -2,13 +2,16 @@
  * InsuranceList - Displays a list of insurance policy entries
  */
 
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { ScrollView, View, Text, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { GuidanceCard } from '@/components/ui/GuidanceCard';
-import { spacing } from '@/constants/theme';
+import { SkeletonList } from '@/components/ui/SkeletonCard';
+import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
+import { colors, spacing } from '@/constants/theme';
 import { getTaskByKey } from '@/constants/vault';
 import { listStyles } from './listStyles';
 import type { EntryListProps } from '../registry';
@@ -32,16 +35,20 @@ export function InsuranceList({
 
   if (isLoading) {
     return (
-      <View style={listStyles.loadingContainer}>
-        <ActivityIndicator size="large" />
-      </View>
+      <ScrollView
+        style={listStyles.container}
+        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <SkeletonList count={3} />
+      </ScrollView>
     );
   }
 
   if (entries.length === 0) {
     return (
       <View style={[listStyles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Text style={listStyles.emptyIcon}>🛡️</Text>
+        <Ionicons name="shield-outline" size={48} color={colors.textTertiary} style={listStyles.emptyIcon} />
         <Text style={listStyles.emptyTitle}>No policies added yet</Text>
         <Text style={listStyles.emptyDescription}>
           Add your insurance policies so your loved ones know what coverage exists.
@@ -59,32 +66,35 @@ export function InsuranceList({
     >
       {task?.guidance && <GuidanceCard text={task.guidance} />}
 
-      {entries.map((entry) => {
+      {entries.map((entry, index) => {
         const metadata = entry.metadata as InsuranceMetadata;
         const subtitle = [metadata.provider, metadata.coverageDetails]
           .filter(Boolean)
           .join(' · ');
 
         return (
-          <PressableCard
-            key={entry.id}
-            onPress={() => onEntryPress(entry.id)}
-            style={listStyles.card}
-          >
-            <View style={listStyles.cardContent}>
-              <View style={listStyles.cardText}>
-                <Text style={listStyles.cardTitle}>{entry.title}</Text>
-                {subtitle && <Text style={listStyles.cardSubtitle}>{subtitle}</Text>}
+          <AnimatedListItem key={entry.id} index={index}>
+            <PressableCard
+              onPress={() => onEntryPress(entry.id)}
+              style={listStyles.card}
+            >
+              <View style={listStyles.cardContent}>
+                <View style={listStyles.cardText}>
+                  <Text style={listStyles.cardTitle}>{entry.title}</Text>
+                  {subtitle && <Text style={listStyles.cardSubtitle}>{subtitle}</Text>}
+                </View>
+                <Text style={listStyles.chevron}>›</Text>
               </View>
-              <Text style={listStyles.chevron}>›</Text>
-            </View>
-          </PressableCard>
+            </PressableCard>
+          </AnimatedListItem>
         );
       })}
 
-      <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-        <Text style={listStyles.addText}>+ Add Policy</Text>
-      </PressableCard>
+      <AnimatedListItem index={entries.length}>
+        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+          <Text style={listStyles.addText}>+ Add Policy</Text>
+        </PressableCard>
+      </AnimatedListItem>
     </ScrollView>
   );
 }

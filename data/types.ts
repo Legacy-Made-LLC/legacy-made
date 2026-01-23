@@ -77,7 +77,6 @@ export interface Category {
   title: string;
   description: string;
   guidance: string;
-  icon: string;
   ionIcon: string;
   route: string;
   /** Data key used to look up item count from app state */

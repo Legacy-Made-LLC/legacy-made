@@ -8,13 +8,13 @@
  * entryId = <uuid> for editing an existing entry
  */
 
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getTask } from '@/constants/vault';
 import { getFormComponent } from '@/components/vault/registry';
-import { colors, typography, spacing } from '@/constants/theme';
-import { useEntryQuery, useCreateEntry, useUpdateEntry, useDeleteEntry } from '@/hooks/queries';
+import { colors, spacing, typography } from '@/constants/theme';
+import { getTask } from '@/constants/vault';
+import { useCreateEntry, useDeleteEntry, useEntryQuery, useUpdateEntry } from '@/hooks/queries';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{

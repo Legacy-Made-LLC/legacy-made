@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -18,7 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 interface DevAction {
   id: string;
   label: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   destructive?: boolean;
 }
@@ -71,25 +72,25 @@ export function DevMenu() {
     {
       id: "skip-onboarding",
       label: hasCompletedInitialOnboarding ? "Onboarding already complete" : "Skip Onboarding",
-      icon: "⏭️",
+      icon: "play-skip-forward-outline",
       onPress: handleSkipOnboarding,
     },
     {
       id: "restart-onboarding",
       label: "Restart Onboarding",
-      icon: "🔄",
+      icon: "refresh-outline",
       onPress: handleRestartOnboarding,
     },
     {
       id: "sign-out",
       label: isSignedIn ? "Sign Out" : "Not signed in",
-      icon: "🚪",
+      icon: "log-out-outline",
       onPress: handleSignOut,
     },
     {
       id: "refresh-data",
       label: isLoading ? "Refreshing..." : "Refresh Data",
-      icon: "🔃",
+      icon: "sync-outline",
       onPress: handleRefreshData,
     },
   ];
@@ -105,7 +106,7 @@ export function DevMenu() {
         ]}
         onPress={() => setIsOpen(true)}
       >
-        <Text style={styles.fabIcon}>🛠️</Text>
+        <Ionicons name="build-outline" size={24} color="white" />
       </Pressable>
 
       {/* Menu Modal */}
@@ -123,7 +124,7 @@ export function DevMenu() {
             <Pressable onPress={(e) => e.stopPropagation()}>
               <View style={styles.menu}>
                 <View style={styles.header}>
-                  <Text style={styles.headerIcon}>🛠️</Text>
+                  <Ionicons name="build-outline" size={20} color={colors.textPrimary} style={styles.headerIcon} />
                   <Text style={styles.headerTitle}>Dev Menu</Text>
                 </View>
 
@@ -159,7 +160,12 @@ export function DevMenu() {
                     ]}
                     onPress={action.onPress}
                   >
-                    <Text style={styles.menuItemIcon}>{action.icon}</Text>
+                    <Ionicons
+                      name={action.icon}
+                      size={18}
+                      color={action.destructive ? colors.error : colors.textPrimary}
+                      style={styles.menuItemIcon}
+                    />
                     <Text style={[
                       styles.menuItemLabel,
                       action.destructive && styles.menuItemLabelDestructive,
@@ -209,9 +215,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.95 }],
     opacity: 0.9,
   },
-  fabIcon: {
-    fontSize: 24,
-  },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -235,7 +238,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   headerIcon: {
-    fontSize: 20,
     marginRight: spacing.sm,
   },
   headerTitle: {
@@ -282,7 +284,6 @@ const styles = StyleSheet.create({
   },
   menuItemDestructive: {},
   menuItemIcon: {
-    fontSize: 18,
     marginRight: spacing.md,
   },
   menuItemLabel: {

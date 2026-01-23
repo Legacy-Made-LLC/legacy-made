@@ -57,7 +57,6 @@ export const listStyles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: spacing.lg,
   },
   emptyTitle: {

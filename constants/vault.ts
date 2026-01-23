@@ -29,8 +29,6 @@ export interface VaultSection {
   title: string;
   /** Short description shown on dashboard */
   description: string;
-  /** Emoji icon */
-  icon: string;
   /** Ionicon name */
   ionIcon: string;
   /** Tasks within this section */
@@ -42,7 +40,6 @@ export const vaultSections: VaultSection[] = [
     id: 'contacts',
     title: 'Who to Contact First',
     description: 'The first calls your family should make',
-    icon: '📞',
     ionIcon: 'call-outline',
     tasks: [
       {
@@ -67,7 +64,6 @@ export const vaultSections: VaultSection[] = [
     id: 'people',
     title: 'Important People',
     description: 'Everyone else your family should know about',
-    icon: '👤',
     ionIcon: 'person-outline',
     tasks: [
       {
@@ -84,7 +80,6 @@ export const vaultSections: VaultSection[] = [
     id: 'finances',
     title: 'Financial Accounts',
     description: 'Bank, investment, and retirement accounts',
-    icon: '💰',
     ionIcon: 'cash-outline',
     tasks: [
       {
@@ -101,7 +96,6 @@ export const vaultSections: VaultSection[] = [
     id: 'insurance',
     title: 'Insurance Policies',
     description: 'Coverage your family should know about',
-    icon: '🛡️',
     ionIcon: 'shield-outline',
     tasks: [
       {
@@ -118,7 +112,6 @@ export const vaultSections: VaultSection[] = [
     id: 'documents',
     title: 'Legal Documents',
     description: 'Wills, trusts, and important papers',
-    icon: '📄',
     ionIcon: 'document-text-outline',
     tasks: [
       {
@@ -135,7 +128,6 @@ export const vaultSections: VaultSection[] = [
     id: 'property',
     title: 'Property & Vehicles',
     description: 'Real estate, vehicles, and physical assets',
-    icon: '🏠',
     ionIcon: 'home-outline',
     tasks: [
       {
@@ -152,7 +144,6 @@ export const vaultSections: VaultSection[] = [
     id: 'pets',
     title: 'Pets',
     description: 'Care instructions for your animal companions',
-    icon: '🐾',
     ionIcon: 'paw-outline',
     tasks: [
       {
@@ -169,7 +160,6 @@ export const vaultSections: VaultSection[] = [
     id: 'digital',
     title: 'Digital Access',
     description: 'How to access your online accounts',
-    icon: '💻',
     ionIcon: 'laptop-outline',
     tasks: [
       {

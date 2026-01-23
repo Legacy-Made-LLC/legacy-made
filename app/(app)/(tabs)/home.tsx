@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
+  Animated,
   Image,
   Pressable,
   ScrollView,
@@ -50,6 +51,75 @@ const pillars = [
     route: "/(app)/(tabs)/family",
   },
 ];
+
+// Animation configuration
+const PROGRESS_ANIMATION_DURATION = 400;
+
+interface PillarCardProps {
+  pillar: (typeof pillars)[number];
+  currentProgress: number;
+  onPress: () => void;
+}
+
+function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const progressPercent = Math.min(currentProgress / pillar.totalItems, 1);
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progressPercent,
+      duration: PROGRESS_ANIMATION_DURATION,
+      useNativeDriver: false,
+    }).start();
+  }, [progressPercent, progressAnim]);
+
+  return (
+    <PressableCard onPress={onPress} style={styles.pillarCard}>
+      <View style={styles.pillarContent}>
+        <View style={styles.pillarIconContainer}>
+          <Ionicons
+            name={pillar.icon}
+            size={22}
+            color={colors.textTertiary}
+          />
+        </View>
+        <View style={styles.pillarTextContent}>
+          <View style={styles.pillarHeader}>
+            <View style={styles.pillarTitleRow}>
+              <Text style={styles.pillarTitle}>{pillar.title}</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.textTertiary}
+              />
+            </View>
+            <Text style={styles.pillarDescription}>
+              {pillar.description}
+            </Text>
+          </View>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {currentProgress}/{pillar.totalItems}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </PressableCard>
+  );
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -120,55 +190,14 @@ export default function HomeScreen() {
 
       {/* Pillar Cards */}
       <View style={styles.pillars}>
-        {pillars.map((pillar) => {
-          const currentProgress = getPillarProgress(pillar.id);
-          const progressPercent = Math.min(currentProgress / pillar.totalItems, 1);
-          return (
-            <PressableCard
-              key={pillar.id}
-              onPress={() => router.push(pillar.route as any)}
-              style={styles.pillarCard}
-            >
-              <View style={styles.pillarContent}>
-                <View style={styles.pillarIconContainer}>
-                  <Ionicons
-                    name={pillar.icon}
-                    size={22}
-                    color={colors.textTertiary}
-                  />
-                </View>
-                <View style={styles.pillarTextContent}>
-                  <View style={styles.pillarHeader}>
-                    <View style={styles.pillarTitleRow}>
-                      <Text style={styles.pillarTitle}>{pillar.title}</Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={20}
-                        color={colors.textTertiary}
-                      />
-                    </View>
-                    <Text style={styles.pillarDescription}>
-                      {pillar.description}
-                    </Text>
-                  </View>
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${progressPercent * 100}%` },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.progressText}>
-                      {currentProgress}/{pillar.totalItems}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </PressableCard>
-          );
-        })}
+        {pillars.map((pillar) => (
+          <PillarCard
+            key={pillar.id}
+            pillar={pillar}
+            currentProgress={getPillarProgress(pillar.id)}
+            onPress={() => router.push(pillar.route as any)}
+          />
+        ))}
       </View>
     </ScrollView>
   );

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useClerk } from "@clerk/clerk-expo";
 import React, { useEffect, useRef, useState } from "react";
@@ -23,7 +24,7 @@ interface MenuProps {
 interface MenuItemProps {
   label: string;
   onPress: () => void;
-  icon?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 function MenuItem({ label, onPress, icon }: MenuItemProps) {
@@ -35,7 +36,7 @@ function MenuItem({ label, onPress, icon }: MenuItemProps) {
         pressed && styles.menuItemPressed,
       ]}
     >
-      {icon && <Text style={styles.menuItemIcon}>{icon}</Text>}
+      {icon && <Ionicons name={icon} size={20} color={colors.textPrimary} style={styles.menuItemIcon} />}
       <Text style={styles.menuItemLabel}>{label}</Text>
     </Pressable>
   );
@@ -131,28 +132,28 @@ export function Menu({ visible, onClose }: MenuProps) {
 
           <View style={styles.menuItems}>
             <MenuItem
-              icon="🏠"
+              icon="home-outline"
               label="Home"
               onPress={() => {
                 onClose();
               }}
             />
             <MenuItem
-              icon="⚙️"
+              icon="settings-outline"
               label="Settings"
               onPress={() => {
                 onClose();
               }}
             />
             <MenuItem
-              icon="❓"
+              icon="help-circle-outline"
               label="Help & Support"
               onPress={() => {
                 onClose();
               }}
             />
             <MenuItem
-              icon="📖"
+              icon="book-outline"
               label="About Legacy Made"
               onPress={() => {
                 onClose();
@@ -253,7 +254,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
   },
   menuItemIcon: {
-    fontSize: 20,
     marginRight: spacing.md,
   },
   menuItemLabel: {
