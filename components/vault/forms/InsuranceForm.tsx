@@ -1,38 +1,68 @@
+/**
+ * InsuranceForm - Form for creating/editing insurance policy entries
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
-  StyleSheet,
+  Text,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Pressable,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Button } from '@/components/ui/Button';
-import { useAppContext } from '@/data/store';
-import { colors, spacing } from '@/constants/theme';
-import type { InsurancePolicy } from '@/data/types';
+import { spacing } from '@/constants/theme';
+import { formStyles } from './formStyles';
+import type { EntryFormProps } from '../registry';
 
-export default function InsuranceDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+const policyTypes = [
+  'Life',
+  'Health',
+  'Home',
+  'Auto',
+  'Disability',
+  'Other',
+] as const;
+
+type PolicyType = (typeof policyTypes)[number];
+
+interface InsuranceMetadata {
+  provider: string;
+  policyType: PolicyType;
+  policyNumber?: string;
+  contactInfo?: string;
+  coverageDetails?: string;
+}
+
+export function InsuranceForm({
+  taskKey,
+  entryId,
+  initialData,
+  onSave,
+  onDelete,
+  onCancel,
+  isSaving,
+}: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { getInsurance, addInsurance, updateInsurance, deleteInsurance } = useAppContext();
+  const isNew = !entryId;
 
-  const isNew = id === 'new';
-  const existing = isNew ? undefined : getInsurance(id);
+  const initialMetadata = initialData?.metadata as InsuranceMetadata | undefined;
 
-  const [policyName, setPolicyName] = useState(existing?.policyName ?? '');
-  const [provider, setProvider] = useState(existing?.provider ?? '');
-  const [policyNumber, setPolicyNumber] = useState(existing?.policyNumber ?? '');
-  const [coverageAmount, setCoverageAmount] = useState(existing?.coverageAmount ?? '');
-  const [beneficiary, setBeneficiary] = useState(existing?.beneficiary ?? '');
-  const [notes, setNotes] = useState(existing?.notes ?? '');
-  const [isSaving, setIsSaving] = useState(false);
+  const [policyName, setPolicyName] = useState(initialData?.title ?? '');
+  const [provider, setProvider] = useState(initialMetadata?.provider ?? '');
+  const [policyType, setPolicyType] = useState<PolicyType>(
+    initialMetadata?.policyType ?? 'Life'
+  );
+  const [policyNumber, setPolicyNumber] = useState(initialMetadata?.policyNumber ?? '');
+  const [coverageDetails, setCoverageDetails] = useState(initialMetadata?.coverageDetails ?? '');
+  const [notes, setNotes] = useState(initialData?.notes ?? '');
 
   useEffect(() => {
     navigation.setOptions({
@@ -50,35 +80,31 @@ export default function InsuranceDetailScreen() {
       return;
     }
 
-    const data: Omit<InsurancePolicy, 'id'> = {
-      policyName: policyName.trim(),
+    const metadata: InsuranceMetadata = {
       provider: provider.trim(),
+      policyType,
       policyNumber: policyNumber.trim() || undefined,
-      coverageAmount: coverageAmount.trim() || undefined,
-      beneficiary: beneficiary.trim() || undefined,
-      notes: notes.trim() || undefined,
+      coverageDetails: coverageDetails.trim() || undefined,
     };
 
-    setIsSaving(true);
     try {
-      if (isNew) {
-        await addInsurance(data);
-      } else {
-        await updateInsurance(id, data);
-      }
-      router.back();
+      await onSave({
+        title: policyName.trim(),
+        notes: notes.trim() || undefined,
+        metadata: metadata as unknown as Record<string, unknown>,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save policy';
       Alert.alert('Error', message);
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleDelete = () => {
+    if (!onDelete) return;
+
     Alert.alert(
       'Delete Policy',
-      `Are you sure you want to delete ${policyName}?`,
+      `Are you sure you want to delete ${policyName || 'this policy'}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -86,8 +112,7 @@ export default function InsuranceDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteInsurance(id);
-              router.back();
+              await onDelete();
             } catch (err) {
               const message = err instanceof Error ? err.message : 'Failed to delete policy';
               Alert.alert('Error', message);
@@ -100,13 +125,13 @@ export default function InsuranceDetailScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={formStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        style={formStyles.scrollView}
+        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -124,6 +149,31 @@ export default function InsuranceDetailScreen() {
           onChangeText={setProvider}
         />
 
+        <View style={formStyles.fieldContainer}>
+          <Text style={formStyles.label}>Policy Type</Text>
+          <View style={formStyles.typeGrid}>
+            {policyTypes.map((type) => (
+              <Pressable
+                key={type}
+                style={[
+                  formStyles.typeButton,
+                  policyType === type && formStyles.typeButtonSelected,
+                ]}
+                onPress={() => setPolicyType(type)}
+              >
+                <Text
+                  style={[
+                    formStyles.typeButtonText,
+                    policyType === type && formStyles.typeButtonTextSelected,
+                  ]}
+                >
+                  {type}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         <Input
           label="Policy Number (Optional)"
           placeholder="e.g., LF-2847592"
@@ -134,16 +184,8 @@ export default function InsuranceDetailScreen() {
         <Input
           label="Coverage Amount (Optional)"
           placeholder="e.g., $500,000"
-          value={coverageAmount}
-          onChangeText={setCoverageAmount}
-        />
-
-        <Input
-          label="Beneficiary (Optional)"
-          placeholder="e.g., Margaret Chen"
-          value={beneficiary}
-          onChangeText={setBeneficiary}
-          autoCapitalize="words"
+          value={coverageDetails}
+          onChangeText={setCoverageDetails}
         />
 
         <TextArea
@@ -153,7 +195,7 @@ export default function InsuranceDetailScreen() {
           onChangeText={setNotes}
         />
 
-        <View style={styles.buttonContainer}>
+        <View style={formStyles.buttonContainer}>
           <Button
             title={isSaving ? 'Saving...' : 'Save'}
             onPress={handleSave}
@@ -161,8 +203,8 @@ export default function InsuranceDetailScreen() {
           />
         </View>
 
-        {!isNew && (
-          <View style={styles.deleteContainer}>
+        {!isNew && onDelete && (
+          <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Policy"
               variant="destructive"
@@ -174,24 +216,3 @@ export default function InsuranceDetailScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-  },
-  buttonContainer: {
-    marginTop: spacing.lg,
-  },
-  deleteContainer: {
-    marginTop: spacing.xl,
-    alignItems: 'center',
-  },
-});

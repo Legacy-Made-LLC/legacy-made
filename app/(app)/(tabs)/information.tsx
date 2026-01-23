@@ -2,12 +2,14 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CategoryCard } from "@/components/dashboard/CategoryCard";
-import { categories } from "@/constants/categories";
+import { SectionCard } from "@/components/vault/SectionCard";
+import { vaultSections } from "@/constants/vault";
+import { useVaultEntryCounts } from "@/hooks/useVaultEntries";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
+  const { counts } = useVaultEntryCounts();
 
   return (
     <ScrollView
@@ -26,8 +28,8 @@ export default function InformationScreen() {
       </View>
 
       <View style={styles.categories}>
-        {categories.map((category) => (
-          <CategoryCard key={category.id} category={category} />
+        {vaultSections.map((section) => (
+          <SectionCard key={section.id} section={section} counts={counts} />
         ))}
       </View>
     </ScrollView>

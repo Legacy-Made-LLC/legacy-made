@@ -210,8 +210,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   pageTitle: {
-    fontFamily: typography.fontFamily.serif,
-    fontSize: 28,
+    fontFamily: typography.fontFamily.serifBold,
+    fontSize: 24,
     color: colors.textPrimary,
     textAlign: "center",
   },

@@ -59,6 +59,19 @@ export interface DigitalAccount {
   importance: 'critical' | 'high' | 'medium' | 'low';
 }
 
+export interface Pet {
+  id: string;
+  name: string;
+  species: 'Dog' | 'Cat' | 'Bird' | 'Fish' | 'Other';
+  breed?: string;
+  age?: string;
+  veterinarian?: string;
+  vetPhone?: string;
+  careInstructions?: string;
+  designatedCaretaker?: string;
+  notes?: string;
+}
+
 export interface Category {
   id: string;
   title: string;
@@ -68,7 +81,7 @@ export interface Category {
   ionIcon: string;
   route: string;
   /** Data key used to look up item count from app state */
-  stateKey?: 'contacts' | 'finances' | 'insurance' | 'documents' | 'homeResponsibilities' | 'digitalAccounts';
+  stateKey?: 'contacts' | 'finances' | 'insurance' | 'documents' | 'homeResponsibilities' | 'digitalAccounts' | 'pets';
   /** Filter function name for subset counting (e.g., primary contacts vs all contacts) */
   filterType?: 'primary' | 'secondary';
 }

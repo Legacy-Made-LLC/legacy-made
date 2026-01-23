@@ -266,6 +266,47 @@ export function createEntriesService(client: ApiClient) {
         ...options,
       });
     },
+
+    // =========================================================================
+    // Task Key based methods (new vault structure)
+    // =========================================================================
+
+    /**
+     * List entries by taskKey
+     * taskKey format: "contacts.primary", "financial", etc.
+     */
+    listByTaskKey: async (planId: string, taskKey: string): Promise<Entry[]> => {
+      return client.get<Entry[]>(ENTRIES_PATH, {
+        planId,
+        taskKey,
+      });
+    },
+
+    /**
+     * List all entries for a plan (for counting)
+     */
+    listAll: async (planId: string): Promise<Entry[]> => {
+      return client.get<Entry[]>(ENTRIES_PATH, {
+        planId,
+      });
+    },
+
+    /**
+     * Create an entry with taskKey
+     */
+    createWithTaskKey: async (
+      planId: string,
+      taskKey: string,
+      data: { title: string; notes?: string; metadata: Record<string, unknown> }
+    ): Promise<Entry> => {
+      return client.post<Entry>(ENTRIES_PATH, {
+        planId,
+        taskKey,
+        title: data.title,
+        notes: data.notes,
+        metadata: data.metadata,
+      });
+    },
   };
 }
 

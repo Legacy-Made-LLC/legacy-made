@@ -51,12 +51,12 @@ export default function AppLayout() {
             headerStyle: {
               backgroundColor: colors.background,
             },
-            headerTintColor: colors.primary,
+            headerTintColor: colors.textPrimary,
             headerTitleStyle: {
-              fontWeight: typography.weights.semibold,
+              fontFamily: typography.fontFamily.serifSemiBold,
               fontSize: typography.sizes.titleMedium,
             },
-            headerBackButtonDisplayMode: "minimal",
+            headerBackButtonDisplayMode: "generic",
             headerShadowVisible: false,
             contentStyle: {
               backgroundColor: colors.background,
@@ -76,75 +76,21 @@ export default function AppLayout() {
             }}
           />
           <Stack.Screen
-            name="contacts/index"
+            name="vault/[sectionId]/index"
             options={{
-              title: "Key Contacts",
+              title: '',
             }}
           />
           <Stack.Screen
-            name="contacts/[id]"
+            name="vault/[sectionId]/[taskId]/index"
             options={{
-              title: "Contact",
+              title: '',
             }}
           />
           <Stack.Screen
-            name="finances/index"
+            name="vault/[sectionId]/[taskId]/[entryId]"
             options={{
-              title: "Financial Accounts",
-            }}
-          />
-          <Stack.Screen
-            name="finances/[id]"
-            options={{
-              title: "Account",
-            }}
-          />
-          <Stack.Screen
-            name="insurance/index"
-            options={{
-              title: "Insurance",
-            }}
-          />
-          <Stack.Screen
-            name="insurance/[id]"
-            options={{
-              title: "Policy",
-            }}
-          />
-          <Stack.Screen
-            name="documents/index"
-            options={{
-              title: "Legal Documents",
-            }}
-          />
-          <Stack.Screen
-            name="documents/[id]"
-            options={{
-              title: "Document",
-            }}
-          />
-          <Stack.Screen
-            name="home-responsibilities/index"
-            options={{
-              title: "Home & Responsibilities",
-            }}
-          />
-          <Stack.Screen
-            name="home-responsibilities/[id]"
-            options={{
-              title: "Item",
-            }}
-          />
-          <Stack.Screen
-            name="digital/index"
-            options={{
-              title: "Digital Access",
-            }}
-          />
-          <Stack.Screen
-            name="digital/[id]"
-            options={{
-              title: "Account",
+              title: '',
             }}
           />
         </Stack>

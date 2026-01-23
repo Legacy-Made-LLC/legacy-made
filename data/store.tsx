@@ -13,6 +13,7 @@ import type {
   LegalDocument,
   HomeResponsibility,
   DigitalAccount,
+  Pet,
 } from './types';
 import { usePlan } from './PlanProvider';
 import {
