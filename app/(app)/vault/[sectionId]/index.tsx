@@ -23,6 +23,7 @@ export default function SectionScreen() {
     if (section) {
       navigation.setOptions({
         title: section.title,
+        headerDescription: section.description,
       });
     }
   }, [section, navigation]);

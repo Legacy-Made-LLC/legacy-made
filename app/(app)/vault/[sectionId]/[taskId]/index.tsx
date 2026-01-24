@@ -5,13 +5,13 @@
  * list component for that task type.
  */
 
-import React, { useLayoutEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
-import { getSection, getTask } from '@/constants/vault';
 import { getListComponent } from '@/components/vault/registry';
-import { colors, typography, spacing } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
+import { getSection, getTask } from '@/constants/vault';
 import { useEntriesQuery } from '@/hooks/queries';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import React, { useLayoutEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function TaskScreen() {
   const { sectionId, taskId } = useLocalSearchParams<{
@@ -29,6 +29,7 @@ export default function TaskScreen() {
     if (task) {
       navigation.setOptions({
         title: task.title,
+        headerDescription: task.description,
       });
     }
   }, [task, navigation]);
