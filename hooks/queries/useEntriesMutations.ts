@@ -171,12 +171,16 @@ export function useUpdateEntry<T = Record<string, unknown>>(taskKey: string | un
         context.previousEntries
       );
     },
-    onSettled: () => {
+    onSettled: (_data, _error, variables) => {
       if (!planId || !taskKey) return;
 
       // Refetch to ensure cache is in sync
       queryClient.invalidateQueries({
         queryKey: queryKeys.entries.byTaskKey(planId, taskKey),
+      });
+      // Also invalidate the single entry query so the form shows fresh data
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entries.single(planId, variables.entryId),
       });
     },
   });

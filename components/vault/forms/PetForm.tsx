@@ -93,13 +93,6 @@ export function PetForm({
   });
 
   useEffect(() => {
-    if (initialData) {
-      form.reset();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData]);
-
-  useEffect(() => {
     navigation.setOptions({
       title: isNew ? 'Add Pet' : 'Edit Pet',
     });

@@ -93,13 +93,6 @@ export function FinancialForm({
   });
 
   useEffect(() => {
-    if (initialData) {
-      form.reset();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData]);
-
-  useEffect(() => {
     navigation.setOptions({
       title: isNew ? 'Add Account' : 'Edit Account',
     });
