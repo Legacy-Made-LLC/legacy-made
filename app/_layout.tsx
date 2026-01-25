@@ -48,7 +48,7 @@ export default function RootLayout() {
 
   return (
     <OnboardingProvider>
-      <ClerkProvider tokenCache={tokenCache}>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}>
         <QueryProvider>
           <PlanProvider>
             <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
