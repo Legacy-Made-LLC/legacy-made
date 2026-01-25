@@ -12,8 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.legacymade.LegacyMade",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Select a photo for your profile picture"
+      },
+      "appleTeamId": "283YQ4PTU9"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +26,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.legacymade.LegacyMade"
+      "package": "com.legacymade.LegacyMade",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -45,7 +50,8 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image-picker"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -59,7 +59,7 @@ export const onboardingStyles = StyleSheet.create({
   },
   stanzaText: {
     fontFamily: typography.fontFamily.serifMedium,
-    fontSize: 16,
+    fontSize: 18,
     color: colors.textPrimary,
     textAlign: "center",
     lineHeight: 18 * typography.lineHeights.relaxed,

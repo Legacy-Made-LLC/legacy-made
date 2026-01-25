@@ -1,18 +1,24 @@
-import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing, typography } from "@/constants/theme";
 import { SUPPORT_LINKS } from "@/constants/links";
+import { colors, spacing, typography } from "@/constants/theme";
 import { useClerk, useUser } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -54,6 +60,7 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
     ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
     : user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "User";
   const email = user?.primaryEmailAddress?.emailAddress || "";
+  const profileImageUrl = user?.imageUrl;
 
   return (
     <Pressable
@@ -63,9 +70,16 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
         pressed && styles.profileHeaderPressed,
       ]}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial.toUpperCase()}</Text>
-      </View>
+      {profileImageUrl ? (
+        <Image
+          source={{ uri: profileImageUrl }}
+          style={styles.avatarImage}
+        />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial.toUpperCase()}</Text>
+        </View>
+      )}
       <View style={styles.profileInfo}>
         <Text style={styles.profileName} numberOfLines={1}>
           {displayName}
@@ -135,21 +149,130 @@ function AccountView({
   bottomInset: number;
 }) {
   const { user } = useUser();
+  const [isEditing, setIsEditing] = useState(false);
+  const [firstName, setFirstName] = useState(user?.firstName || "");
+  const [lastName, setLastName] = useState(user?.lastName || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Reset form when user changes or when entering edit mode
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+    }
+  }, [user]);
+
   const initial =
-    user?.firstName?.[0] ||
+    firstName?.[0] ||
     user?.primaryEmailAddress?.emailAddress?.[0] ||
     "?";
-  const displayName = user?.firstName
-    ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
-    : user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "User";
   const email = user?.primaryEmailAddress?.emailAddress || "";
+  const profileImageUrl = user?.imageUrl;
+
+  const hasChanges =
+    firstName !== (user?.firstName || "") ||
+    lastName !== (user?.lastName || "");
+
+  const pickAndUploadImage = async () => {
+    if (!user) return;
+
+    try {
+      // Request permission
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        setError("Permission to access photos is required to change your profile picture.");
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets[0]) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      setIsUploadingImage(true);
+      setError(null);
+
+      if (Platform.OS === "web") {
+        // Web: fetch the blob URI and upload directly
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        await user.setProfileImage({ file: blob });
+      } else {
+        // Native: use expo-file-system to read as base64
+        const base64 = new FileSystem.File(asset.uri).base64Sync();
+        const mimeType = asset.mimeType || "image/jpeg";
+        const dataUri = `data:${mimeType};base64,${base64}`;
+        await user.setProfileImage({ file: dataUri });
+      }
+    } catch (err) {
+      console.error("Profile image upload error:", err);
+      const clerkError = err as { errors?: { message: string }[] };
+      if (clerkError.errors && clerkError.errors.length > 0) {
+        setError(clerkError.errors[0].message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to update profile picture. Please try again.");
+      }
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user || !hasChanges) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      await user.update({
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      const clerkError = err as { errors?: { message: string }[] };
+      if (clerkError.errors && clerkError.errors.length > 0) {
+        setError(clerkError.errors[0].message);
+      } else {
+        setError("Failed to update profile. Please try again.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFirstName(user?.firstName || "");
+    setLastName(user?.lastName || "");
+    setError(null);
+    setIsEditing(false);
+  };
+
+  const handleBack = () => {
+    if (isEditing) {
+      handleCancel();
+    }
+    onBack();
+  };
 
   return (
     <View style={styles.accountView}>
       {/* Header */}
       <View style={styles.accountHeader}>
         <Pressable
-          onPress={onBack}
+          onPress={handleBack}
           style={({ pressed }) => [
             styles.backButton,
             pressed && styles.backButtonPressed,
@@ -172,25 +295,150 @@ function AccountView({
         </Pressable>
       </View>
 
-      {/* Large Avatar */}
-      <View style={styles.accountAvatarContainer}>
-        <View style={styles.accountAvatar}>
-          <Text style={styles.accountAvatarText}>{initial.toUpperCase()}</Text>
+      <ScrollView
+        style={styles.accountScrollView}
+        contentContainerStyle={styles.accountScrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Large Avatar */}
+        <View style={styles.accountAvatarContainer}>
+          <Pressable
+            onPress={isEditing ? pickAndUploadImage : undefined}
+            disabled={!isEditing || isUploadingImage}
+            style={({ pressed }) => [
+              styles.avatarPressable,
+              isEditing && pressed && styles.avatarPressablePressed,
+            ]}
+          >
+            {profileImageUrl ? (
+              <Image
+                source={{ uri: profileImageUrl }}
+                style={styles.accountAvatarImage}
+              />
+            ) : (
+              <View style={styles.accountAvatar}>
+                <Text style={styles.accountAvatarText}>{initial.toUpperCase()}</Text>
+              </View>
+            )}
+            {isEditing && (
+              <View style={styles.avatarEditOverlay}>
+                {isUploadingImage ? (
+                  <ActivityIndicator size="small" color={colors.surface} />
+                ) : (
+                  <Ionicons name="camera" size={24} color={colors.surface} />
+                )}
+              </View>
+            )}
+          </Pressable>
+          {!isEditing && (
+            <Pressable
+              onPress={() => setIsEditing(true)}
+              style={({ pressed }) => [
+                styles.editProfileButton,
+                pressed && styles.editProfileButtonPressed,
+              ]}
+            >
+              <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+              <Text style={styles.editProfileText}>Edit Profile</Text>
+            </Pressable>
+          )}
         </View>
-      </View>
 
-      {/* User Info Fields */}
-      <View style={styles.accountFields}>
-        <View style={styles.accountField}>
-          <Text style={styles.fieldLabel}>Username</Text>
-          <Text style={styles.fieldValue}>{displayName}</Text>
-        </View>
-        <View style={styles.accountFieldDivider} />
-        <View style={styles.accountField}>
-          <Text style={styles.fieldLabel}>Email</Text>
-          <Text style={styles.fieldValue}>{email}</Text>
-        </View>
-      </View>
+        {/* Error Message */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* User Info Fields */}
+        {isEditing ? (
+          <View style={styles.editableFields}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>FIRST NAME</Text>
+              <TextInput
+                style={styles.textInput}
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Enter first name"
+                placeholderTextColor={colors.textTertiary}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSaving}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>LAST NAME</Text>
+              <TextInput
+                style={styles.textInput}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Enter last name"
+                placeholderTextColor={colors.textTertiary}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isSaving}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>EMAIL</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyValue}>{email}</Text>
+                <Ionicons name="lock-closed-outline" size={16} color={colors.textTertiary} />
+              </View>
+              <Text style={styles.fieldHint}>Email cannot be changed here</Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <Pressable
+                onPress={handleCancel}
+                disabled={isSaving}
+                style={({ pressed }) => [
+                  styles.cancelButton,
+                  pressed && styles.cancelButtonPressed,
+                  isSaving && styles.buttonDisabled,
+                ]}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSave}
+                disabled={isSaving || !hasChanges}
+                style={({ pressed }) => [
+                  styles.saveButton,
+                  pressed && styles.saveButtonPressed,
+                  (isSaving || !hasChanges) && styles.buttonDisabled,
+                ]}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color={colors.surface} />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.accountFields}>
+            <View style={styles.accountField}>
+              <Text style={styles.fieldLabel}>First Name</Text>
+              <Text style={styles.fieldValue}>{firstName || "Not set"}</Text>
+            </View>
+            <View style={styles.accountFieldDivider} />
+            <View style={styles.accountField}>
+              <Text style={styles.fieldLabel}>Last Name</Text>
+              <Text style={styles.fieldValue}>{lastName || "Not set"}</Text>
+            </View>
+            <View style={styles.accountFieldDivider} />
+            <View style={styles.accountField}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldValue}>{email}</Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
 
       {/* Footer with Sign Out */}
       <View style={[styles.accountFooter, { paddingBottom: bottomInset + spacing.lg }]}>
@@ -542,6 +790,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.semibold,
     color: colors.surface,
   },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
   profileInfo: {
     flex: 1,
     marginLeft: spacing.md,
@@ -674,6 +927,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: spacing.xl,
   },
+  avatarPressable: {
+    position: "relative",
+  },
+  avatarPressablePressed: {
+    opacity: 0.8,
+  },
   accountAvatar: {
     width: 80,
     height: 80,
@@ -682,10 +941,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  accountAvatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
   accountAvatarText: {
     fontSize: 32,
     fontFamily: typography.fontFamily.semibold,
     color: colors.surface,
+  },
+  avatarEditOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 40,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   accountFields: {
     marginHorizontal: spacing.lg,
@@ -718,9 +993,10 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   accountFooter: {
-    flex: 1,
-    justifyContent: "flex-end",
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
   },
   signOutButton: {
     flexDirection: "row",
@@ -736,5 +1012,141 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     color: colors.error,
     marginLeft: spacing.sm,
+  },
+
+  // Account View - Scrollable Content
+  accountScrollView: {
+    flex: 1,
+  },
+  accountScrollContent: {
+    paddingBottom: spacing.lg,
+  },
+
+  // Edit Profile Button
+  editProfileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  editProfileButtonPressed: {
+    opacity: 0.7,
+  },
+  editProfileText: {
+    fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.primary,
+    marginLeft: spacing.xs,
+  },
+
+  // Error Display
+  errorContainer: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: `${colors.error}15`,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${colors.error}30`,
+  },
+  errorText: {
+    fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.error,
+    textAlign: "center",
+  },
+
+  // Editable Fields
+  editableFields: {
+    paddingHorizontal: spacing.lg,
+  },
+  inputContainer: {
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    fontSize: typography.sizes.label,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textSecondary,
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  textInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+  },
+  readOnlyField: {
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  readOnlyValue: {
+    fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  fieldHint: {
+    fontSize: typography.sizes.caption,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+
+  // Action Buttons
+  actionButtons: {
+    flexDirection: "row",
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  cancelButton: {
+    flex: 1,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  cancelButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
+  },
+  cancelButtonText: {
+    fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textSecondary,
+  },
+  saveButton: {
+    flex: 1,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+  },
+  saveButtonPressed: {
+    backgroundColor: colors.primaryPressed,
+  },
+  saveButtonText: {
+    fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.surface,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
