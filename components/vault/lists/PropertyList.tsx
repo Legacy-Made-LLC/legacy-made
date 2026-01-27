@@ -2,19 +2,19 @@
  * PropertyList - Displays a list of property and vehicle entries
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, View, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PressableCard } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { GuidanceCard } from '@/components/ui/GuidanceCard';
-import { SkeletonList } from '@/components/ui/SkeletonCard';
-import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { colors, spacing } from '@/constants/theme';
-import { getTaskByKey } from '@/constants/vault';
-import { listStyles } from './listStyles';
-import type { EntryListProps } from '../registry';
+import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
+import { Button } from "@/components/ui/Button";
+import { PressableCard } from "@/components/ui/Card";
+import { GuidanceCard } from "@/components/ui/GuidanceCard";
+import { SkeletonList } from "@/components/ui/SkeletonCard";
+import { colors, spacing } from "@/constants/theme";
+import { getTaskByKey } from "@/constants/vault";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryListProps } from "../registry";
+import { listStyles } from "./listStyles";
 
 interface PropertyMetadata {
   responsibilityType?: string;
@@ -36,7 +36,10 @@ export function PropertyList({
     return (
       <ScrollView
         style={listStyles.container}
-        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          listStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <SkeletonList count={3} />
@@ -46,13 +49,27 @@ export function PropertyList({
 
   if (entries.length === 0) {
     return (
-      <View style={[listStyles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Ionicons name="home-outline" size={48} color={colors.textTertiary} style={listStyles.emptyIcon} />
-        <Text style={listStyles.emptyTitle}>No property added yet</Text>
+      <View
+        style={[
+          listStyles.emptyContainer,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
+      >
+        <Ionicons
+          name="home-outline"
+          size={48}
+          color={colors.textTertiary}
+          style={listStyles.emptyIcon}
+        />
+        <Text style={listStyles.emptyTitle}>Nothing added yet</Text>
         <Text style={listStyles.emptyDescription}>
           Add your property, vehicles, and other physical assets.
         </Text>
-        <Button title="Add Property" onPress={onAddPress} style={listStyles.emptyButton} />
+        <Button
+          title="Add Property"
+          onPress={onAddPress}
+          style={listStyles.emptyButton}
+        />
       </View>
     );
   }
@@ -60,7 +77,10 @@ export function PropertyList({
   return (
     <ScrollView
       style={listStyles.container}
-      contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+      contentContainerStyle={[
+        listStyles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {task?.guidance && <GuidanceCard text={task.guidance} />}
@@ -69,7 +89,7 @@ export function PropertyList({
         const metadata = entry.metadata as PropertyMetadata;
         const subtitle = [metadata.responsibilityType, metadata.accountInfo]
           .filter(Boolean)
-          .join(' · ');
+          .join(" · ");
 
         return (
           <AnimatedListItem key={entry.id} index={index}>
@@ -80,7 +100,9 @@ export function PropertyList({
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>
                   <Text style={listStyles.cardTitle}>{entry.title}</Text>
-                  {subtitle && <Text style={listStyles.cardSubtitle}>{subtitle}</Text>}
+                  {subtitle && (
+                    <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
+                  )}
                 </View>
                 <Text style={listStyles.chevron}>›</Text>
               </View>

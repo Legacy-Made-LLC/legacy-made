@@ -4,7 +4,7 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
-import { contactSchema } from '@/components/forms';
+import { contactSchemaWithRequiredPhone } from '@/components/forms';
 import { ContactFormFieldsWithForm } from '@/components/forms/ContactFormFields';
 import { colors, spacing, typography } from '@/constants/theme';
 import { revalidateLogic, useForm } from '@tanstack/react-form';
@@ -27,7 +27,7 @@ interface ContactMetadata {
   firstName: string;
   lastName: string;
   relationship: string;
-  phone?: string;
+  phone: string;
   email?: string;
   reason?: string;
   isPrimary?: boolean;
@@ -73,7 +73,7 @@ export function ContactForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
-      onDynamic: contactSchema,
+      onDynamic: contactSchemaWithRequiredPhone,
     },
     onSubmit: async ({ value }) => {
       const title = `${value.firstName.trim()} ${value.lastName.trim()}`.trim();
@@ -81,7 +81,7 @@ export function ContactForm({
         firstName: value.firstName.trim(),
         lastName: value.lastName.trim(),
         relationship: value.relationship.trim(),
-        phone: value.phone.trim() || undefined,
+        phone: value.phone.trim(),
         email: value.email.trim() || undefined,
         reason: value.reason.trim() || undefined,
         isPrimary: taskKey === 'contacts.primary',
@@ -141,7 +141,7 @@ export function ContactForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <ContactFormFieldsWithForm form={form} showReasonField={true} phoneRequired={false} />
+        <ContactFormFieldsWithForm form={form} showReasonField={true} phoneRequired={true} />
 
         <View style={styles.buttonContainer}>
           <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>

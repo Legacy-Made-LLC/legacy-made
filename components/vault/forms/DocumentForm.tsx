@@ -21,26 +21,36 @@ import { spacing } from '@/constants/theme';
 import { formStyles } from './formStyles';
 import type { EntryFormProps } from '../registry';
 
-const documentTypes = [
+const legalDocumentTypes = [
   'Will',
   'Trust',
   'Power of Attorney',
   'Healthcare Directive',
-  'Birth Certificate',
-  'Passport',
   'Other',
 ] as const;
 
-type DocumentType = (typeof documentTypes)[number];
+const otherDocumentTypes = [
+  'Birth Certificate',
+  'Passport',
+  'Social Security Card',
+  'Other',
+] as const;
+
+type LegalDocumentType = (typeof legalDocumentTypes)[number];
+type OtherDocumentType = (typeof otherDocumentTypes)[number];
+type DocumentType = LegalDocumentType | OtherDocumentType;
 
 interface DocumentMetadata {
   documentType: DocumentType;
   location: string;
   holder?: string;
+  preparer?: string;
+  preparerPhone?: string;
   notes?: string;
 }
 
 export function DocumentForm({
+  taskKey,
   entryId,
   initialData,
   onSave,
@@ -51,17 +61,23 @@ export function DocumentForm({
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
 
+  // Determine which document types to show based on taskKey
+  const isLegalDocs = taskKey === 'documents.legal';
+  const documentTypes = isLegalDocs ? legalDocumentTypes : otherDocumentTypes;
+  const defaultDocType = isLegalDocs ? 'Will' : 'Birth Certificate';
+
   const initialMetadata = initialData?.metadata as DocumentMetadata | undefined;
 
   const defaultValues = useMemo(
     () => ({
-      documentName: initialData?.title ?? '',
-      documentType: (initialMetadata?.documentType ?? 'Will') as string,
+      documentType: (initialMetadata?.documentType ?? defaultDocType) as string,
       location: initialMetadata?.location ?? '',
       holder: initialMetadata?.holder ?? '',
+      preparer: initialMetadata?.preparer ?? '',
+      preparerPhone: initialMetadata?.preparerPhone ?? '',
       notes: initialMetadata?.notes ?? initialData?.notes ?? '',
     }),
-    [initialData, initialMetadata]
+    [initialData, initialMetadata, defaultDocType]
   );
 
   const form = useForm({
@@ -75,12 +91,17 @@ export function DocumentForm({
         documentType: value.documentType as DocumentType,
         location: value.location.trim(),
         holder: value.holder.trim() || undefined,
+        preparer: value.preparer.trim() || undefined,
+        preparerPhone: value.preparerPhone.trim() || undefined,
         notes: value.notes.trim() || undefined,
       };
 
+      // Use document type as the title
+      const title = value.documentType;
+
       try {
         await onSave({
-          title: value.documentName.trim(),
+          title,
           notes: value.notes.trim() || undefined,
           metadata: metadata as unknown as Record<string, unknown>,
         });
@@ -92,18 +113,19 @@ export function DocumentForm({
   });
 
   useEffect(() => {
+    const docLabel = isLegalDocs ? 'Legal Document' : 'Document';
     navigation.setOptions({
-      title: isNew ? 'Add Document' : 'Edit Document',
+      title: isNew ? `Add ${docLabel}` : `Edit ${docLabel}`,
     });
-  }, [isNew, navigation]);
+  }, [isNew, isLegalDocs, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const documentName = form.getFieldValue('documentName');
+    const documentType = form.getFieldValue('documentType');
     Alert.alert(
       'Delete Document',
-      `Are you sure you want to delete ${documentName || 'this document'}?`,
+      `Are you sure you want to delete ${documentType || 'this document'}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -134,16 +156,6 @@ export function DocumentForm({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <form.Field name="documentName">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Document Name"
-              placeholder="e.g., Last Will and Testament"
-            />
-          )}
-        </form.Field>
-
         <form.Field name="documentType">
           {(field) => (
             <View style={formStyles.fieldContainer}>
@@ -173,6 +185,36 @@ export function DocumentForm({
           )}
         </form.Field>
 
+        {isLegalDocs && (
+          <View style={formStyles.fieldRow}>
+            <View style={formStyles.fieldRowItem}>
+              <form.Field name="preparer">
+                {(field) => (
+                  <FormInput
+                    field={field}
+                    label="Attorney/Preparer"
+                    placeholder="e.g., David Park, Esq."
+                    containerStyle={{ marginBottom: 0 }}
+                  />
+                )}
+              </form.Field>
+            </View>
+            <View style={formStyles.fieldRowItem}>
+              <form.Field name="preparerPhone">
+                {(field) => (
+                  <FormInput
+                    field={field}
+                    label="Phone"
+                    placeholder="(555) 123-4567"
+                    keyboardType="phone-pad"
+                    containerStyle={{ marginBottom: 0 }}
+                  />
+                )}
+              </form.Field>
+            </View>
+          </View>
+        )}
+
         <form.Field name="location">
           {(field) => (
             <FormInput
@@ -187,7 +229,7 @@ export function DocumentForm({
           {(field) => (
             <FormInput
               field={field}
-              label="Who Has a Copy? (Optional)"
+              label="Who Has a Copy?"
               placeholder="e.g., Attorney David Park"
             />
           )}
@@ -197,7 +239,7 @@ export function DocumentForm({
           {(field) => (
             <FormTextArea
               field={field}
-              label="Notes (Optional)"
+              label="Notes"
               placeholder="Any additional details about this document"
             />
           )}

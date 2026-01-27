@@ -6,7 +6,7 @@
  * Pass these schemas directly to useForm({ validators: { onChange: schema } })
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 // ============================================================================
 // Field-Level Schemas (Reusable)
@@ -24,14 +24,14 @@ export const emailOptional = z
   .string()
   .trim()
   .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
-    message: 'Please enter a valid email address',
+    message: "Please enter a valid email address",
   });
 
 /** Email validation - required and must be valid */
 export const emailRequired = z
-  .email('Please enter a valid email address')
+  .email("Please enter a valid email address")
   .trim()
-  .min(1, 'Email is required');
+  .min(1, "Email is required");
 
 /** Phone validation - optional but must have 10+ digits if provided */
 export const phoneOptional = z
@@ -40,23 +40,23 @@ export const phoneOptional = z
   .refine(
     (v) => {
       if (!v || v.length === 0) return true;
-      const digitsOnly = v.replace(/\D/g, '');
+      const digitsOnly = v.replace(/\D/g, "");
       return digitsOnly.length >= 10;
     },
-    { message: 'Please enter a valid phone number' }
+    { message: "Please enter a valid phone number" },
   );
 
 /** Phone validation - required and must have 10+ digits */
 export const phoneRequired = z
   .string()
   .trim()
-  .min(1, 'Phone is required')
+  .min(1, "Phone is required")
   .refine(
     (v) => {
-      const digitsOnly = v.replace(/\D/g, '');
+      const digitsOnly = v.replace(/\D/g, "");
       return digitsOnly.length >= 10;
     },
-    { message: 'Please enter a valid phone number' }
+    { message: "Please enter a valid phone number" },
   );
 
 // ============================================================================
@@ -71,8 +71,8 @@ export type SignInFormValues = z.infer<typeof signInSchema>;
 
 /** Sign-up form: first name, last name, email */
 export const signUpSchema = z.object({
-  firstName: requiredString('First name'),
-  lastName: requiredString('Last name'),
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
   email: emailRequired,
 });
 export type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -83,9 +83,9 @@ export type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 /** Contact form - base schema with phone optional */
 export const contactSchema = z.object({
-  firstName: requiredString('First name'),
-  lastName: requiredString('Last name'),
-  relationship: requiredString('Relationship'),
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
+  relationship: requiredString("Relationship"),
   phone: phoneOptional,
   email: emailOptional,
   reason: optionalString,
@@ -94,14 +94,16 @@ export type ContactFormValues = z.infer<typeof contactSchema>;
 
 /** Contact form with required phone */
 export const contactSchemaWithRequiredPhone = z.object({
-  firstName: requiredString('First name'),
-  lastName: requiredString('Last name'),
-  relationship: requiredString('Relationship'),
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
+  relationship: requiredString("Relationship"),
   phone: phoneRequired,
   email: emailOptional,
   reason: optionalString,
 });
-export type ContactFormValuesWithRequiredPhone = z.infer<typeof contactSchemaWithRequiredPhone>;
+export type ContactFormValuesWithRequiredPhone = z.infer<
+  typeof contactSchemaWithRequiredPhone
+>;
 
 // ============================================================================
 // Vault Form Schemas
@@ -109,9 +111,10 @@ export type ContactFormValuesWithRequiredPhone = z.infer<typeof contactSchemaWit
 
 /** Financial account form */
 export const financialSchema = z.object({
-  accountName: requiredString('Account name'),
-  institution: requiredString('Institution'),
+  accountName: optionalString,
+  institution: requiredString("Institution"),
   accountType: optionalString,
+  accountOwners: optionalString,
   accountNumber: optionalString,
   notes: optionalString,
 });
@@ -119,38 +122,44 @@ export type FinancialFormValues = z.infer<typeof financialSchema>;
 
 /** Insurance policy form */
 export const insuranceSchema = z.object({
-  policyName: requiredString('Policy name'),
-  provider: requiredString('Provider'),
-  policyType: optionalString,
+  provider: requiredString("Insurance provider"),
+  policyType: requiredString("Policy type"),
   policyNumber: optionalString,
   coverageDetails: optionalString,
+  beneficiaries: optionalString,
+  agentName: optionalString,
+  agentPhone: optionalString,
   notes: optionalString,
 });
 export type InsuranceFormValues = z.infer<typeof insuranceSchema>;
 
 /** Legal document form */
 export const documentSchema = z.object({
-  documentName: requiredString('Document name'),
-  documentType: optionalString,
-  location: requiredString('Location'),
+  documentType: requiredString("Document type"),
+  location: requiredString("Location"),
   holder: optionalString,
+  preparer: optionalString,
+  preparerPhone: phoneOptional,
   notes: optionalString,
 });
 export type DocumentFormValues = z.infer<typeof documentSchema>;
 
 /** Property/home responsibility form */
 export const propertySchema = z.object({
-  itemName: requiredString('Name'),
-  propertyType: optionalString,
-  accountInfo: optionalString,
+  propertyType: requiredString("Type"),
+  ownership: optionalString,
+  addressDescription: optionalString,
+  lienHolder: optionalString,
+  documentsLocation: optionalString,
+  keyLocation: optionalString,
   notes: optionalString,
 });
 export type PropertyFormValues = z.infer<typeof propertySchema>;
 
 /** Digital account form */
 export const digitalSchema = z.object({
-  accountName: requiredString('Account name'),
-  service: requiredString('Service/Platform'),
+  accountName: requiredString("Account name"),
+  service: requiredString("Service/Platform"),
   username: optionalString,
   importance: optionalString,
   accessNotes: optionalString,
@@ -159,10 +168,9 @@ export type DigitalFormValues = z.infer<typeof digitalSchema>;
 
 /** Pet form */
 export const petSchema = z.object({
-  name: requiredString('Pet name'),
+  name: requiredString("Pet name"),
   species: optionalString,
   breed: optionalString,
-  age: optionalString,
   veterinarian: optionalString,
   vetPhone: phoneOptional,
   designatedCaretaker: optionalString,

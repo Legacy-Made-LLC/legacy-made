@@ -60,7 +60,7 @@ export function ContactFormFieldsWithForm({
   form,
   showReasonField = true,
   phoneRequired = false,
-  reasonLabel = 'Why this person? (Optional)',
+  reasonLabel = 'Why this person?',
   reasonPlaceholder = 'What makes them the right contact?',
 }: ContactFormFieldsWithFormProps) {
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
@@ -99,21 +99,6 @@ export function ContactFormFieldsWithForm({
           </form.Field>
         </View>
       </View>
-
-      {/* Phone */}
-      <form.Field name="phone">
-        {(field: Parameters<typeof FormInput>[0]['field']) => (
-          <FormInput
-            field={field}
-            label={phoneRequired ? 'Phone' : 'Phone (Optional)'}
-            placeholder="(555) 123-4567"
-            keyboardType="phone-pad"
-            autoCorrect={false}
-            maxLength={14}
-            onValueChange={(v) => field.handleChange(formatPhoneNumber(v))}
-          />
-        )}
-      </form.Field>
 
       {/* Relationship - Dropdown (custom component, can't use FormInput) */}
       <form.Field name="relationship">
@@ -193,12 +178,27 @@ export function ContactFormFieldsWithForm({
         }}
       </form.Field>
 
+      {/* Phone */}
+      <form.Field name="phone">
+        {(field: Parameters<typeof FormInput>[0]['field']) => (
+          <FormInput
+            field={field}
+            label="Phone"
+            placeholder="(555) 123-4567"
+            keyboardType="phone-pad"
+            autoCorrect={false}
+            maxLength={14}
+            onValueChange={(v) => field.handleChange(formatPhoneNumber(v))}
+          />
+        )}
+      </form.Field>
+
       {/* Email */}
       <form.Field name="email">
         {(field: Parameters<typeof FormInput>[0]['field']) => (
           <FormInput
             field={field}
-            label="Email (Optional)"
+            label="Email"
             placeholder="email@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -207,7 +207,7 @@ export function ContactFormFieldsWithForm({
         )}
       </form.Field>
 
-      {/* Why this person? (Optional) */}
+      {/* Why this person?  */}
       {showReasonField && (
         <form.Field name="reason">
           {(field: Parameters<typeof FormTextArea>[0]['field']) => (

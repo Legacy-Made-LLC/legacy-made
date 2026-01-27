@@ -10,10 +10,18 @@ const iconSize = 26;
 // Home icon with special circular background
 function HomeTabIcon({ focused }: { focused: boolean }) {
   if (focused) {
-    return <Image source={require("@/assets/images/muted-green-logo-rounded-rectangle-filled.png")} style={styles.homeIcon} />
+    return (
+      <Image
+        source={require("@/assets/images/muted-green-logo-rounded-rectangle.png")}
+        style={styles.homeIcon}
+      />
+    );
   }
   return (
-    <Image source={require("@/assets/images/muted-green-logo-rounded-rectangle.png")} style={styles.homeIcon} />
+    <Image
+      source={require("@/assets/images/muted-green-logo-rounded-rectangle-outline.png")}
+      style={styles.homeIcon}
+    />
   );
 }
 
@@ -111,5 +119,5 @@ const styles = StyleSheet.create({
   },
   homeIconFocused: {
     opacity: 0.8,
-  }
+  },
 });

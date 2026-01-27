@@ -33,7 +33,54 @@ interface DigitalMetadata {
   notes?: string;
 }
 
+// Get display labels based on task type
+function getLabels(taskKey: string) {
+  switch (taskKey) {
+    case 'digital.email':
+      return {
+        addTitle: 'Add Email Account',
+        editTitle: 'Edit Email Account',
+        deleteTitle: 'Delete Email Account',
+        namePlaceholder: 'e.g., Primary Email, Work Email',
+        servicePlaceholder: 'e.g., Gmail, Outlook, Yahoo',
+      };
+    case 'digital.passwords':
+      return {
+        addTitle: 'Add Password Info',
+        editTitle: 'Edit Password Info',
+        deleteTitle: 'Delete Password Info',
+        namePlaceholder: 'e.g., Password Manager, Browser Passwords',
+        servicePlaceholder: 'e.g., 1Password, LastPass, iCloud Keychain',
+      };
+    case 'digital.devices':
+      return {
+        addTitle: 'Add Device',
+        editTitle: 'Edit Device',
+        deleteTitle: 'Delete Device',
+        namePlaceholder: 'e.g., iPhone, MacBook, iPad',
+        servicePlaceholder: 'e.g., Apple, Samsung, Dell',
+      };
+    case 'digital.social':
+      return {
+        addTitle: 'Add Social Account',
+        editTitle: 'Edit Social Account',
+        deleteTitle: 'Delete Social Account',
+        namePlaceholder: 'e.g., Facebook, Instagram, LinkedIn',
+        servicePlaceholder: 'e.g., Facebook, Instagram, Twitter/X',
+      };
+    default:
+      return {
+        addTitle: 'Add Account',
+        editTitle: 'Edit Account',
+        deleteTitle: 'Delete Account',
+        namePlaceholder: 'e.g., Primary Email',
+        servicePlaceholder: 'e.g., Gmail, 1Password, Apple ID',
+      };
+  }
+}
+
 export function DigitalForm({
+  taskKey,
   entryId,
   initialData,
   onSave,
@@ -43,6 +90,7 @@ export function DigitalForm({
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const labels = getLabels(taskKey);
 
   const initialMetadata = initialData?.metadata as DigitalMetadata | undefined;
 
@@ -86,15 +134,15 @@ export function DigitalForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Account' : 'Edit Account',
+      title: isNew ? labels.addTitle : labels.editTitle,
     });
-  }, [isNew, navigation]);
+  }, [isNew, labels.addTitle, labels.editTitle, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
     const accountName = form.getFieldValue('accountName');
-    Alert.alert('Delete Account', `Are you sure you want to delete ${accountName || 'this account'}?`, [
+    Alert.alert(labels.deleteTitle, `Are you sure you want to delete ${accountName || 'this item'}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -103,7 +151,7 @@ export function DigitalForm({
           try {
             await onDelete();
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete account';
+            const message = err instanceof Error ? err.message : 'Failed to delete';
             Alert.alert('Error', message);
           }
         },
@@ -125,7 +173,7 @@ export function DigitalForm({
       >
         <form.Field name="accountName">
           {(field) => (
-            <FormInput field={field} label="Account Name" placeholder="e.g., Primary Email" />
+            <FormInput field={field} label="Name" placeholder={labels.namePlaceholder} />
           )}
         </form.Field>
 
@@ -134,7 +182,7 @@ export function DigitalForm({
             <FormInput
               field={field}
               label="Service/Platform"
-              placeholder="e.g., Gmail, 1Password, Apple ID"
+              placeholder={labels.servicePlaceholder}
             />
           )}
         </form.Field>
@@ -143,7 +191,7 @@ export function DigitalForm({
           {(field) => (
             <FormInput
               field={field}
-              label="Username/Email (Optional)"
+              label="Username/Email"
               placeholder="e.g., email@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -184,7 +232,7 @@ export function DigitalForm({
           {(field) => (
             <FormTextArea
               field={field}
-              label="How to Access (Optional)"
+              label="How to Access"
               placeholder="Where can the password be found? Don't store the actual password here."
             />
           )}
@@ -204,7 +252,7 @@ export function DigitalForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title="Delete Account" variant="destructive" onPress={handleDelete} />
+            <Button title={labels.deleteTitle} variant="destructive" onPress={handleDelete} />
           </View>
         )}
       </ScrollView>

@@ -76,10 +76,14 @@ export const listRegistry: Record<string, ComponentType<EntryListProps>> = {
   'people': ContactList, // Reuses contact list (same data shape)
   'financial': FinancialList,
   'insurance': InsuranceList,
-  'documents': DocumentList,
+  'documents.legal': DocumentList,
+  'documents.other': DocumentList,
   'property': PropertyList,
   'pets': PetList,
-  'digital': DigitalList,
+  'digital.email': DigitalList,
+  'digital.passwords': DigitalList,
+  'digital.devices': DigitalList,
+  'digital.social': DigitalList,
 };
 
 /**
@@ -95,10 +99,14 @@ export const formRegistry: Record<string, ComponentType<EntryFormProps>> = {
   'people': ContactForm, // Reuses contact form (same data shape)
   'financial': FinancialForm,
   'insurance': InsuranceForm,
-  'documents': DocumentForm,
+  'documents.legal': DocumentForm,
+  'documents.other': DocumentForm,
   'property': PropertyForm,
   'pets': PetForm,
-  'digital': DigitalForm,
+  'digital.email': DigitalForm,
+  'digital.passwords': DigitalForm,
+  'digital.devices': DigitalForm,
+  'digital.social': DigitalForm,
 };
 
 /**

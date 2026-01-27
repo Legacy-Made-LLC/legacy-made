@@ -19,7 +19,6 @@ import type { EntryListProps } from '../registry';
 interface PetMetadata {
   species?: string;
   breed?: string;
-  age?: string;
   designatedCaretaker?: string;
 }
 
@@ -68,7 +67,7 @@ export function PetList({
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as PetMetadata;
-        const subtitle = [metadata.species, metadata.breed, metadata.age]
+        const subtitle = [metadata.species, metadata.breed]
           .filter(Boolean)
           .join(' · ');
 

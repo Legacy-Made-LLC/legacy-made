@@ -68,9 +68,12 @@ export function InsuranceList({
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as InsuranceMetadata;
-        const subtitle = [metadata.provider, metadata.coverageDetails]
-          .filter(Boolean)
-          .join(' · ');
+
+        // Title is generated from provider + policy type, so just show coverage in subtitle
+        const displayTitle = entry.title ||
+          [metadata.provider, metadata.policyType].filter(Boolean).join(' ');
+
+        const subtitle = metadata.coverageDetails || null;
 
         return (
           <AnimatedListItem key={entry.id} index={index}>
@@ -80,7 +83,7 @@ export function InsuranceList({
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>
-                  <Text style={listStyles.cardTitle}>{entry.title}</Text>
+                  <Text style={listStyles.cardTitle}>{displayTitle}</Text>
                   {subtitle && <Text style={listStyles.cardSubtitle}>{subtitle}</Text>}
                 </View>
                 <Text style={listStyles.chevron}>›</Text>

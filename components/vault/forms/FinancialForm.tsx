@@ -2,33 +2,33 @@
  * FinancialForm - Form for creating/editing financial account entries
  */
 
-import React, { useEffect, useMemo } from 'react';
+import { FormInput, FormTextArea, financialSchema } from "@/components/forms";
+import { Button } from "@/components/ui/Button";
+import { spacing } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
 import {
-  ScrollView,
-  View,
-  Text,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Pressable,
-} from 'react-native';
-import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { FormInput, FormTextArea, financialSchema } from '@/components/forms';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
-import type { EntryFormProps } from '../registry';
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
+import { formStyles } from "./formStyles";
 
 const accountTypes = [
-  'Checking',
-  'Savings',
-  'Retirement',
-  'Investment',
-  'Credit',
-  'Loan',
-  'Other',
+  "Checking",
+  "Savings",
+  "Retirement",
+  "Investment",
+  "Credit",
+  "Loan",
+  "Other",
 ] as const;
 
 type AccountType = (typeof accountTypes)[number];
@@ -36,6 +36,7 @@ type AccountType = (typeof accountTypes)[number];
 interface FinancialMetadata {
   institution: string;
   accountType: AccountType;
+  accountOwners?: string;
   accountNumber?: string;
   contactInfo?: string;
   notes?: string;
@@ -52,17 +53,20 @@ export function FinancialForm({
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
 
-  const initialMetadata = initialData?.metadata as FinancialMetadata | undefined;
+  const initialMetadata = initialData?.metadata as
+    | FinancialMetadata
+    | undefined;
 
   const defaultValues = useMemo(
     () => ({
-      accountName: initialData?.title ?? '',
-      institution: initialMetadata?.institution ?? '',
-      accountType: (initialMetadata?.accountType ?? 'Checking') as string,
-      accountNumber: initialMetadata?.accountNumber ?? '',
-      notes: initialMetadata?.notes ?? initialData?.notes ?? '',
+      accountName: initialData?.title ?? "",
+      institution: initialMetadata?.institution ?? "",
+      accountType: (initialMetadata?.accountType ?? "Checking") as string,
+      accountOwners: initialMetadata?.accountOwners ?? "",
+      accountNumber: initialMetadata?.accountNumber ?? "",
+      notes: initialMetadata?.notes ?? initialData?.notes ?? "",
     }),
-    [initialData, initialMetadata]
+    [initialData, initialMetadata],
   );
 
   const form = useForm({
@@ -75,77 +79,82 @@ export function FinancialForm({
       const metadata: FinancialMetadata = {
         institution: value.institution.trim(),
         accountType: value.accountType as AccountType,
+        accountOwners: value.accountOwners.trim() || undefined,
         accountNumber: value.accountNumber.trim() || undefined,
         notes: value.notes.trim() || undefined,
       };
 
+      // Use account name if provided, otherwise generate from institution + type
+      const title =
+        value.accountName.trim() ||
+        `${value.institution.trim()} ${value.accountType}`.trim();
+
       try {
         await onSave({
-          title: value.accountName.trim(),
+          title,
           notes: value.notes.trim() || undefined,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save account';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save account";
+        Alert.alert("Error", message);
       }
     },
   });
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Account' : 'Edit Account',
+      title: isNew ? "Add Account" : "Edit Account",
     });
   }, [isNew, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const accountName = form.getFieldValue('accountName');
-    Alert.alert('Delete Account', `Are you sure you want to delete ${accountName || 'this account'}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await onDelete();
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete account';
-            Alert.alert('Error', message);
-          }
+    const accountName = form.getFieldValue("accountName");
+    Alert.alert(
+      "Delete Account",
+      `Are you sure you want to delete ${accountName || "this account"}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await onDelete();
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : "Failed to delete account";
+              Alert.alert("Error", message);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
     <KeyboardAvoidingView
       style={formStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          formStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <form.Field name="accountName">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Account Name"
-              placeholder="e.g., Primary Checking"
-            />
-          )}
-        </form.Field>
-
         <form.Field name="institution">
           {(field) => (
             <FormInput
               field={field}
-              label="Institution"
+              label="Bank/Institution"
               placeholder="e.g., Chase Bank"
             />
           )}
@@ -161,14 +170,16 @@ export function FinancialForm({
                     key={type}
                     style={[
                       formStyles.typeButton,
-                      field.state.value === type && formStyles.typeButtonSelected,
+                      field.state.value === type &&
+                        formStyles.typeButtonSelected,
                     ]}
                     onPress={() => field.handleChange(type)}
                   >
                     <Text
                       style={[
                         formStyles.typeButtonText,
-                        field.state.value === type && formStyles.typeButtonTextSelected,
+                        field.state.value === type &&
+                          formStyles.typeButtonTextSelected,
                       ]}
                     >
                       {type}
@@ -180,11 +191,31 @@ export function FinancialForm({
           )}
         </form.Field>
 
+        <form.Field name="accountName">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Account Name"
+              placeholder="e.g., Primary Checking"
+            />
+          )}
+        </form.Field>
+
+        <form.Field name="accountOwners">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Account Owner(s)"
+              placeholder="e.g., John & Jane Doe"
+            />
+          )}
+        </form.Field>
+
         <form.Field name="accountNumber">
           {(field) => (
             <FormInput
               field={field}
-              label="Last 4 Digits (Optional)"
+              label="Last 4 Digits"
               placeholder="e.g., 4521"
               keyboardType="number-pad"
               maxLength={4}
@@ -196,17 +227,19 @@ export function FinancialForm({
           {(field) => (
             <FormTextArea
               field={field}
-              label="Notes (Optional)"
+              label="Notes"
               placeholder="Any additional details about this account"
             />
           )}
         </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => (
               <Button
-                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                title={isSaving || isSubmitting ? "Saving..." : "Save"}
                 onPress={() => form.handleSubmit()}
                 disabled={isSaving || isSubmitting || !canSubmit}
               />
@@ -216,7 +249,11 @@ export function FinancialForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title="Delete Account" variant="destructive" onPress={handleDelete} />
+            <Button
+              title="Delete Account"
+              variant="destructive"
+              onPress={handleDelete}
+            />
           </View>
         )}
       </ScrollView>

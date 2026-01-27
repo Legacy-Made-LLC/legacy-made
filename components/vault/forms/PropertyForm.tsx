@@ -2,34 +2,46 @@
  * PropertyForm - Form for creating/editing property and vehicle entries
  */
 
-import React, { useEffect, useMemo } from 'react';
+import { FormInput, FormTextArea, propertySchema } from "@/components/forms";
+import { Button } from "@/components/ui/Button";
+import { spacing } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
 import {
-  ScrollView,
-  View,
-  Text,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Pressable,
-} from 'react-native';
-import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { FormInput, FormTextArea, propertySchema } from '@/components/forms';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
-import type { EntryFormProps } from '../registry';
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
+import { formStyles } from "./formStyles";
 
-const propertyTypes = ['Real Estate', 'Vehicle', 'Storage Unit', 'Recurring Bill', 'Other'] as const;
+const propertyTypes = [
+  "Primary Home",
+  "Vacation Home",
+  "Rental Property",
+  "Vehicle",
+  "Storage Unit",
+  "Land",
+  "Other",
+] as const;
+const ownershipTypes = ["Own", "Lease", "Rent", "Finance"] as const;
 
 type PropertyType = (typeof propertyTypes)[number];
+type OwnershipType = (typeof ownershipTypes)[number];
 
 interface PropertyMetadata {
   responsibilityType: PropertyType;
-  provider?: string;
-  accountInfo?: string;
-  frequency?: string;
+  ownership?: OwnershipType;
+  addressDescription?: string;
+  lienHolder?: string;
+  documentsLocation?: string;
+  keyLocation?: string;
   notes?: string;
 }
 
@@ -48,12 +60,16 @@ export function PropertyForm({
 
   const defaultValues = useMemo(
     () => ({
-      itemName: initialData?.title ?? '',
-      propertyType: (initialMetadata?.responsibilityType ?? 'Real Estate') as string,
-      accountInfo: initialMetadata?.accountInfo ?? '',
-      notes: initialMetadata?.notes ?? initialData?.notes ?? '',
+      propertyType: (initialMetadata?.responsibilityType ??
+        "Primary Home") as string,
+      ownership: (initialMetadata?.ownership ?? "Own") as string,
+      addressDescription: initialMetadata?.addressDescription ?? "",
+      lienHolder: initialMetadata?.lienHolder ?? "",
+      documentsLocation: initialMetadata?.documentsLocation ?? "",
+      keyLocation: initialMetadata?.keyLocation ?? "",
+      notes: initialMetadata?.notes ?? initialData?.notes ?? "",
     }),
-    [initialData, initialMetadata]
+    [initialData, initialMetadata],
   );
 
   const form = useForm({
@@ -65,90 +81,100 @@ export function PropertyForm({
     onSubmit: async ({ value }) => {
       const metadata: PropertyMetadata = {
         responsibilityType: value.propertyType as PropertyType,
-        accountInfo: value.accountInfo.trim() || undefined,
+        ownership: value.ownership as OwnershipType,
+        addressDescription: value.addressDescription.trim() || undefined,
+        lienHolder: value.lienHolder.trim() || undefined,
+        documentsLocation: value.documentsLocation.trim() || undefined,
+        keyLocation: value.keyLocation.trim() || undefined,
         notes: value.notes.trim() || undefined,
       };
 
+      // Generate title from type
+      const title = value.propertyType;
+
       try {
         await onSave({
-          title: value.itemName.trim(),
+          title,
           notes: value.notes.trim() || undefined,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save property';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save property";
+        Alert.alert("Error", message);
       }
     },
   });
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Property' : 'Edit Property',
+      title: isNew ? "Add Property" : "Edit Property",
     });
   }, [isNew, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const itemName = form.getFieldValue('itemName');
-    Alert.alert('Delete Property', `Are you sure you want to delete ${itemName || 'this item'}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await onDelete();
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete property';
-            Alert.alert('Error', message);
-          }
+    const propertyType = form.getFieldValue("propertyType");
+    Alert.alert(
+      "Delete Property",
+      `Are you sure you want to delete this ${propertyType || "item"}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await onDelete();
+            } catch (err) {
+              const message =
+                err instanceof Error
+                  ? err.message
+                  : "Failed to delete property";
+              Alert.alert("Error", message);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
     <KeyboardAvoidingView
       style={formStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          formStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <form.Field name="itemName">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Name"
-              placeholder="e.g., Primary Residence, Honda CR-V"
-            />
-          )}
-        </form.Field>
-
         <form.Field name="propertyType">
           {(field) => (
             <View style={formStyles.fieldContainer}>
-              <Text style={formStyles.label}>Type</Text>
+              <Text style={formStyles.label}>Property Type</Text>
               <View style={formStyles.typeGrid}>
                 {propertyTypes.map((type) => (
                   <Pressable
                     key={type}
                     style={[
                       formStyles.typeButton,
-                      field.state.value === type && formStyles.typeButtonSelected,
+                      field.state.value === type &&
+                        formStyles.typeButtonSelected,
                     ]}
                     onPress={() => field.handleChange(type)}
                   >
                     <Text
                       style={[
                         formStyles.typeButtonText,
-                        field.state.value === type && formStyles.typeButtonTextSelected,
+                        field.state.value === type &&
+                          formStyles.typeButtonTextSelected,
                       ]}
                     >
                       {type}
@@ -160,27 +186,94 @@ export function PropertyForm({
           )}
         </form.Field>
 
-        <form.Field name="accountInfo">
+        <form.Field name="ownership">
+          {(field) => (
+            <View style={formStyles.fieldContainer}>
+              <Text style={formStyles.label}>Ownership</Text>
+              <View style={formStyles.typeGrid}>
+                {ownershipTypes.map((type) => (
+                  <Pressable
+                    key={type}
+                    style={[
+                      formStyles.typeButton,
+                      field.state.value === type &&
+                        formStyles.typeButtonSelected,
+                    ]}
+                    onPress={() => field.handleChange(type)}
+                  >
+                    <Text
+                      style={[
+                        formStyles.typeButtonText,
+                        field.state.value === type &&
+                          formStyles.typeButtonTextSelected,
+                      ]}
+                    >
+                      {type}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </form.Field>
+
+        <form.Field name="addressDescription">
           {(field) => (
             <FormInput
               field={field}
-              label="Details (Optional)"
-              placeholder="e.g., Address, license plate, account number"
+              label="Address/Description"
+              placeholder="e.g., 123 Main St or 2021 Honda CR-V"
+            />
+          )}
+        </form.Field>
+
+        <form.Field name="lienHolder">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Mortgage/Lien Holder"
+              placeholder="e.g., Wells Fargo, Toyota Financial"
+            />
+          )}
+        </form.Field>
+
+        <form.Field name="documentsLocation">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Where Documents are Stored"
+              placeholder="e.g., Filing cabinet, safe deposit box"
+            />
+          )}
+        </form.Field>
+
+        <form.Field name="keyLocation">
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Key/Access Location"
+              placeholder="e.g., Kitchen drawer, with neighbor"
             />
           )}
         </form.Field>
 
         <form.Field name="notes">
           {(field) => (
-            <FormTextArea field={field} label="Notes (Optional)" placeholder="Any additional details" />
+            <FormTextArea
+              field={field}
+              label="Notes"
+              placeholder="e.g. HOA, utilities, alarm codes, etc."
+            />
           )}
         </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => (
               <Button
-                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                title={isSaving || isSubmitting ? "Saving..." : "Save"}
                 onPress={() => form.handleSubmit()}
                 disabled={isSaving || isSubmitting || !canSubmit}
               />
@@ -190,7 +283,11 @@ export function PropertyForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title="Delete Property" variant="destructive" onPress={handleDelete} />
+            <Button
+              title="Delete Property"
+              variant="destructive"
+              onPress={handleDelete}
+            />
           </View>
         )}
       </ScrollView>

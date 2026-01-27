@@ -67,8 +67,15 @@ export function FinancialList({
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as FinancialMetadata;
+
+        // If title is blank, show institution + account type as title
+        const hasCustomTitle = entry.title && entry.title !== `${metadata.institution} ${metadata.accountType}`.trim();
+        const displayTitle = entry.title ||
+          [metadata.institution, metadata.accountType].filter(Boolean).join(' ');
+
+        // Subtitle: show institution (if not already in title) + account number
         const subtitle = [
-          metadata.institution,
+          hasCustomTitle ? metadata.institution : null,
           metadata.accountNumber ? `****${metadata.accountNumber.slice(-4)}` : null,
         ]
           .filter(Boolean)
@@ -82,7 +89,7 @@ export function FinancialList({
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>
-                  <Text style={listStyles.cardTitle}>{entry.title}</Text>
+                  <Text style={listStyles.cardTitle}>{displayTitle}</Text>
                   {subtitle && <Text style={listStyles.cardSubtitle}>{subtitle}</Text>}
                 </View>
                 <Text style={listStyles.chevron}>›</Text>

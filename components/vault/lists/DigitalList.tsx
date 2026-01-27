@@ -21,6 +21,47 @@ interface DigitalMetadata {
   username?: string;
 }
 
+// Get display labels based on task type
+function getLabels(taskKey: string) {
+  switch (taskKey) {
+    case 'digital.email':
+      return {
+        emptyTitle: 'No email accounts added yet',
+        emptyDescription: 'Add your email accounts so your family can access important communications.',
+        addButton: 'Add Email Account',
+        icon: 'mail-outline' as const,
+      };
+    case 'digital.passwords':
+      return {
+        emptyTitle: 'No password info added yet',
+        emptyDescription: 'Note where your passwords are stored and how to access them.',
+        addButton: 'Add Password Info',
+        icon: 'key-outline' as const,
+      };
+    case 'digital.devices':
+      return {
+        emptyTitle: 'No devices added yet',
+        emptyDescription: 'Add your phones, computers, and tablets with access information.',
+        addButton: 'Add Device',
+        icon: 'phone-portrait-outline' as const,
+      };
+    case 'digital.social':
+      return {
+        emptyTitle: 'No social accounts added yet',
+        emptyDescription: 'Add your social media accounts and any legacy settings you\'ve configured.',
+        addButton: 'Add Social Account',
+        icon: 'share-social-outline' as const,
+      };
+    default:
+      return {
+        emptyTitle: 'No accounts added yet',
+        emptyDescription: 'Add your important digital accounts and how to access them.',
+        addButton: 'Add Account',
+        icon: 'laptop-outline' as const,
+      };
+  }
+}
+
 export function DigitalList({
   taskKey,
   entries,
@@ -30,6 +71,7 @@ export function DigitalList({
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
+  const labels = getLabels(taskKey);
 
   if (isLoading) {
     return (
@@ -46,12 +88,10 @@ export function DigitalList({
   if (entries.length === 0) {
     return (
       <View style={[listStyles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Ionicons name="laptop-outline" size={48} color={colors.textTertiary} style={listStyles.emptyIcon} />
-        <Text style={listStyles.emptyTitle}>No accounts added yet</Text>
-        <Text style={listStyles.emptyDescription}>
-          Add your important digital accounts and how to access them.
-        </Text>
-        <Button title="Add Account" onPress={onAddPress} style={listStyles.emptyButton} />
+        <Ionicons name={labels.icon} size={48} color={colors.textTertiary} style={listStyles.emptyIcon} />
+        <Text style={listStyles.emptyTitle}>{labels.emptyTitle}</Text>
+        <Text style={listStyles.emptyDescription}>{labels.emptyDescription}</Text>
+        <Button title={labels.addButton} onPress={onAddPress} style={listStyles.emptyButton} />
       </View>
     );
   }
@@ -88,7 +128,7 @@ export function DigitalList({
 
       <AnimatedListItem index={entries.length}>
         <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Account</Text>
+          <Text style={listStyles.addText}>+ {labels.addButton}</Text>
         </PressableCard>
       </AnimatedListItem>
     </ScrollView>

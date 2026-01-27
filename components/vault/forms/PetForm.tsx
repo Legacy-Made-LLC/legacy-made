@@ -28,7 +28,6 @@ type SpeciesType = (typeof speciesTypes)[number];
 interface PetMetadata {
   species: SpeciesType;
   breed?: string;
-  age?: string;
   veterinarian?: string;
   vetPhone?: string;
   careInstructions?: string;
@@ -53,7 +52,6 @@ export function PetForm({
       name: initialData?.title ?? '',
       species: (initialMetadata?.species ?? 'Dog') as string,
       breed: initialMetadata?.breed ?? '',
-      age: initialMetadata?.age ?? '',
       veterinarian: initialMetadata?.veterinarian ?? '',
       vetPhone: initialMetadata?.vetPhone ?? '',
       designatedCaretaker: initialMetadata?.designatedCaretaker ?? '',
@@ -72,7 +70,6 @@ export function PetForm({
       const metadata: PetMetadata = {
         species: value.species as SpeciesType,
         breed: value.breed.trim() || undefined,
-        age: value.age.trim() || undefined,
         veterinarian: value.veterinarian.trim() || undefined,
         vetPhone: value.vetPhone.trim() || undefined,
         designatedCaretaker: value.designatedCaretaker.trim() || undefined,
@@ -173,41 +170,44 @@ export function PetForm({
 
         <form.Field name="breed">
           {(field) => (
-            <FormInput field={field} label="Breed (Optional)" placeholder="e.g., Golden Retriever" />
+            <FormInput field={field} label="Breed/Description" placeholder="e.g., Golden Retriever, orange tabby" />
           )}
         </form.Field>
 
-        <form.Field name="age">
-          {(field) => <FormInput field={field} label="Age (Optional)" placeholder="e.g., 6 years" />}
-        </form.Field>
-
-        <form.Field name="veterinarian">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Veterinarian (Optional)"
-              placeholder="e.g., Bay Area Pet Hospital"
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="vetPhone">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Vet Phone (Optional)"
-              placeholder="(555) 123-4567"
-              keyboardType="phone-pad"
-              onValueChange={(text) => field.handleChange(formatPhoneNumber(text))}
-            />
-          )}
-        </form.Field>
+        <View style={formStyles.fieldRow}>
+          <View style={formStyles.fieldRowItem}>
+            <form.Field name="veterinarian">
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Veterinarian"
+                  placeholder="e.g., Bay Area Pet Hospital"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              )}
+            </form.Field>
+          </View>
+          <View style={formStyles.fieldRowItem}>
+            <form.Field name="vetPhone">
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Phone"
+                  placeholder="(555) 123-4567"
+                  keyboardType="phone-pad"
+                  onValueChange={(text) => field.handleChange(formatPhoneNumber(text))}
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              )}
+            </form.Field>
+          </View>
+        </View>
 
         <form.Field name="designatedCaretaker">
           {(field) => (
             <FormInput
               field={field}
-              label="Who Will Care for Them? (Optional)"
+              label="Who Will Care for Them?"
               placeholder="e.g., Margaret Chen"
             />
           )}
@@ -217,7 +217,7 @@ export function PetForm({
           {(field) => (
             <FormTextArea
               field={field}
-              label="Care Instructions (Optional)"
+              label="Care Instructions"
               placeholder="Special diet, medications, routines, etc."
             />
           )}

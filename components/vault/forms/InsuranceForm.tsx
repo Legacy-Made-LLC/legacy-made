@@ -2,26 +2,33 @@
  * InsuranceForm - Form for creating/editing insurance policy entries
  */
 
-import React, { useEffect, useMemo } from 'react';
+import { FormInput, FormTextArea, insuranceSchema } from "@/components/forms";
+import { Button } from "@/components/ui/Button";
+import { spacing } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
 import {
-  ScrollView,
-  View,
-  Text,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Pressable,
-} from 'react-native';
-import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { FormInput, FormTextArea, insuranceSchema } from '@/components/forms';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
-import type { EntryFormProps } from '../registry';
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
+import { formStyles } from "./formStyles";
 
-const policyTypes = ['Life', 'Health', 'Home', 'Auto', 'Disability', 'Other'] as const;
+const policyTypes = [
+  "Life",
+  "Health",
+  "Home",
+  "Auto",
+  "Disability",
+  "Other",
+] as const;
 
 type PolicyType = (typeof policyTypes)[number];
 
@@ -31,6 +38,9 @@ interface InsuranceMetadata {
   policyNumber?: string;
   contactInfo?: string;
   coverageDetails?: string;
+  beneficiaries?: string;
+  agentName?: string;
+  agentPhone?: string;
 }
 
 export function InsuranceForm({
@@ -44,18 +54,22 @@ export function InsuranceForm({
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
 
-  const initialMetadata = initialData?.metadata as InsuranceMetadata | undefined;
+  const initialMetadata = initialData?.metadata as
+    | InsuranceMetadata
+    | undefined;
 
   const defaultValues = useMemo(
     () => ({
-      policyName: initialData?.title ?? '',
-      provider: initialMetadata?.provider ?? '',
-      policyType: (initialMetadata?.policyType ?? 'Life') as string,
-      policyNumber: initialMetadata?.policyNumber ?? '',
-      coverageDetails: initialMetadata?.coverageDetails ?? '',
-      notes: initialData?.notes ?? '',
+      provider: initialMetadata?.provider ?? "",
+      policyType: (initialMetadata?.policyType ?? "Life") as string,
+      policyNumber: initialMetadata?.policyNumber ?? "",
+      coverageDetails: initialMetadata?.coverageDetails ?? "",
+      beneficiaries: initialMetadata?.beneficiaries ?? "",
+      agentName: initialMetadata?.agentName ?? "",
+      agentPhone: initialMetadata?.agentPhone ?? "",
+      notes: initialData?.notes ?? "",
     }),
-    [initialData, initialMetadata]
+    [initialData, initialMetadata],
   );
 
   const form = useForm({
@@ -70,42 +84,52 @@ export function InsuranceForm({
         policyType: value.policyType as PolicyType,
         policyNumber: value.policyNumber.trim() || undefined,
         coverageDetails: value.coverageDetails.trim() || undefined,
+        beneficiaries: value.beneficiaries.trim() || undefined,
+        agentName: value.agentName.trim() || undefined,
+        agentPhone: value.agentPhone.trim() || undefined,
       };
+
+      // Generate title from provider + policy type
+      const title = `${value.provider.trim()} ${value.policyType}`.trim();
 
       try {
         await onSave({
-          title: value.policyName.trim(),
+          title,
           notes: value.notes.trim() || undefined,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save policy';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save policy";
+        Alert.alert("Error", message);
       }
     },
   });
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Policy' : 'Edit Policy',
+      title: isNew ? "Add Policy" : "Edit Policy",
     });
   }, [isNew, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const policyName = form.getFieldValue('policyName');
-    Alert.alert('Delete Policy', `Are you sure you want to delete ${policyName || 'this policy'}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    const provider = form.getFieldValue("provider");
+    const policyType = form.getFieldValue("policyType");
+    const name = provider ? `${provider} ${policyType}`.trim() : "this policy";
+    Alert.alert("Delete Policy", `Are you sure you want to delete ${name}?`, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: async () => {
           try {
             await onDelete();
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete policy';
-            Alert.alert('Error', message);
+            const message =
+              err instanceof Error ? err.message : "Failed to delete policy";
+            Alert.alert("Error", message);
           }
         },
       },
@@ -115,24 +139,25 @@ export function InsuranceForm({
   return (
     <KeyboardAvoidingView
       style={formStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          formStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <form.Field name="policyName">
-          {(field) => (
-            <FormInput field={field} label="Policy Name" placeholder="e.g., Life Insurance" />
-          )}
-        </form.Field>
-
         <form.Field name="provider">
           {(field) => (
-            <FormInput field={field} label="Provider" placeholder="e.g., Northwestern Mutual" />
+            <FormInput
+              field={field}
+              label="Insurance Provider"
+              placeholder="e.g., State Farm, MetLife, etc."
+            />
           )}
         </form.Field>
 
@@ -146,14 +171,16 @@ export function InsuranceForm({
                     key={type}
                     style={[
                       formStyles.typeButton,
-                      field.state.value === type && formStyles.typeButtonSelected,
+                      field.state.value === type &&
+                        formStyles.typeButtonSelected,
                     ]}
                     onPress={() => field.handleChange(type)}
                   >
                     <Text
                       style={[
                         formStyles.typeButtonText,
-                        field.state.value === type && formStyles.typeButtonTextSelected,
+                        field.state.value === type &&
+                          formStyles.typeButtonTextSelected,
                       ]}
                     >
                       {type}
@@ -165,37 +192,88 @@ export function InsuranceForm({
           )}
         </form.Field>
 
-        <form.Field name="policyNumber">
-          {(field) => (
-            <FormInput field={field} label="Policy Number (Optional)" placeholder="e.g., LF-2847592" />
-          )}
-        </form.Field>
+        <View style={formStyles.fieldRow}>
+          <View style={formStyles.fieldRowItem}>
+            <form.Field name="policyNumber">
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Policy #"
+                  placeholder="e.g., LF-2847592"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              )}
+            </form.Field>
+          </View>
+          <View style={formStyles.fieldRowItem}>
+            <form.Field name="coverageDetails">
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Coverage"
+                  placeholder="e.g., $500,000"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              )}
+            </form.Field>
+          </View>
+        </View>
 
-        <form.Field name="coverageDetails">
+        <form.Field name="beneficiaries">
           {(field) => (
             <FormInput
               field={field}
-              label="Coverage Amount (Optional)"
-              placeholder="e.g., $500,000"
+              label="Beneficiaries"
+              placeholder="e.g., Jane Doe, John Doe"
             />
           )}
         </form.Field>
+
+        <View style={formStyles.fieldRow}>
+          <View style={formStyles.fieldRowItem}>
+            <form.Field name="agentName">
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Agent Name"
+                  placeholder="e.g., John Smith"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              )}
+            </form.Field>
+          </View>
+          <View style={formStyles.fieldRowItem}>
+            <form.Field name="agentPhone">
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Agent Phone"
+                  placeholder="(555) 123-4567"
+                  keyboardType="phone-pad"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              )}
+            </form.Field>
+          </View>
+        </View>
 
         <form.Field name="notes">
           {(field) => (
             <FormTextArea
               field={field}
-              label="Notes (Optional)"
-              placeholder="Any additional details about this policy"
+              label="Notes"
+              placeholder="i.e. physical location, contact information, etc."
             />
           )}
         </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => (
               <Button
-                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                title={isSaving || isSubmitting ? "Saving..." : "Save"}
                 onPress={() => form.handleSubmit()}
                 disabled={isSaving || isSubmitting || !canSubmit}
               />
@@ -205,7 +283,11 @@ export function InsuranceForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title="Delete Policy" variant="destructive" onPress={handleDelete} />
+            <Button
+              title="Delete Policy"
+              variant="destructive"
+              onPress={handleDelete}
+            />
           </View>
         )}
       </ScrollView>
