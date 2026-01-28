@@ -2,7 +2,7 @@
  * InsuranceForm - Form for creating/editing insurance policy entries
  */
 
-import { FormInput, FormTextArea, insuranceSchema } from "@/components/forms";
+import { FormInput, FormTextArea, insuranceSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
@@ -49,6 +49,9 @@ export function InsuranceForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -267,17 +270,37 @@ export function InsuranceForm({
           )}
         </form.Field>
 
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Policy Documents"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="all"
+            maxFiles={5}
+            placeholder="Add policy documents or ID cards"
+            helpText="Attach scans of insurance cards, policy documents, or related files"
+          />
+        )}
+
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {([canSubmit, isSubmitting]) => (
-              <Button
-                title={isSaving || isSubmitting ? "Saving..." : "Save"}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              />
-            )}
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? "Uploading..."
+                : busy
+                  ? "Saving..."
+                  : "Save";
+              return (
+                <Button
+                  title={buttonTitle}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
+                />
+              );
+            }}
           </form.Subscribe>
         </View>
 
