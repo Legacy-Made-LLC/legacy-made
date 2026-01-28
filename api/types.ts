@@ -39,6 +39,8 @@ export interface LegalDocumentMetadata {
   location: string;
   holder?: string;
   notes?: string;
+  /** Attached document files (scans, PDFs, images) */
+  attachments?: FileAttachment[];
 }
 
 export interface HomeMetadata {
@@ -47,6 +49,8 @@ export interface HomeMetadata {
   accountInfo?: string;
   frequency?: string;
   notes?: string;
+  /** Attached photos or documents (property photos, vehicle docs, etc.) */
+  attachments?: FileAttachment[];
 }
 
 export interface DigitalAccessMetadata {
@@ -56,6 +60,46 @@ export interface DigitalAccessMetadata {
   notes?: string;
   /** Importance level: critical, high, medium, low */
   importance?: 'critical' | 'high' | 'medium' | 'low';
+}
+
+// ============================================================================
+// File Attachment Types
+// ============================================================================
+
+export type FileUploadStatus = 'pending' | 'uploading' | 'complete' | 'error';
+
+export type FileType = 'image' | 'video' | 'document';
+
+/**
+ * Represents a file attachment that can be added to any entry
+ */
+export interface FileAttachment {
+  /** Unique ID from backend after successful upload */
+  id?: string;
+  /** Local URI (before upload) or remote URL (after upload) */
+  uri: string;
+  /** Original filename */
+  fileName: string;
+  /** File size in bytes */
+  fileSize: number;
+  /** MIME type (e.g., 'image/jpeg', 'video/mp4', 'application/pdf') */
+  mimeType: string;
+  /** Type category for UI purposes */
+  type: FileType;
+  /** Thumbnail URI for videos (generated locally or from backend) */
+  thumbnailUri?: string;
+  /** Duration in seconds for videos */
+  duration?: number;
+  /** Width in pixels for images/videos */
+  width?: number;
+  /** Height in pixels for images/videos */
+  height?: number;
+  /** Upload status for tracking progress */
+  uploadStatus?: FileUploadStatus;
+  /** Upload progress (0-1) when status is 'uploading' */
+  uploadProgress?: number;
+  /** Error message if upload failed */
+  errorMessage?: string;
 }
 
 // ============================================================================

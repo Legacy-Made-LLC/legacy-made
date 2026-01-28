@@ -1,0 +1,347 @@
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, typography, borderRadius } from '@/constants/theme';
+import { FileAttachment } from '@/api/types';
+import { useFilePicker, PickerMode } from '@/hooks/useFilePicker';
+import { FilePreviewList } from './FilePreview';
+
+interface FilePickerProps {
+  /** Label displayed above the picker */
+  label?: string;
+  /** Currently selected files */
+  value: FileAttachment[];
+  /** Callback when files change */
+  onChange: (files: FileAttachment[]) => void;
+  /** What types of files can be selected */
+  mode?: PickerMode;
+  /** Maximum number of files allowed */
+  maxFiles?: number;
+  /** Whether to allow camera capture */
+  allowCamera?: boolean;
+  /** Whether the picker is disabled */
+  disabled?: boolean;
+  /** Placeholder text when no files selected */
+  placeholder?: string;
+  /** Help text displayed below the picker */
+  helpText?: string;
+}
+
+interface PickerOption {
+  id: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  action: () => Promise<FileAttachment | null>;
+}
+
+/**
+ * File picker component for forms
+ * Supports images, videos, and documents with preview
+ */
+export function FilePicker({
+  label,
+  value,
+  onChange,
+  mode = 'all',
+  maxFiles = 10,
+  allowCamera = true,
+  disabled = false,
+  placeholder = 'Tap to add files',
+  helpText,
+}: FilePickerProps) {
+  const [showOptions, setShowOptions] = useState(false);
+  const { isLoading, pickFromLibrary, pickFromCamera, pickDocument } =
+    useFilePicker({ mode });
+
+  const canAddMore = value.length < maxFiles;
+
+  /**
+   * Handle file selection from any source
+   */
+  const handleFilePicked = useCallback(
+    async (pickerFn: () => Promise<FileAttachment | null>) => {
+      setShowOptions(false);
+      const file = await pickerFn();
+      if (file) {
+        onChange([...value, file]);
+      }
+    },
+    [value, onChange]
+  );
+
+  /**
+   * Remove a file from selection
+   */
+  const handleRemoveFile = useCallback(
+    (uri: string) => {
+      onChange(value.filter((f) => f.uri !== uri));
+    },
+    [value, onChange]
+  );
+
+  /**
+   * Get available picker options based on mode
+   */
+  const getPickerOptions = useCallback((): PickerOption[] => {
+    const options: PickerOption[] = [];
+
+    // Photo library option (for images, videos, or media modes)
+    if (mode !== 'document') {
+      options.push({
+        id: 'library',
+        label: mode === 'video' ? 'Choose Video' : mode === 'image' ? 'Choose Photo' : 'Choose from Library',
+        icon: 'images-outline',
+        action: pickFromLibrary,
+      });
+    }
+
+    // Camera option (for images or media modes, when allowed)
+    if (allowCamera && mode !== 'document' && mode !== 'video') {
+      options.push({
+        id: 'camera',
+        label: 'Take Photo',
+        icon: 'camera-outline',
+        action: pickFromCamera,
+      });
+    }
+
+    // Document option (for document or all modes)
+    if (mode === 'document' || mode === 'all') {
+      options.push({
+        id: 'document',
+        label: 'Choose Document',
+        icon: 'document-outline',
+        action: pickDocument,
+      });
+    }
+
+    return options;
+  }, [mode, allowCamera, pickFromLibrary, pickFromCamera, pickDocument]);
+
+  const pickerOptions = getPickerOptions();
+
+  /**
+   * Handle add button press - show options if multiple, otherwise pick directly
+   */
+  const handleAddPress = useCallback(() => {
+    if (disabled || !canAddMore) return;
+
+    if (pickerOptions.length === 1) {
+      // Single option - pick directly
+      handleFilePicked(pickerOptions[0].action);
+    } else {
+      // Multiple options - show menu
+      setShowOptions(true);
+    }
+  }, [disabled, canAddMore, pickerOptions, handleFilePicked]);
+
+  return (
+    <View style={styles.container}>
+      {label && <Text style={styles.label}>{label}</Text>}
+
+      {/* Selected files preview */}
+      {value.length > 0 && (
+        <View style={styles.previewContainer}>
+          <FilePreviewList
+            files={value}
+            onRemove={handleRemoveFile}
+            removable={!disabled}
+          />
+        </View>
+      )}
+
+      {/* Add button */}
+      {canAddMore && (
+        <Pressable
+          onPress={handleAddPress}
+          disabled={disabled || isLoading}
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.addButtonPressed,
+            disabled && styles.addButtonDisabled,
+          ]}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              <Ionicons
+                name="add-circle-outline"
+                size={24}
+                color={disabled ? colors.textTertiary : colors.primary}
+              />
+              <Text
+                style={[
+                  styles.addButtonText,
+                  disabled && styles.addButtonTextDisabled,
+                ]}
+              >
+                {value.length === 0 ? placeholder : 'Add Another'}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      )}
+
+      {/* File count / limit indicator */}
+      {maxFiles < 10 && (
+        <Text style={styles.countText}>
+          {value.length} of {maxFiles} files
+        </Text>
+      )}
+
+      {/* Help text */}
+      {helpText && <Text style={styles.helpText}>{helpText}</Text>}
+
+      {/* Options modal */}
+      <Modal
+        visible={showOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowOptions(false)}
+        >
+          <View style={styles.optionsContainer}>
+            <Text style={styles.optionsTitle}>Add File</Text>
+            {pickerOptions.map((option) => (
+              <Pressable
+                key={option.id}
+                onPress={() => handleFilePicked(option.action)}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  pressed && styles.optionButtonPressed,
+                ]}
+              >
+                <Ionicons
+                  name={option.icon}
+                  size={24}
+                  color={colors.textPrimary}
+                />
+                <Text style={styles.optionLabel}>{option.label}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              onPress={() => setShowOptions(false)}
+              style={[styles.optionButton, styles.cancelButton]}
+            >
+              <Text style={styles.cancelLabel}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: spacing.md,
+  },
+  label: {
+    fontSize: typography.sizes.label,
+    fontWeight: typography.weights.medium,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  previewContainer: {
+    marginBottom: spacing.sm,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    gap: spacing.sm,
+  },
+  addButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
+  },
+  addButtonDisabled: {
+    opacity: 0.5,
+  },
+  addButtonText: {
+    fontSize: typography.sizes.body,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
+  },
+  addButtonTextDisabled: {
+    color: colors.textTertiary,
+  },
+  countText: {
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  helpText: {
+    fontSize: typography.sizes.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  optionsContainer: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  optionsTitle: {
+    fontSize: typography.sizes.titleMedium,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.md,
+  },
+  optionButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
+  },
+  optionLabel: {
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
+  },
+  cancelButton: {
+    marginTop: spacing.sm,
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  cancelLabel: {
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+});
