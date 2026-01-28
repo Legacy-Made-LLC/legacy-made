@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -20,7 +20,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
 import { formStyles } from "./formStyles";
-import type { FileAttachment } from "@/api/types";
 
 const propertyTypes = [
   "Primary Home",
@@ -44,7 +43,6 @@ interface PropertyMetadata {
   documentsLocation?: string;
   keyLocation?: string;
   notes?: string;
-  attachments?: FileAttachment[];
 }
 
 export function PropertyForm({
@@ -53,17 +51,15 @@ export function PropertyForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
 
   const initialMetadata = initialData?.metadata as PropertyMetadata | undefined;
-
-  // File attachments state (managed separately from form for simplicity with complex file objects)
-  const [attachments, setAttachments] = useState<FileAttachment[]>(
-    initialMetadata?.attachments ?? []
-  );
 
   const defaultValues = useMemo(
     () => ({
@@ -94,7 +90,6 @@ export function PropertyForm({
         documentsLocation: value.documentsLocation.trim() || undefined,
         keyLocation: value.keyLocation.trim() || undefined,
         notes: value.notes.trim() || undefined,
-        attachments: attachments.length > 0 ? attachments : undefined,
       };
 
       // Generate title from type
@@ -275,27 +270,37 @@ export function PropertyForm({
           )}
         </form.Field>
 
-        <FilePicker
-          label="Photos & Documents"
-          value={attachments}
-          onChange={setAttachments}
-          mode="all"
-          maxFiles={10}
-          placeholder="Add photos or documents"
-          helpText="Attach photos of the property, vehicle, or related documents"
-        />
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Photos & Documents"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="all"
+            maxFiles={10}
+            placeholder="Add photos or documents"
+            helpText="Attach photos of the property, vehicle, or related documents"
+          />
+        )}
 
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {([canSubmit, isSubmitting]) => (
-              <Button
-                title={isSaving || isSubmitting ? "Saving..." : "Save"}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              />
-            )}
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? "Uploading..."
+                : busy
+                  ? "Saving..."
+                  : "Save";
+              return (
+                <Button
+                  title={buttonTitle}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
+                />
+              );
+            }}
           </form.Subscribe>
         </View>
 

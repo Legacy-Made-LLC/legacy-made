@@ -8,13 +8,16 @@
  * entryId = <uuid> for editing an existing entry
  */
 
+import { apiFileToAttachment, type FileAttachment } from '@/api/types';
 import { getFormComponent } from '@/components/vault/registry';
 import { colors, spacing, typography } from '@/constants/theme';
 import { getTask } from '@/constants/vault';
 import { useCreateEntry, useDeleteEntry, useEntryQuery, useUpdateEntry } from '@/hooks/queries';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useApi } from '@/api';
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -33,6 +36,9 @@ export default function EntryScreen() {
   // Fetch entry data if editing
   const { data: entry, isLoading } = useEntryQuery(isNew ? undefined : entryId);
 
+  // API for file operations
+  const { files: filesService } = useApi();
+
   // Mutations
   const createMutation = useCreateEntry(task?.taskKey);
   const updateMutation = useUpdateEntry(task?.taskKey);
@@ -40,19 +46,141 @@ export default function EntryScreen() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  // Track if a file deletion is in progress
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
+
+  // File attachments state - initialized from entry.files when available
+  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+
+  // Initialize attachments when entry data loads
+  useEffect(() => {
+    if (entry?.files) {
+      setAttachments(entry.files.map(apiFileToAttachment));
+    }
+  }, [entry?.files]);
+
+  // File upload hook
+  const { uploadFiles, uploadStates, isUploading } = useFileUpload({
+    onFileUploaded: (file, fileId) => {
+      // Update attachment with backend ID and mark as remote
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.uri === file.uri ? { ...a, id: fileId, uploadStatus: 'complete', isRemote: true } : a
+        )
+      );
+    },
+    onFileError: (file, error) => {
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.uri === file.uri ? { ...a, uploadStatus: 'error', errorMessage: error } : a
+        )
+      );
+    },
+  });
+
+  // Merge upload states into attachments for UI display
+  const attachmentsWithUploadState = attachments.map((attachment) => {
+    const uploadState = uploadStates[attachment.uri];
+    if (uploadState) {
+      return {
+        ...attachment,
+        uploadStatus: uploadState.status,
+        uploadProgress: uploadState.progress,
+        errorMessage: uploadState.error,
+      };
+    }
+    return attachment;
+  });
+
+  // Keep a ref to current attachments for comparison in handleAttachmentsChange
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+
+  /**
+   * Handle attachment changes from the form.
+   * Detects when a remote file is being removed and shows confirmation.
+   */
+  const handleAttachmentsChange = useCallback(
+    (newAttachments: FileAttachment[]) => {
+      const currentAttachments = attachmentsRef.current;
+
+      // Find any remote files that were removed
+      const removedRemoteFiles = currentAttachments.filter(
+        (current) =>
+          current.isRemote &&
+          current.id &&
+          !newAttachments.some((newFile) => newFile.uri === current.uri)
+      );
+
+      // If no remote files were removed, just update state
+      if (removedRemoteFiles.length === 0) {
+        setAttachments(newAttachments);
+        return;
+      }
+
+      // Show confirmation for remote file deletion
+      const fileToDelete = removedRemoteFiles[0];
+      Alert.alert(
+        'Delete Attachment',
+        `Are you sure you want to permanently delete "${fileToDelete.fileName}"? This cannot be undone.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            // Don't update state - keep the file
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              if (!fileToDelete.id) return;
+
+              setIsDeletingFile(true);
+              try {
+                await filesService.delete(fileToDelete.id);
+                // Remove from state after successful deletion
+                setAttachments((prev) =>
+                  prev.filter((a) => a.uri !== fileToDelete.uri)
+                );
+              } catch (error) {
+                const message =
+                  error instanceof Error ? error.message : 'Failed to delete file';
+                Alert.alert('Error', message);
+              } finally {
+                setIsDeletingFile(false);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [filesService]
+  );
+
   // Handle save
   const handleSave = useCallback(
     async (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => {
       if (!task) return;
 
+      let savedEntryId: string;
+
       if (isNew) {
-        await createMutation.mutateAsync(data);
+        const createdEntry = await createMutation.mutateAsync(data);
+        savedEntryId = createdEntry.id;
       } else {
         await updateMutation.mutateAsync({ entryId, data });
+        savedEntryId = entryId;
       }
+
+      // Upload any pending files
+      const pendingFiles = attachments.filter((f) => !f.isRemote && f.uploadStatus !== 'complete');
+      if (pendingFiles.length > 0) {
+        await uploadFiles(savedEntryId, attachments);
+      }
+
       router.back();
     },
-    [task, isNew, entryId, createMutation, updateMutation, router]
+    [task, isNew, entryId, createMutation, updateMutation, attachments, uploadFiles, router]
   );
 
   // Handle delete
@@ -105,7 +233,10 @@ export default function EntryScreen() {
       onSave={handleSave}
       onDelete={isNew ? undefined : handleDelete}
       onCancel={handleCancel}
-      isSaving={isSaving}
+      isSaving={isSaving || isDeletingFile}
+      attachments={attachmentsWithUploadState}
+      onAttachmentsChange={handleAttachmentsChange}
+      isUploading={isUploading}
     />
   );
 }

@@ -6,7 +6,7 @@
  */
 
 import type { ComponentType } from 'react';
-import type { Entry } from '@/api/types';
+import type { Entry, FileAttachment } from '@/api/types';
 
 // ============================================================================
 // List Component Registry
@@ -68,6 +68,12 @@ export interface EntryFormProps {
   onCancel: () => void;
   /** Whether save is in progress */
   isSaving?: boolean;
+  /** Current file attachments (including pending uploads) */
+  attachments?: FileAttachment[];
+  /** Callback when attachments change (for forms that support file uploads) */
+  onAttachmentsChange?: (files: FileAttachment[]) => void;
+  /** Whether file uploads are in progress */
+  isUploading?: boolean;
 }
 
 export const listRegistry: Record<string, ComponentType<EntryListProps>> = {

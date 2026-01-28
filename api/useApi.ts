@@ -6,6 +6,7 @@ import { useMemo, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
 import { createApiClient } from './client';
 import { createEntriesService } from './entries';
+import { createFilesService } from './files';
 import { createPlansService } from './plans';
 
 /**
@@ -47,11 +48,17 @@ export function useApi() {
     return createPlansService(client);
   }, [client]);
 
+  const files = useMemo(() => {
+    return createFilesService(client);
+  }, [client]);
+
   return {
     /** The base API client for custom requests */
     client,
     /** Entries service with CRUD operations */
     entries,
+    /** Files service for upload and management */
+    files,
     /** Plans service */
     plans,
     /** Whether the user is signed in */

@@ -2,7 +2,7 @@
  * DocumentForm - Form for creating/editing legal document entries
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ScrollView,
   View,
@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/Button';
 import { spacing } from '@/constants/theme';
 import { formStyles } from './formStyles';
 import type { EntryFormProps } from '../registry';
-import type { FileAttachment } from '@/api/types';
 
 const legalDocumentTypes = [
   'Will',
@@ -48,7 +47,6 @@ interface DocumentMetadata {
   preparer?: string;
   preparerPhone?: string;
   notes?: string;
-  attachments?: FileAttachment[];
 }
 
 export function DocumentForm({
@@ -58,6 +56,9 @@ export function DocumentForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -69,11 +70,6 @@ export function DocumentForm({
   const defaultDocType = isLegalDocs ? 'Will' : 'Birth Certificate';
 
   const initialMetadata = initialData?.metadata as DocumentMetadata | undefined;
-
-  // File attachments state (managed separately from form for simplicity with complex file objects)
-  const [attachments, setAttachments] = useState<FileAttachment[]>(
-    initialMetadata?.attachments ?? []
-  );
 
   const defaultValues = useMemo(
     () => ({
@@ -101,8 +97,8 @@ export function DocumentForm({
         preparer: value.preparer.trim() || undefined,
         preparerPhone: value.preparerPhone.trim() || undefined,
         notes: value.notes.trim() || undefined,
-        attachments: attachments.length > 0 ? attachments : undefined,
       };
+      // Note: Files are uploaded separately via file API, not stored in metadata
 
       // Use document type as the title
       const title = value.documentType;
@@ -253,25 +249,35 @@ export function DocumentForm({
           )}
         </form.Field>
 
-        <FilePicker
-          label="Attachments"
-          value={attachments}
-          onChange={setAttachments}
-          mode="all"
-          maxFiles={5}
-          placeholder="Add document scan or photo"
-          helpText="Attach scanned copies, photos, or PDF files of this document"
-        />
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Attachments"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="all"
+            maxFiles={5}
+            placeholder="Add document scan or photo"
+            helpText="Attach scanned copies, photos, or PDF files of this document"
+          />
+        )}
 
         <View style={formStyles.buttonContainer}>
           <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-            {([canSubmit, isSubmitting]) => (
-              <Button
-                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              />
-            )}
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? 'Uploading...'
+                : busy
+                  ? 'Saving...'
+                  : 'Save';
+              return (
+                <Button
+                  title={buttonTitle}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
+                />
+              );
+            }}
           </form.Subscribe>
         </View>
 

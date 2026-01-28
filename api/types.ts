@@ -39,8 +39,6 @@ export interface LegalDocumentMetadata {
   location: string;
   holder?: string;
   notes?: string;
-  /** Attached document files (scans, PDFs, images) */
-  attachments?: FileAttachment[];
 }
 
 export interface HomeMetadata {
@@ -49,8 +47,6 @@ export interface HomeMetadata {
   accountInfo?: string;
   frequency?: string;
   notes?: string;
-  /** Attached photos or documents (property photos, vehicle docs, etc.) */
-  attachments?: FileAttachment[];
 }
 
 export interface DigitalAccessMetadata {
@@ -63,7 +59,42 @@ export interface DigitalAccessMetadata {
 }
 
 // ============================================================================
-// File Attachment Types
+// File Types (Backend Response)
+// ============================================================================
+
+export type ApiFileStorageType = 'r2' | 'mux';
+export type ApiFileUploadStatus = 'pending' | 'uploading' | 'complete' | 'failed';
+
+/**
+ * File record from backend API response
+ * Returned as part of entry.files[] array
+ */
+export interface ApiFile {
+  id: string;
+  entryId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageType: ApiFileStorageType;
+  uploadStatus: ApiFileUploadStatus;
+  /** Presigned download URL for R2 files (expires in ~1hr) */
+  downloadUrl: string | null;
+  /** Thumbnail URL for images/videos */
+  thumbnailUrl: string | null;
+  /** Mux playback ID for videos */
+  playbackId: string | null;
+  /** Mux tokens for video playback (videos only) */
+  tokens?: {
+    playbackToken: string;
+    thumbnailToken: string;
+    storyboardToken: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// File Attachment Types (Client-side)
 // ============================================================================
 
 export type FileUploadStatus = 'pending' | 'uploading' | 'complete' | 'error';
@@ -71,7 +102,8 @@ export type FileUploadStatus = 'pending' | 'uploading' | 'complete' | 'error';
 export type FileType = 'image' | 'video' | 'document';
 
 /**
- * Represents a file attachment that can be added to any entry
+ * Client-side file attachment representation
+ * Used for displaying files in forms (both local and remote)
  */
 export interface FileAttachment {
   /** Unique ID from backend after successful upload */
@@ -100,6 +132,97 @@ export interface FileAttachment {
   uploadProgress?: number;
   /** Error message if upload failed */
   errorMessage?: string;
+  /** Whether this file exists on the server (vs local-only) */
+  isRemote?: boolean;
+  /** Mux playback ID for videos */
+  playbackId?: string;
+  /** Mux tokens for video playback */
+  tokens?: {
+    playbackToken: string;
+    thumbnailToken: string;
+    storyboardToken: string;
+  };
+}
+
+/**
+ * Converts an API file response to a client-side FileAttachment
+ */
+export function apiFileToAttachment(file: ApiFile): FileAttachment {
+  const type: FileType = file.mimeType.startsWith('image/')
+    ? 'image'
+    : file.mimeType.startsWith('video/')
+      ? 'video'
+      : 'document';
+
+  return {
+    id: file.id,
+    uri: file.downloadUrl || '',
+    fileName: file.filename,
+    fileSize: file.sizeBytes,
+    mimeType: file.mimeType,
+    type,
+    thumbnailUri: file.thumbnailUrl || undefined,
+    uploadStatus: file.uploadStatus === 'complete' ? 'complete' : 'pending',
+    isRemote: true,
+    playbackId: file.playbackId || undefined,
+    tokens: file.tokens,
+  };
+}
+
+// ============================================================================
+// File Upload API Types
+// ============================================================================
+
+/**
+ * Request body for initializing a file upload (R2 or Mux)
+ */
+export interface InitUploadRequest {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+/**
+ * Response from POST /entries/:entryId/files/upload/init
+ * For single uploads (files ≤100MB)
+ */
+export interface InitUploadResponse {
+  fileId: string;
+  uploadUrl: string;
+  uploadMethod: 'PUT';
+  expiresAt: string;
+  /** For multipart uploads (>100MB) - not implemented in MVP */
+  uploadId?: string;
+  parts?: { partNumber: number; uploadUrl: string }[];
+}
+
+/**
+ * Response from POST /entries/:entryId/files/video/init
+ */
+export interface InitVideoUploadResponse {
+  fileId: string;
+  uploadUrl: string;
+}
+
+/**
+ * Response from GET /files/:id/download
+ * Returns either R2 download URL or Mux playback info
+ */
+export interface DownloadUrlResponse {
+  /** Presigned download URL for R2 files */
+  downloadUrl?: string;
+  /** Seconds until URL expires */
+  expiresIn?: number;
+  /** Mux playback URL for videos */
+  playbackUrl?: string;
+  /** Mux playback ID */
+  playbackId?: string;
+  /** Mux authentication tokens */
+  tokens?: {
+    playbackToken: string;
+    thumbnailToken: string;
+    storyboardToken: string;
+  };
 }
 
 // ============================================================================
@@ -120,6 +243,8 @@ export interface Entry<T = Record<string, unknown>> {
   notes: string | null;
   sortOrder: number;
   metadata: T;
+  /** Files attached to this entry (returned by backend) */
+  files?: ApiFile[];
   createdAt: string;
   updatedAt: string;
 }
