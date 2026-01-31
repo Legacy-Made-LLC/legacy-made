@@ -9,6 +9,7 @@ import type {
   DownloadUrlResponse,
   InitUploadRequest,
   InitUploadResponse,
+  InitVideoUploadRequest,
   InitVideoUploadResponse,
 } from "./types";
 
@@ -34,10 +35,11 @@ export function createFilesService(client: ApiClient) {
     /**
      * Initialize a video upload (Mux)
      * Returns a Mux direct upload URL
+     * Supports optional metadata for tracking in Mux dashboard
      */
     initVideoUpload: async (
       entryId: string,
-      data: InitUploadRequest
+      data: InitVideoUploadRequest
     ): Promise<InitVideoUploadResponse> => {
       return client.post<InitVideoUploadResponse>(
         `/entries/${entryId}/files/video/init`,

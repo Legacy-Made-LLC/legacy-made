@@ -5,11 +5,12 @@
  * and video uploads (Mux) with progress tracking.
  */
 
-import { useState, useCallback, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/api";
-import { queryKeys } from "@/lib/queryKeys";
 import type { FileAttachment, FileUploadStatus } from "@/api/types";
+import { queryKeys } from "@/lib/queryKeys";
+import { useUser } from "@clerk/clerk-expo";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
 
 interface UploadResult {
   /** URI of the file that was uploaded (for matching) */
@@ -111,6 +112,7 @@ export function useFileUpload(
   const { onFileUploaded, onFileError, onAllComplete } = options;
   const { files: filesService } = useApi();
   const queryClient = useQueryClient();
+  const { user } = useUser();
 
   const [uploadStates, setUploadStates] = useState<
     Record<string, FileUploadState>
@@ -211,10 +213,17 @@ export function useFileUpload(
 
       try {
         // 1. Initialize video upload - get Mux direct upload URL
+        // Include metadata for easier tracking in Mux dashboard
         const initResponse = await filesService.initVideoUpload(entryId, {
           filename: file.fileName,
           mimeType: file.mimeType,
           sizeBytes: file.fileSize,
+          meta: {
+            externalId: `${entryId}-${Date.now()}`,
+            creatorId: user?.id,
+            title: file.fileName,
+          },
+          passthrough: JSON.stringify({ entryId })
         });
 
         if (signal.aborted) {
@@ -250,7 +259,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError]
+    [filesService, updateFileState, onFileUploaded, onFileError, user?.id]
   );
 
   /**

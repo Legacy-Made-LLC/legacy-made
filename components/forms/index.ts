@@ -7,6 +7,9 @@ export { FormTypeSelector } from './FormTypeSelector';
 // File picker components
 export { FilePicker } from './FilePicker';
 export { FilePreview, FilePreviewGrid, FilePreviewList } from './FilePreview';
+export { FilePreviewModal } from './FilePreviewModal';
+export { ImageViewer } from './ImageViewer';
+export { VideoPlayer } from './VideoPlayer';
 
 // Zod schemas and utilities
 export * from './schemas';

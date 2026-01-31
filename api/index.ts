@@ -26,6 +26,7 @@ export type {
   FileUploadStatus,
   InitUploadRequest,
   InitUploadResponse,
+  InitVideoUploadRequest,
   InitVideoUploadResponse,
   DownloadUrlResponse,
 } from './types';

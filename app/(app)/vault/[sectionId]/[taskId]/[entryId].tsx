@@ -8,16 +8,25 @@
  * entryId = <uuid> for editing an existing entry
  */
 
-import { apiFileToAttachment, type FileAttachment } from '@/api/types';
-import { getFormComponent } from '@/components/vault/registry';
-import { colors, spacing, typography } from '@/constants/theme';
-import { getTask } from '@/constants/vault';
-import { useCreateEntry, useDeleteEntry, useEntryQuery, useUpdateEntry } from '@/hooks/queries';
-import { useFileUpload } from '@/hooks/useFileUpload';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { useApi } from '@/api';
+import { useQueryClient } from "@tanstack/react-query";
+
+import { useApi } from "@/api";
+import { apiFileToAttachment, type FileAttachment } from "@/api/types";
+import { getFormComponent } from "@/components/vault/registry";
+import { colors, spacing, typography } from "@/constants/theme";
+import { getTask } from "@/constants/vault";
+import { usePlan } from "@/data/PlanProvider";
+import {
+  useCreateEntry,
+  useDeleteEntry,
+  useEntryQuery,
+  useUpdateEntry,
+} from "@/hooks/queries";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { queryKeys } from "@/lib/queryKeys";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -26,9 +35,11 @@ export default function EntryScreen() {
     entryId: string;
   }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { planId } = usePlan();
 
   const task = getTask(sectionId, taskId);
-  const isNew = entryId === 'new';
+  const isNew = entryId === "new";
 
   // Get the form component for this task
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
@@ -49,15 +60,88 @@ export default function EntryScreen() {
   // Track if a file deletion is in progress
   const [isDeletingFile, setIsDeletingFile] = useState(false);
 
+  // Track if files were deleted during this session (to invalidate cache on unmount)
+  const filesDeletedRef = useRef(false);
+
   // File attachments state - initialized from entry.files when available
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
 
-  // Initialize attachments when entry data loads
+  // Track if we're currently saving to prevent entry refetch from overwriting local attachments
+  const isSavingRef = useRef(false);
+
+  // Initialize attachments when entry data loads (but not during save/upload)
   useEffect(() => {
+    // Don't overwrite local attachments during save - the mutation invalidates the query
+    // which would cause us to lose pending file uploads
+    if (isSavingRef.current) {
+      return;
+    }
     if (entry?.files) {
       setAttachments(entry.files.map(apiFileToAttachment));
     }
   }, [entry?.files]);
+
+  // Refs to capture current values for unmount cleanup
+  const planIdRef = useRef(planId);
+  const entryIdRef = useRef(entryId);
+  planIdRef.current = planId;
+  entryIdRef.current = entryId;
+
+  // Invalidate entry cache on unmount if files were deleted during this session
+  // This ensures the next time the entry is viewed, it reflects the deleted files
+  useEffect(() => {
+    return () => {
+      if (filesDeletedRef.current && planIdRef.current && entryIdRef.current && entryIdRef.current !== "new") {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entries.single(planIdRef.current, entryIdRef.current),
+        });
+      }
+    };
+  }, [queryClient]);
+
+  // Polling for processing videos - check every 5 seconds, max 5 retries
+  const videoPollingRetryCount = useRef(0);
+  const VIDEO_POLLING_INTERVAL = 5000; // 5 seconds
+  const VIDEO_POLLING_MAX_RETRIES = 5;
+
+  useEffect(() => {
+    // Check if there are any processing videos
+    const hasProcessingVideos = attachments.some(
+      (a) => a.type === "video" && a.isProcessing && a.isRemote
+    );
+
+    // If no processing videos or max retries reached, don't poll
+    if (!hasProcessingVideos || videoPollingRetryCount.current >= VIDEO_POLLING_MAX_RETRIES) {
+      return;
+    }
+
+    // Don't poll while saving
+    if (isSavingRef.current) {
+      return;
+    }
+
+    const pollTimer = setTimeout(() => {
+      videoPollingRetryCount.current += 1;
+      // Invalidate the entry query to refetch and check if videos are ready
+      if (planId && entryId && entryId !== "new") {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entries.single(planId, entryId),
+        });
+      }
+    }, VIDEO_POLLING_INTERVAL);
+
+    return () => clearTimeout(pollTimer);
+  }, [attachments, planId, entryId, queryClient]);
+
+  // Reset polling retry count when attachments change and no longer have processing videos
+  useEffect(() => {
+    const hasProcessingVideos = attachments.some(
+      (a) => a.type === "video" && a.isProcessing && a.isRemote
+    );
+    if (!hasProcessingVideos) {
+      videoPollingRetryCount.current = 0;
+    }
+  }, [attachments]);
 
   // File upload hook
   const { uploadFiles, uploadStates, isUploading } = useFileUpload({
@@ -65,14 +149,18 @@ export default function EntryScreen() {
       // Update attachment with backend ID and mark as remote
       setAttachments((prev) =>
         prev.map((a) =>
-          a.uri === file.uri ? { ...a, id: fileId, uploadStatus: 'complete', isRemote: true } : a
+          a.uri === file.uri
+            ? { ...a, id: fileId, uploadStatus: "complete", isRemote: true }
+            : a
         )
       );
     },
     onFileError: (file, error) => {
       setAttachments((prev) =>
         prev.map((a) =>
-          a.uri === file.uri ? { ...a, uploadStatus: 'error', errorMessage: error } : a
+          a.uri === file.uri
+            ? { ...a, uploadStatus: "error", errorMessage: error }
+            : a
         )
       );
     },
@@ -104,12 +192,17 @@ export default function EntryScreen() {
     (newAttachments: FileAttachment[]) => {
       const currentAttachments = attachmentsRef.current;
 
+      // Helper to get unique identifier for a file (id for remote, uri for local)
+      const getFileIdentifier = (file: FileAttachment) => file.id || file.uri;
+
       // Find any remote files that were removed
       const removedRemoteFiles = currentAttachments.filter(
         (current) =>
           current.isRemote &&
           current.id &&
-          !newAttachments.some((newFile) => newFile.uri === current.uri)
+          !newAttachments.some(
+            (newFile) => getFileIdentifier(newFile) === getFileIdentifier(current)
+          )
       );
 
       // If no remote files were removed, just update state
@@ -121,31 +214,35 @@ export default function EntryScreen() {
       // Show confirmation for remote file deletion
       const fileToDelete = removedRemoteFiles[0];
       Alert.alert(
-        'Delete Attachment',
+        "Delete Attachment",
         `Are you sure you want to permanently delete "${fileToDelete.fileName}"? This cannot be undone.`,
         [
           {
-            text: 'Cancel',
-            style: 'cancel',
+            text: "Cancel",
+            style: "cancel",
             // Don't update state - keep the file
           },
           {
-            text: 'Delete',
-            style: 'destructive',
+            text: "Delete",
+            style: "destructive",
             onPress: async () => {
               if (!fileToDelete.id) return;
 
               setIsDeletingFile(true);
               try {
                 await filesService.delete(fileToDelete.id);
-                // Remove from state after successful deletion
+                // Mark that files were deleted (for cache invalidation on unmount)
+                filesDeletedRef.current = true;
+                // Remove from state after successful deletion (use id for remote files)
                 setAttachments((prev) =>
-                  prev.filter((a) => a.uri !== fileToDelete.uri)
+                  prev.filter((a) => getFileIdentifier(a) !== fileToDelete.id)
                 );
               } catch (error) {
                 const message =
-                  error instanceof Error ? error.message : 'Failed to delete file';
-                Alert.alert('Error', message);
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to delete file";
+                Alert.alert("Error", message);
               } finally {
                 setIsDeletingFile(false);
               }
@@ -159,8 +256,15 @@ export default function EntryScreen() {
 
   // Handle save
   const handleSave = useCallback(
-    async (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => {
-      if (!task) return;
+    async (data: {
+      title: string;
+      notes?: string;
+      metadata: Record<string, unknown>;
+    }) => {
+      if (!task || !planId) return;
+
+      // Prevent entry refetch from overwriting local attachments during save
+      isSavingRef.current = true;
 
       let savedEntryId: string;
 
@@ -173,14 +277,32 @@ export default function EntryScreen() {
       }
 
       // Upload any pending files
-      const pendingFiles = attachments.filter((f) => !f.isRemote && f.uploadStatus !== 'complete');
+      const pendingFiles = attachments.filter(
+        (f) => !f.isRemote && f.uploadStatus !== "complete"
+      );
       if (pendingFiles.length > 0) {
         await uploadFiles(savedEntryId, attachments);
+
+        // Invalidate entry cache after uploads so it includes the new files
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entries.single(planId, savedEntryId),
+        });
       }
 
       router.back();
     },
-    [task, isNew, entryId, createMutation, updateMutation, attachments, uploadFiles, router]
+    [
+      task,
+      planId,
+      isNew,
+      entryId,
+      createMutation,
+      updateMutation,
+      attachments,
+      uploadFiles,
+      queryClient,
+      router,
+    ]
   );
 
   // Handle delete
@@ -244,20 +366,20 @@ export default function EntryScreen() {
 const styles = StyleSheet.create({
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
     padding: spacing.xl,
   },
   errorText: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
   },
   loadingText: {

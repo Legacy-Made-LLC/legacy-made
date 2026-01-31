@@ -18,6 +18,8 @@ interface FilePreviewProps {
   removable?: boolean;
   /** Compact mode for inline display */
   compact?: boolean;
+  /** Callback when the preview is pressed (for opening full-screen viewer) */
+  onPress?: () => void;
 }
 
 /**
@@ -58,28 +60,46 @@ export function FilePreview({
   onRemove,
   removable = true,
   compact = false,
+  onPress,
 }: FilePreviewProps) {
   const isImage = file.type === 'image';
   const isVideo = file.type === 'video';
   const isUploading = file.uploadStatus === 'uploading';
   const hasError = file.uploadStatus === 'error';
+  const isProcessing = file.isProcessing === true;
 
   // Thumbnail URI for display (use generated thumbnail for videos, or file URI for images)
   const thumbnailUri = isVideo ? file.thumbnailUri : isImage ? file.uri : null;
 
+  // Whether this file type can be previewed (images and videos only)
+  // Disable preview for videos that are still processing
+  const canPreview = (isImage || isVideo) && onPress && !isUploading && !isProcessing;
+
   if (compact) {
+    const thumbnailContent = thumbnailUri ? (
+      <Image source={{ uri: thumbnailUri }} style={styles.compactThumbnail} />
+    ) : (
+      <View style={styles.compactIcon}>
+        <Ionicons
+          name={isVideo ? 'videocam' : getDocumentIcon(file.mimeType)}
+          size={20}
+          color={colors.textSecondary}
+        />
+      </View>
+    );
+
     return (
       <View style={[styles.compactContainer, hasError && styles.errorBorder]}>
-        {/* Thumbnail or icon */}
-        {thumbnailUri ? (
-          <Image source={{ uri: thumbnailUri }} style={styles.compactThumbnail} />
+        {/* Thumbnail or icon - tappable if previewable */}
+        {canPreview ? (
+          <Pressable onPress={onPress} style={styles.compactThumbnailPressable}>
+            {thumbnailContent}
+            {isVideo && !isProcessing && <View style={styles.compactPlayBadge}><Ionicons name="play" size={12} color="#FFFFFF" /></View>}
+            {isImage && <View style={styles.compactZoomBadge}><Ionicons name="expand-outline" size={10} color="#FFFFFF" /></View>}
+          </Pressable>
         ) : (
-          <View style={styles.compactIcon}>
-            <Ionicons
-              name={isVideo ? 'videocam' : getDocumentIcon(file.mimeType)}
-              size={20}
-              color={colors.textSecondary}
-            />
+          <View style={[styles.compactThumbnailPressable, isProcessing && styles.compactProcessingThumbnail]}>
+            {thumbnailContent}
           </View>
         )}
 
@@ -88,14 +108,18 @@ export function FilePreview({
           <Text style={styles.compactFileName} numberOfLines={1}>
             {file.fileName}
           </Text>
-          <Text style={styles.compactMeta}>
-            {formatFileSize(file.fileSize)}
-            {isVideo && file.duration ? ` \u00B7 ${formatDuration(file.duration)}` : ''}
+          <Text style={[styles.compactMeta, isProcessing && styles.processingMeta]}>
+            {isProcessing ? 'Processing...' : (
+              <>
+                {formatFileSize(file.fileSize)}
+                {isVideo && file.duration ? ` \u00B7 ${formatDuration(file.duration)}` : ''}
+              </>
+            )}
           </Text>
         </View>
 
         {/* Status indicator or remove button */}
-        {isUploading ? (
+        {isUploading || isProcessing ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : removable && onRemove ? (
           <Pressable
@@ -110,57 +134,95 @@ export function FilePreview({
     );
   }
 
+  const previewContent = (
+    <>
+      {thumbnailUri ? (
+        <Image
+          source={{ uri: thumbnailUri }}
+          style={styles.thumbnail}
+          contentFit="cover"
+        />
+      ) : (
+        <View style={styles.documentPreview}>
+          <Ionicons
+            name={getDocumentIcon(file.mimeType)}
+            size={40}
+            color={colors.textTertiary}
+          />
+        </View>
+      )}
+
+      {/* Video duration badge */}
+      {isVideo && file.duration && (
+        <View style={styles.durationBadge}>
+          <Ionicons name="play" size={10} color="#FFFFFF" />
+          <Text style={styles.durationText}>{formatDuration(file.duration)}</Text>
+        </View>
+      )}
+
+      {/* Play icon overlay for videos (only when ready to play) */}
+      {isVideo && !isUploading && !isProcessing && (
+        <View style={styles.playOverlay}>
+          <View style={styles.playIconCircle}>
+            <Ionicons name="play" size={24} color="#FFFFFF" />
+          </View>
+        </View>
+      )}
+
+      {/* Zoom icon overlay for images */}
+      {isImage && !isUploading && (
+        <View style={styles.zoomOverlay}>
+          <View style={styles.zoomIconCircle}>
+            <Ionicons name="expand-outline" size={20} color="#FFFFFF" />
+          </View>
+        </View>
+      )}
+
+      {/* Upload progress overlay */}
+      {isUploading && (
+        <View style={styles.uploadOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          {file.uploadProgress !== undefined && (
+            <Text style={styles.progressText}>
+              {Math.round(file.uploadProgress * 100)}%
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Processing overlay for videos still being transcoded */}
+      {isProcessing && !isUploading && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.processingText}>Processing...</Text>
+        </View>
+      )}
+
+      {/* Remove button */}
+      {removable && onRemove && !isUploading && (
+        <Pressable
+          onPress={onRemove}
+          style={styles.removeButton}
+          hitSlop={8}
+        >
+          <Ionicons name="close-circle" size={24} color="#FFFFFF" />
+        </Pressable>
+      )}
+    </>
+  );
+
   return (
     <View style={[styles.container, hasError && styles.errorBorder]}>
-      {/* Preview area */}
-      <View style={styles.previewArea}>
-        {thumbnailUri ? (
-          <Image
-            source={{ uri: thumbnailUri }}
-            style={styles.thumbnail}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={styles.documentPreview}>
-            <Ionicons
-              name={getDocumentIcon(file.mimeType)}
-              size={40}
-              color={colors.textTertiary}
-            />
-          </View>
-        )}
-
-        {/* Video duration badge */}
-        {isVideo && file.duration && (
-          <View style={styles.durationBadge}>
-            <Ionicons name="play" size={10} color="#FFFFFF" />
-            <Text style={styles.durationText}>{formatDuration(file.duration)}</Text>
-          </View>
-        )}
-
-        {/* Upload progress overlay */}
-        {isUploading && (
-          <View style={styles.uploadOverlay}>
-            <ActivityIndicator size="large" color="#FFFFFF" />
-            {file.uploadProgress !== undefined && (
-              <Text style={styles.progressText}>
-                {Math.round(file.uploadProgress * 100)}%
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Remove button */}
-        {removable && onRemove && !isUploading && (
-          <Pressable
-            onPress={onRemove}
-            style={styles.removeButton}
-            hitSlop={8}
-          >
-            <Ionicons name="close-circle" size={24} color="#FFFFFF" />
-          </Pressable>
-        )}
-      </View>
+      {/* Preview area - tappable if previewable */}
+      {canPreview ? (
+        <Pressable style={styles.previewArea} onPress={onPress}>
+          {previewContent}
+        </Pressable>
+      ) : (
+        <View style={styles.previewArea}>
+          {previewContent}
+        </View>
+      )}
 
       {/* File info */}
       <View style={styles.infoArea}>
@@ -187,10 +249,13 @@ export function FilePreviewGrid({
   files,
   onRemove,
   removable = true,
+  onFilePress,
 }: {
   files: FileAttachment[];
-  onRemove?: (uri: string) => void;
+  /** Called with file.id (for remote files) or file.uri (for local files) */
+  onRemove?: (identifier: string) => void;
   removable?: boolean;
+  onFilePress?: (file: FileAttachment) => void;
 }) {
   if (files.length === 0) return null;
 
@@ -198,10 +263,11 @@ export function FilePreviewGrid({
     <View style={styles.grid}>
       {files.map((file) => (
         <FilePreview
-          key={file.uri}
+          key={file.id || file.uri}
           file={file}
-          onRemove={onRemove ? () => onRemove(file.uri) : undefined}
+          onRemove={onRemove ? () => onRemove(file.id || file.uri) : undefined}
           removable={removable}
+          onPress={onFilePress ? () => onFilePress(file) : undefined}
         />
       ))}
     </View>
@@ -215,10 +281,13 @@ export function FilePreviewList({
   files,
   onRemove,
   removable = true,
+  onFilePress,
 }: {
   files: FileAttachment[];
-  onRemove?: (uri: string) => void;
+  /** Called with file.id (for remote files) or file.uri (for local files) */
+  onRemove?: (identifier: string) => void;
   removable?: boolean;
+  onFilePress?: (file: FileAttachment) => void;
 }) {
   if (files.length === 0) return null;
 
@@ -226,10 +295,11 @@ export function FilePreviewList({
     <View style={styles.list}>
       {files.map((file) => (
         <FilePreview
-          key={file.uri}
+          key={file.id || file.uri}
           file={file}
-          onRemove={onRemove ? () => onRemove(file.uri) : undefined}
+          onRemove={onRemove ? () => onRemove(file.id || file.uri) : undefined}
           removable={removable}
+          onPress={onFilePress ? () => onFilePress(file) : undefined}
           compact
         />
       ))}
@@ -294,12 +364,50 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     marginTop: spacing.sm,
   },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingText: {
+    color: '#FFFFFF',
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: typography.weights.medium,
+    marginTop: spacing.sm,
+  },
   removeButton: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 12,
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomOverlay: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+  },
+  zoomIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoArea: {
     padding: spacing.md,
@@ -346,6 +454,31 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: borderRadius.sm,
   },
+  compactThumbnailPressable: {
+    position: 'relative',
+  },
+  compactPlayBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactZoomBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   compactIcon: {
     width: 44,
     height: 44,
@@ -367,6 +500,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.caption,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  processingMeta: {
+    color: colors.primary,
+    fontStyle: 'italic',
+  },
+  compactProcessingThumbnail: {
+    opacity: 0.5,
   },
   compactRemoveButton: {
     padding: spacing.xs,

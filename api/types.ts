@@ -134,6 +134,8 @@ export interface FileAttachment {
   errorMessage?: string;
   /** Whether this file exists on the server (vs local-only) */
   isRemote?: boolean;
+  /** Whether this video is still processing on the server (Mux) */
+  isProcessing?: boolean;
   /** Mux playback ID for videos */
   playbackId?: string;
   /** Mux tokens for video playback */
@@ -154,6 +156,9 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
       ? 'video'
       : 'document';
 
+  // Videos are "processing" if they're on the server but not yet complete (Mux transcoding)
+  const isProcessing = type === 'video' && file.uploadStatus !== 'complete';
+
   return {
     id: file.id,
     uri: file.downloadUrl || '',
@@ -164,6 +169,7 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
     thumbnailUri: file.thumbnailUrl || undefined,
     uploadStatus: file.uploadStatus === 'complete' ? 'complete' : 'pending',
     isRemote: true,
+    isProcessing,
     playbackId: file.playbackId || undefined,
     tokens: file.tokens,
   };
@@ -174,12 +180,35 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
 // ============================================================================
 
 /**
- * Request body for initializing a file upload (R2 or Mux)
+ * Request body for initializing a standard file upload (R2)
  */
 export interface InitUploadRequest {
   filename: string;
   mimeType: string;
   sizeBytes: number;
+}
+
+/**
+ * Request body for initializing a video upload (Mux)
+ * Includes optional metadata fields that Mux supports for tracking
+ */
+export interface InitVideoUploadRequest {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  /**
+   * Metadata to associate with the Mux asset for easier tracking.
+   * These are passed to Mux via the passthrough field and stored on the asset.
+   */
+  meta?: {
+    /** External ID from your system (e.g., entry ID, user ID combination) */
+    externalId?: string;
+    /** ID of the user who uploaded the video */
+    creatorId?: string;
+    /** Human-readable title for the video */
+    title?: string;
+  };
+  passthrough?: string;
 }
 
 /**

@@ -12,6 +12,7 @@ import { colors, spacing, typography, borderRadius } from '@/constants/theme';
 import { FileAttachment } from '@/api/types';
 import { useFilePicker, PickerMode } from '@/hooks/useFilePicker';
 import { FilePreviewList } from './FilePreview';
+import { FilePreviewModal } from './FilePreviewModal';
 
 interface FilePickerProps {
   /** Label displayed above the picker */
@@ -57,6 +58,7 @@ export function FilePicker({
   helpText,
 }: FilePickerProps) {
   const [showOptions, setShowOptions] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const { isLoading, pickFromLibrary, pickFromCamera, pickDocument } =
     useFilePicker({ mode });
 
@@ -78,10 +80,11 @@ export function FilePicker({
 
   /**
    * Remove a file from selection
+   * @param identifier - file.id for remote files, file.uri for local files
    */
   const handleRemoveFile = useCallback(
-    (uri: string) => {
-      onChange(value.filter((f) => f.uri !== uri));
+    (identifier: string) => {
+      onChange(value.filter((f) => (f.id || f.uri) !== identifier));
     },
     [value, onChange]
   );
@@ -153,6 +156,7 @@ export function FilePicker({
             files={value}
             onRemove={handleRemoveFile}
             removable={!disabled}
+            onFilePress={setPreviewFile}
           />
         </View>
       )}
@@ -239,6 +243,12 @@ export function FilePicker({
           </View>
         </Pressable>
       </Modal>
+
+      {/* File preview modal */}
+      <FilePreviewModal
+        file={previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
     </View>
   );
 }
