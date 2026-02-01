@@ -18,6 +18,8 @@ export interface VaultTask {
   title: string;
   /** Short description */
   description: string;
+  /** Heading for guidance card shown on the task screen */
+  guidanceHeading?: string;
   /** Longer guidance text shown on the task screen */
   guidance: string;
 }
@@ -47,16 +49,18 @@ export const vaultSections: VaultSection[] = [
         taskKey: "contacts.primary",
         title: "Primary Contacts",
         description: "The people to call first",
+        guidanceHeading: "This is usually the first call your family will make.",
         guidance:
-          "Start with one primary contact — the person who should be called first. This is typically a spouse, sibling, or close friend who can help coordinate everything else.",
+          "Choose someone who stays calm under pressure and can help coordinate what comes next.",
       },
       {
         id: "backup",
         taskKey: "contacts.backup",
         title: "Backup Contacts",
         description: "Attorney, financial advisor, close friends",
+        guidanceHeading: "Who else should know right away?",
         guidance:
-          "Add backup contacts like your attorney, financial advisor, or close friends who can help if primary contacts are unavailable.",
+          "These are the other people your family should contact early — relatives, close friends, or professionals.",
       },
     ],
   },
@@ -71,8 +75,9 @@ export const vaultSections: VaultSection[] = [
         taskKey: "people",
         title: "Important People",
         description: "Everyone else your family should know about",
+        guidanceHeading: "Who else matters in your life?",
         guidance:
-          "Add other important people like neighbors, friends, employers, or anyone else who should be notified. These are people who matter but may not need to be called immediately.",
+          "Beyond family, there are people who should know — and people your family should know about.",
       },
     ],
   },
@@ -87,8 +92,9 @@ export const vaultSections: VaultSection[] = [
         taskKey: "financial",
         title: "Financial Accounts",
         description: "Bank, investment, and retirement accounts",
+        guidanceHeading: "Your family just needs to know these accounts exist.",
         guidance:
-          "List your bank accounts, investments, and any debts. You don't need account numbers — just enough detail so your family knows where to look.",
+          "You don't need full account numbers — just enough for them to contact the right institutions.",
       },
     ],
   },
@@ -103,8 +109,9 @@ export const vaultSections: VaultSection[] = [
         taskKey: "insurance",
         title: "Insurance Policies",
         description: "Coverage your family should know about",
+        guidanceHeading: "Insurance benefits only help if your family knows they exist.",
         guidance:
-          "Include life insurance first, then health, home, and auto policies. Note the provider and policy number so claims can be filed.",
+          "Many families miss out on coverage they're entitled to simply because they didn't know about it.",
       },
     ],
   },
@@ -119,8 +126,9 @@ export const vaultSections: VaultSection[] = [
         taskKey: "documents.legal",
         title: "Legal Documents",
         description: "Wills, trusts, and powers of attorney",
+        guidanceHeading: "These documents give your family the authority to act.",
         guidance:
-          "These are documents typically prepared by an attorney. Record where your will, trust, and power of attorney documents are stored, and who has copies.",
+          "When the time comes, they'll need to find these quickly. Note where each one is stored.",
       },
       {
         id: "other",
@@ -143,8 +151,9 @@ export const vaultSections: VaultSection[] = [
         taskKey: "property",
         title: "Property & Vehicles",
         description: "Real estate, vehicles, and physical assets",
+        guidanceHeading: "Your family won't know what exists unless you tell them.",
         guidance:
-          "Think about what would need attention if you weren't here — property, vehicles, or recurring obligations that someone would need to handle.",
+          "Properties, vehicles, storage units — if there's a key, a title, or a code, note it here.",
       },
     ],
   },

@@ -56,6 +56,15 @@ export const listStyles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     backgroundColor: colors.background,
   },
+  emptyContent: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    borderRadius: 12,
+  },
   emptyIcon: {
     marginBottom: spacing.lg,
   },

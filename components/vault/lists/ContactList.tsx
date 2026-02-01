@@ -14,7 +14,7 @@ import { GuidanceCard } from '@/components/ui/GuidanceCard';
 import { SkeletonList } from '@/components/ui/SkeletonCard';
 import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
 import { colors, spacing } from '@/constants/theme';
-import { getTaskByKey } from '@/constants/vault';
+import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
 import { listStyles } from './listStyles';
 import type { EntryListProps } from '../registry';
 
@@ -35,6 +35,18 @@ export function ContactList({
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
+  const section = getSectionByTaskKey(taskKey);
+
+  const renderGuidanceCard = () => {
+    if (!task?.guidance) return null;
+    return (
+      <GuidanceCard
+        icon={section?.ionIcon as keyof typeof Ionicons.glyphMap}
+        heading={task.guidanceHeading}
+        text={task.guidance}
+      />
+    );
+  };
 
   if (isLoading) {
     return (
@@ -43,6 +55,7 @@ export function ContactList({
         contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
+        {renderGuidanceCard()}
         <SkeletonList count={3} />
       </ScrollView>
     );
@@ -50,14 +63,21 @@ export function ContactList({
 
   if (entries.length === 0) {
     return (
-      <View style={[listStyles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Ionicons name="person-outline" size={48} color={colors.textTertiary} style={listStyles.emptyIcon} />
-        <Text style={listStyles.emptyTitle}>No contacts added yet</Text>
-        <Text style={listStyles.emptyDescription}>
-          Add the first person your loved ones should reach out to.
-        </Text>
-        <Button title="Add Contact" onPress={onAddPress} style={listStyles.emptyButton} />
-      </View>
+      <ScrollView
+        style={listStyles.container}
+        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderGuidanceCard()}
+        <View style={listStyles.emptyContent}>
+          <Ionicons name="add-circle-outline" size={40} color={colors.textTertiary} style={listStyles.emptyIcon} />
+          <Text style={listStyles.emptyTitle}>No contacts added yet</Text>
+          <Text style={listStyles.emptyDescription}>
+            Add the first person your loved ones should reach out to.
+          </Text>
+          <Button title="Add Contact" onPress={onAddPress} style={listStyles.emptyButton} />
+        </View>
+      </ScrollView>
     );
   }
 
@@ -67,7 +87,7 @@ export function ContactList({
       contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
       showsVerticalScrollIndicator={false}
     >
-      {task?.guidance && <GuidanceCard text={task.guidance} />}
+      {renderGuidanceCard()}
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as ContactMetadata;

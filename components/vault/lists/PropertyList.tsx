@@ -8,7 +8,7 @@ import { PressableCard } from "@/components/ui/Card";
 import { GuidanceCard } from "@/components/ui/GuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { colors, spacing } from "@/constants/theme";
-import { getTaskByKey } from "@/constants/vault";
+import { getTaskByKey, getSectionByTaskKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -31,6 +31,18 @@ export function PropertyList({
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
+  const section = getSectionByTaskKey(taskKey);
+
+  const renderGuidanceCard = () => {
+    if (!task?.guidance) return null;
+    return (
+      <GuidanceCard
+        icon={section?.ionIcon as keyof typeof Ionicons.glyphMap}
+        heading={task.guidanceHeading}
+        text={task.guidance}
+      />
+    );
+  };
 
   if (isLoading) {
     return (
@@ -42,6 +54,7 @@ export function PropertyList({
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {renderGuidanceCard()}
         <SkeletonList count={3} />
       </ScrollView>
     );
@@ -49,28 +62,28 @@ export function PropertyList({
 
   if (entries.length === 0) {
     return (
-      <View
-        style={[
-          listStyles.emptyContainer,
+      <ScrollView
+        style={listStyles.container}
+        contentContainerStyle={[
+          listStyles.content,
           { paddingBottom: insets.bottom + spacing.lg },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons
-          name="home-outline"
-          size={48}
-          color={colors.textTertiary}
-          style={listStyles.emptyIcon}
-        />
-        <Text style={listStyles.emptyTitle}>Nothing added yet</Text>
-        <Text style={listStyles.emptyDescription}>
-          Add your property, vehicles, and other physical assets.
-        </Text>
-        <Button
-          title="Add Property"
-          onPress={onAddPress}
-          style={listStyles.emptyButton}
-        />
-      </View>
+        {renderGuidanceCard()}
+        <View style={listStyles.emptyContent}>
+          <Ionicons name="add-circle-outline" size={40} color={colors.textTertiary} style={listStyles.emptyIcon} />
+          <Text style={listStyles.emptyTitle}>Nothing added yet</Text>
+          <Text style={listStyles.emptyDescription}>
+            Add your property, vehicles, and other physical assets.
+          </Text>
+          <Button
+            title="Add Property"
+            onPress={onAddPress}
+            style={listStyles.emptyButton}
+          />
+        </View>
+      </ScrollView>
     );
   }
 
@@ -83,7 +96,7 @@ export function PropertyList({
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {task?.guidance && <GuidanceCard text={task.guidance} />}
+      {renderGuidanceCard()}
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as PropertyMetadata;
