@@ -6,6 +6,7 @@ import type { ApiClient } from "./client";
 import type {
   CreateEntryRequest,
   DeleteResponse,
+  EntriesListResponse,
   Entry,
   UpdateEntryRequest,
 } from "./types";
@@ -27,9 +28,10 @@ export function createEntriesService(client: ApiClient) {
       planId: string,
       taskKey?: string
     ): Promise<Entry<T>[]> => {
-      return client.get<Entry<T>[]>(entriesPath(planId), {
+      const response = await client.get<EntriesListResponse<T>>(entriesPath(planId), {
         taskKey,
       });
+      return response.data;
     },
 
     /**
@@ -39,16 +41,37 @@ export function createEntriesService(client: ApiClient) {
       planId: string,
       taskKey: string
     ): Promise<Entry<T>[]> => {
-      return client.get<Entry<T>[]>(entriesPath(planId), {
+      const response = await client.get<EntriesListResponse<T>>(entriesPath(planId), {
         taskKey,
       });
+      return response.data;
     },
 
     /**
      * List all entries for a plan (for counting)
      */
     listAll: async (planId: string): Promise<Entry[]> => {
-      return client.get<Entry[]>(entriesPath(planId));
+      const response = await client.get<EntriesListResponse>(entriesPath(planId));
+      return response.data;
+    },
+
+    /**
+     * List entries by taskKey with quota information
+     */
+    listByTaskKeyWithQuota: async <T = Record<string, unknown>>(
+      planId: string,
+      taskKey: string
+    ): Promise<EntriesListResponse<T>> => {
+      return client.get<EntriesListResponse<T>>(entriesPath(planId), {
+        taskKey,
+      });
+    },
+
+    /**
+     * List all entries for a plan with quota information
+     */
+    listAllWithQuota: async (planId: string): Promise<EntriesListResponse> => {
+      return client.get<EntriesListResponse>(entriesPath(planId));
     },
 
     /**

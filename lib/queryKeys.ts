@@ -20,4 +20,8 @@ export const queryKeys = {
     // Current user's plan
     current: () => ['plan', 'current'] as const,
   },
+  entitlements: {
+    // Current user's entitlements
+    current: () => ['entitlements', 'current'] as const,
+  },
 } as const;

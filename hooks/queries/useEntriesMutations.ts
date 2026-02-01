@@ -5,12 +5,36 @@
  * Includes optimistic updates for a responsive UI.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { useApi } from '@/api';
-import type { CreateEntryRequest, Entry, UpdateEntryRequest } from '@/api/types';
-import { usePlan } from '@/data/PlanProvider';
-import { queryKeys } from '@/lib/queryKeys';
+import { useApi } from "@/api";
+import type {
+  CreateEntryRequest,
+  EntitlementInfo,
+  Entry,
+  UpdateEntryRequest,
+} from "@/api/types";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
+import { queryKeys } from "@/lib/queryKeys";
+
+/**
+ * Custom error for quota exceeded (client-side check)
+ */
+export class QuotaExceededError extends Error {
+  code = "QUOTA_EXCEEDED" as const;
+  limit: number;
+  current: number;
+
+  constructor(limit: number, current: number) {
+    super(
+      `You've reached your limit of ${limit} entries. Upgrade your plan to add more.`
+    );
+    this.name = "QuotaExceededError";
+    this.limit = limit;
+    this.current = current;
+  }
+}
 
 interface CreateEntryData<T = Record<string, unknown>> {
   title?: string;
@@ -25,17 +49,47 @@ interface UpdateEntryData<T = Record<string, unknown>> {
 }
 
 /**
- * Hook for creating a new entry with optimistic updates
+ * Helper to optimistically update the entries quota count
  */
-export function useCreateEntry<T = Record<string, unknown>>(taskKey: string | undefined) {
+function updateEntriesQuota(
+  entitlements: EntitlementInfo | undefined,
+  delta: number
+): EntitlementInfo | undefined {
+  if (!entitlements) return undefined;
+
+  return {
+    ...entitlements,
+    quotas: entitlements.quotas.map((quota) =>
+      quota.feature === "entries"
+        ? { ...quota, current: Math.max(0, quota.current + delta) }
+        : quota
+    ),
+  };
+}
+
+/**
+ * Hook for creating a new entry with optimistic updates
+ *
+ * Includes client-side quota checking to prevent unnecessary API calls.
+ */
+export function useCreateEntry<T = Record<string, unknown>>(
+  taskKey: string | undefined
+) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
+  const { canCreate, getQuotaInfo } = useEntitlements();
 
   return useMutation({
     mutationFn: (data: CreateEntryData<T>) => {
       if (!planId || !taskKey) {
-        throw new Error('Plan ID and task key are required');
+        throw new Error("Plan ID and task key are required");
+      }
+
+      // Client-side quota check to provide immediate feedback
+      if (!canCreate("entries")) {
+        const quota = getQuotaInfo("entries");
+        throw new QuotaExceededError(quota?.limit ?? 0, quota?.current ?? 0);
       }
 
       const request: CreateEntryRequest<T> = {
@@ -55,10 +109,16 @@ export function useCreateEntry<T = Record<string, unknown>>(taskKey: string | un
       await queryClient.cancelQueries({
         queryKey: queryKeys.entries.byTaskKey(planId, taskKey),
       });
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.entitlements.current(),
+      });
 
-      // Snapshot the previous value
+      // Snapshot the previous values
       const previousEntries = queryClient.getQueryData<Entry<T>[]>(
         queryKeys.entries.byTaskKey(planId, taskKey)
+      );
+      const previousEntitlements = queryClient.getQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current()
       );
 
       // Create optimistic entry with temporary ID
@@ -74,22 +134,38 @@ export function useCreateEntry<T = Record<string, unknown>>(taskKey: string | un
         updatedAt: new Date().toISOString(),
       };
 
-      // Optimistically add to cache
+      // Optimistically add entry to cache
       queryClient.setQueryData<Entry<T>[]>(
         queryKeys.entries.byTaskKey(planId, taskKey),
         [...(previousEntries ?? []), optimisticEntry]
       );
 
-      return { previousEntries };
+      // Optimistically increment entries quota
+      queryClient.setQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current(),
+        updateEntriesQuota(previousEntitlements, 1)
+      );
+
+      return { previousEntries, previousEntitlements };
     },
     onError: (_err, _data, context) => {
-      if (!planId || !taskKey || !context?.previousEntries) return;
+      if (!planId || !taskKey) return;
 
-      // Rollback on error
-      queryClient.setQueryData(
-        queryKeys.entries.byTaskKey(planId, taskKey),
-        context.previousEntries
-      );
+      // Rollback entries on error
+      if (context?.previousEntries) {
+        queryClient.setQueryData(
+          queryKeys.entries.byTaskKey(planId, taskKey),
+          context.previousEntries
+        );
+      }
+
+      // Rollback entitlements on error
+      if (context?.previousEntitlements) {
+        queryClient.setQueryData(
+          queryKeys.entitlements.current(),
+          context.previousEntitlements
+        );
+      }
     },
     onSettled: () => {
       if (!planId || !taskKey) return;
@@ -104,6 +180,10 @@ export function useCreateEntry<T = Record<string, unknown>>(taskKey: string | un
       queryClient.invalidateQueries({
         queryKey: queryKeys.entries.all(planId),
       });
+      // Refresh entitlements to update quota counts
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entitlements.current(),
+      });
     },
   });
 }
@@ -111,15 +191,23 @@ export function useCreateEntry<T = Record<string, unknown>>(taskKey: string | un
 /**
  * Hook for updating an existing entry with optimistic updates
  */
-export function useUpdateEntry<T = Record<string, unknown>>(taskKey: string | undefined) {
+export function useUpdateEntry<T = Record<string, unknown>>(
+  taskKey: string | undefined
+) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
 
   return useMutation({
-    mutationFn: ({ entryId, data }: { entryId: string; data: UpdateEntryData<T> }) => {
+    mutationFn: ({
+      entryId,
+      data,
+    }: {
+      entryId: string;
+      data: UpdateEntryData<T>;
+    }) => {
       if (!planId) {
-        throw new Error('Plan ID is required');
+        throw new Error("Plan ID is required");
       }
 
       const request: UpdateEntryRequest<T> = {
@@ -153,7 +241,9 @@ export function useUpdateEntry<T = Record<string, unknown>>(taskKey: string | un
                   ...entry,
                   ...(data.title !== undefined && { title: data.title }),
                   ...(data.notes !== undefined && { notes: data.notes }),
-                  ...(data.metadata && { metadata: { ...entry.metadata, ...data.metadata } }),
+                  ...(data.metadata && {
+                    metadata: { ...entry.metadata, ...data.metadata },
+                  }),
                 }
               : entry
           )
@@ -189,7 +279,9 @@ export function useUpdateEntry<T = Record<string, unknown>>(taskKey: string | un
 /**
  * Hook for deleting an entry with optimistic updates
  */
-export function useDeleteEntry<T = Record<string, unknown>>(taskKey: string | undefined) {
+export function useDeleteEntry<T = Record<string, unknown>>(
+  taskKey: string | undefined
+) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
@@ -197,7 +289,7 @@ export function useDeleteEntry<T = Record<string, unknown>>(taskKey: string | un
   return useMutation({
     mutationFn: (entryId: string) => {
       if (!planId) {
-        throw new Error('Plan ID is required');
+        throw new Error("Plan ID is required");
       }
 
       return entries.delete(planId, entryId);
@@ -209,13 +301,19 @@ export function useDeleteEntry<T = Record<string, unknown>>(taskKey: string | un
       await queryClient.cancelQueries({
         queryKey: queryKeys.entries.byTaskKey(planId, taskKey),
       });
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.entitlements.current(),
+      });
 
-      // Snapshot the previous value
+      // Snapshot the previous values
       const previousEntries = queryClient.getQueryData<Entry<T>[]>(
         queryKeys.entries.byTaskKey(planId, taskKey)
       );
+      const previousEntitlements = queryClient.getQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current()
+      );
 
-      // Optimistically remove from cache
+      // Optimistically remove entry from cache
       if (previousEntries) {
         queryClient.setQueryData<Entry<T>[]>(
           queryKeys.entries.byTaskKey(planId, taskKey),
@@ -223,16 +321,32 @@ export function useDeleteEntry<T = Record<string, unknown>>(taskKey: string | un
         );
       }
 
-      return { previousEntries };
+      // Optimistically decrement entries quota
+      queryClient.setQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current(),
+        updateEntriesQuota(previousEntitlements, -1)
+      );
+
+      return { previousEntries, previousEntitlements };
     },
     onError: (_err, _entryId, context) => {
-      if (!planId || !taskKey || !context?.previousEntries) return;
+      if (!planId || !taskKey) return;
 
-      // Rollback on error
-      queryClient.setQueryData(
-        queryKeys.entries.byTaskKey(planId, taskKey),
-        context.previousEntries
-      );
+      // Rollback entries on error
+      if (context?.previousEntries) {
+        queryClient.setQueryData(
+          queryKeys.entries.byTaskKey(planId, taskKey),
+          context.previousEntries
+        );
+      }
+
+      // Rollback entitlements on error
+      if (context?.previousEntitlements) {
+        queryClient.setQueryData(
+          queryKeys.entitlements.current(),
+          context.previousEntitlements
+        );
+      }
     },
     onSettled: () => {
       if (!planId || !taskKey) return;
@@ -246,6 +360,10 @@ export function useDeleteEntry<T = Record<string, unknown>>(taskKey: string | un
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.entries.all(planId),
+      });
+      // Refresh entitlements to update quota counts
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entitlements.current(),
       });
     },
   });

@@ -3,13 +3,34 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LockedFeatureOverlay, ViewOnlyBadge } from "@/components/entitlements";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
 
 export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
+  const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+
+  const isLocked = isLockedPillar('family_access');
+  const isViewOnly = isViewOnlyPillar('family_access');
+
+  // Show locked overlay if pillar is locked
+  if (isLocked) {
+    return (
+      <LockedFeatureOverlay
+        featureName="Family Access"
+        description="Manage who can access your legacy information and when they can see it."
+      />
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+      {isViewOnly && (
+        <View style={styles.viewOnlyHeader}>
+          <ViewOnlyBadge />
+        </View>
+      )}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Ionicons name="people-outline" size={40} color={colors.textTertiary} />
@@ -29,6 +50,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  viewOnlyHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    alignItems: "flex-start",
   },
   content: {
     flex: 1,

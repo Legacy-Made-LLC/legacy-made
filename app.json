@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.legacymade.LegacyMade",
+      "bundleIdentifier": "com.gibsonops.legacymade.dev1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Select a photo for your profile picture"
