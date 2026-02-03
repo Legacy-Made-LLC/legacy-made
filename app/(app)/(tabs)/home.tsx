@@ -4,11 +4,10 @@ import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -173,7 +172,8 @@ export default function HomeScreen() {
       </View>
 
       {/* Guidance Card */}
-      <View style={styles.guidanceCard}>
+      {/* TODO: Implement after other app pillars are implemented. */}
+      {/* <View style={styles.guidanceCard}>
         <Text style={styles.guidanceTitle}>Not sure where to begin?</Text>
 
         <Pressable style={styles.guidanceOption}>
@@ -199,7 +199,7 @@ export default function HomeScreen() {
             I&apos;ll explore on my own
           </Text>
         </Pressable>
-      </View>
+      </View> */}
 
       {/* Pillar Cards */}
       <View style={styles.pillars}>
