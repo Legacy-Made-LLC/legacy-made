@@ -25,9 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.legacymade.LegacyMade",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "output": "static",
@@ -47,7 +45,8 @@
       "expo-font",
       "expo-secure-store",
       "expo-image-picker",
-      "expo-video"
+      "expo-video",
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true,

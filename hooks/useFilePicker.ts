@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
-import { Alert, Platform } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-import * as VideoThumbnails from 'expo-video-thumbnails';
-import { FileAttachment, FileType } from '@/api/types';
+import { FileAttachment, FileType } from "@/api/types";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
+import * as VideoThumbnails from "expo-video-thumbnails";
+import { useCallback, useState } from "react";
+import { Alert } from "react-native";
 
-export type PickerMode = 'image' | 'video' | 'media' | 'document' | 'all';
+export type PickerMode = "image" | "video" | "media" | "document" | "all";
 
 interface UseFilePickerOptions {
   /** What types of files can be selected */
@@ -47,16 +47,16 @@ interface UseFilePickerReturn {
  * Determines the FileType category based on MIME type
  */
 function getFileType(mimeType: string): FileType {
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType.startsWith('video/')) return 'video';
-  return 'document';
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  return "document";
 }
 
 /**
  * Generates a thumbnail for a video file
  */
 async function generateVideoThumbnail(
-  videoUri: string
+  videoUri: string,
 ): Promise<string | undefined> {
   try {
     const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
@@ -65,7 +65,7 @@ async function generateVideoThumbnail(
     });
     return uri;
   } catch (error) {
-    console.warn('Failed to generate video thumbnail:', error);
+    console.warn("Failed to generate video thumbnail:", error);
     return undefined;
   }
 }
@@ -76,11 +76,11 @@ async function generateVideoThumbnail(
  */
 async function requestMediaLibraryPermission(): Promise<boolean> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') {
+  if (status !== "granted") {
     Alert.alert(
-      'Permission Required',
-      'Please allow access to your photo library to select files.',
-      [{ text: 'OK' }]
+      "Permission Required",
+      "Please allow access to your photo library to select files.",
+      [{ text: "OK" }],
     );
     return false;
   }
@@ -93,11 +93,11 @@ async function requestMediaLibraryPermission(): Promise<boolean> {
  */
 async function requestCameraPermission(): Promise<boolean> {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  if (status !== 'granted') {
+  if (status !== "granted") {
     Alert.alert(
-      'Permission Required',
-      'Please allow camera access to take photos.',
-      [{ text: 'OK' }]
+      "Permission Required",
+      "Please allow camera access to take photos.",
+      [{ text: "OK" }],
     );
     return false;
   }
@@ -108,10 +108,10 @@ async function requestCameraPermission(): Promise<boolean> {
  * Hook for handling file picking with support for images, videos, and documents
  */
 export function useFilePicker(
-  options: UseFilePickerOptions = {}
+  options: UseFilePickerOptions = {},
 ): UseFilePickerReturn {
   const {
-    mode = 'all',
+    mode = "all",
     allowsEditing = false,
     imageQuality = 0.8,
     videoMaxDuration = 120,
@@ -125,14 +125,14 @@ export function useFilePicker(
    */
   const getMediaTypes = useCallback((): ImagePicker.MediaType[] => {
     switch (mode) {
-      case 'image':
-        return ['images'];
-      case 'video':
-        return ['videos'];
-      case 'media':
-      case 'all':
+      case "image":
+        return ["images"];
+      case "video":
+        return ["videos"];
+      case "media":
+      case "all":
       default:
-        return ['images', 'videos'];
+        return ["images", "videos"];
     }
   }, [mode]);
 
@@ -141,12 +141,10 @@ export function useFilePicker(
    */
   const imagePickerResultToAttachment = useCallback(
     async (
-      asset: ImagePicker.ImagePickerAsset
+      asset: ImagePicker.ImagePickerAsset,
     ): Promise<FileAttachment | null> => {
-      const isVideo = asset.type === 'video';
-      const mimeType =
-        asset.mimeType ||
-        (isVideo ? 'video/mp4' : 'image/jpeg');
+      const isVideo = asset.type === "video";
+      const mimeType = asset.mimeType || (isVideo ? "video/mp4" : "image/jpeg");
       const fileType = getFileType(mimeType);
 
       let thumbnailUri: string | undefined;
@@ -162,78 +160,98 @@ export function useFilePicker(
         type: fileType,
         width: asset.width,
         height: asset.height,
-        duration: asset.duration ? Math.round(asset.duration / 1000) : undefined,
+        duration: asset.duration
+          ? Math.round(asset.duration / 1000)
+          : undefined,
         thumbnailUri,
-        uploadStatus: 'pending',
+        uploadStatus: "pending",
       };
     },
-    []
+    [],
   );
 
   /**
    * Pick from photo library
    */
-  const pickFromLibrary = useCallback(async (): Promise<FileAttachment | null> => {
-    // Request permission first (important for videos on iOS)
-    const hasPermission = await requestMediaLibraryPermission();
-    if (!hasPermission) return null;
+  const pickFromLibrary =
+    useCallback(async (): Promise<FileAttachment | null> => {
+      // Request permission first (important for videos on iOS)
+      const hasPermission = await requestMediaLibraryPermission();
+      if (!hasPermission) return null;
 
-    setIsLoading(true);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: getMediaTypes(),
-        allowsEditing,
-        quality: imageQuality,
-        videoMaxDuration,
-        videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
-      });
+      setIsLoading(true);
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: getMediaTypes(),
+          allowsEditing,
+          quality: imageQuality,
+          videoMaxDuration,
+          videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
+        });
 
-      if (result.canceled || !result.assets?.[0]) {
+        if (result.canceled || !result.assets?.[0]) {
+          return null;
+        }
+
+        const attachment = await imagePickerResultToAttachment(
+          result.assets[0],
+        );
+        return attachment;
+      } catch (error) {
+        console.error("Error picking from library:", error);
+        Alert.alert("Error", "Failed to select file. Please try again.");
         return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      const attachment = await imagePickerResultToAttachment(result.assets[0]);
-      return attachment;
-    } catch (error) {
-      console.error('Error picking from library:', error);
-      Alert.alert('Error', 'Failed to select file. Please try again.');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getMediaTypes, allowsEditing, imageQuality, videoMaxDuration, imagePickerResultToAttachment]);
+    }, [
+      getMediaTypes,
+      allowsEditing,
+      imageQuality,
+      videoMaxDuration,
+      imagePickerResultToAttachment,
+    ]);
 
   /**
    * Pick from camera
    */
-  const pickFromCamera = useCallback(async (): Promise<FileAttachment | null> => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) return null;
+  const pickFromCamera =
+    useCallback(async (): Promise<FileAttachment | null> => {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) return null;
 
-    setIsLoading(true);
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: getMediaTypes(),
-        allowsEditing,
-        quality: imageQuality,
-        videoMaxDuration,
-        videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
-      });
+      setIsLoading(true);
+      try {
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: getMediaTypes(),
+          allowsEditing,
+          quality: imageQuality,
+          videoMaxDuration,
+          videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
+        });
 
-      if (result.canceled || !result.assets?.[0]) {
+        if (result.canceled || !result.assets?.[0]) {
+          return null;
+        }
+
+        const attachment = await imagePickerResultToAttachment(
+          result.assets[0],
+        );
+        return attachment;
+      } catch (error) {
+        console.error("Error capturing from camera:", error);
+        Alert.alert("Error", "Failed to capture. Please try again.");
         return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      const attachment = await imagePickerResultToAttachment(result.assets[0]);
-      return attachment;
-    } catch (error) {
-      console.error('Error capturing from camera:', error);
-      Alert.alert('Error', 'Failed to capture. Please try again.');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getMediaTypes, allowsEditing, imageQuality, videoMaxDuration, imagePickerResultToAttachment]);
+    }, [
+      getMediaTypes,
+      allowsEditing,
+      imageQuality,
+      videoMaxDuration,
+      imagePickerResultToAttachment,
+    ]);
 
   /**
    * Pick a document (PDF, etc.)
@@ -242,7 +260,12 @@ export function useFilePicker(
     setIsLoading(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        type: [
+          "application/pdf",
+          "image/*",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -252,21 +275,23 @@ export function useFilePicker(
       }
 
       const asset = result.assets[0];
-      const fileType = getFileType(asset.mimeType || 'application/octet-stream');
+      const fileType = getFileType(
+        asset.mimeType || "application/octet-stream",
+      );
 
       const attachment: FileAttachment = {
         uri: asset.uri,
         fileName: asset.name,
         fileSize: asset.size || 0,
-        mimeType: asset.mimeType || 'application/octet-stream',
+        mimeType: asset.mimeType || "application/octet-stream",
         type: fileType,
-        uploadStatus: 'pending',
+        uploadStatus: "pending",
       };
 
       return attachment;
     } catch (error) {
-      console.error('Error picking document:', error);
-      Alert.alert('Error', 'Failed to select document. Please try again.');
+      console.error("Error picking document:", error);
+      Alert.alert("Error", "Failed to select document. Please try again.");
       return null;
     } finally {
       setIsLoading(false);
@@ -277,7 +302,7 @@ export function useFilePicker(
    * Generic pick function - shows appropriate picker based on mode
    */
   const pickFile = useCallback(async (): Promise<FileAttachment | null> => {
-    if (mode === 'document') {
+    if (mode === "document") {
       return pickDocument();
     }
     // For image, video, media, or all modes, use library picker
