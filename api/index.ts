@@ -17,6 +17,14 @@ export type {
   ApiError,
   DeleteResponse,
   Plan,
+  // Entitlement types
+  SubscriptionTier,
+  Pillar,
+  QuotaFeature,
+  QuotaInfo,
+  EntitlementInfo,
+  EntitlementErrorCode,
+  EntitlementError,
 } from './types';
 
 // Client
@@ -29,6 +37,9 @@ export type { EntriesService } from './entries';
 
 export { createPlansService } from './plans';
 export type { PlansService } from './plans';
+
+export { createEntitlementsService } from './entitlements';
+export type { EntitlementsService } from './entitlements';
 
 // Mappers
 export {

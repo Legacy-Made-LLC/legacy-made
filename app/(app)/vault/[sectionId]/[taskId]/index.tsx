@@ -5,13 +5,13 @@
  * list component for that task type.
  */
 
-import { getListComponent } from '@/components/vault/registry';
-import { colors, spacing, typography } from '@/constants/theme';
-import { getSection, getTask } from '@/constants/vault';
-import { useEntriesQuery } from '@/hooks/queries';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import React, { useLayoutEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { getListComponent } from "@/components/vault/registry";
+import { colors, spacing, typography } from "@/constants/theme";
+import { getSection, getTask } from "@/constants/vault";
+import { useEntriesQuery } from "@/hooks/queries";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import React, { useLayoutEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function TaskScreen() {
   const { sectionId, taskId } = useLocalSearchParams<{
@@ -83,14 +83,14 @@ export default function TaskScreen() {
 const styles = StyleSheet.create({
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
     padding: spacing.xl,
   },
   errorText: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -12,7 +12,7 @@ import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { spacing } from "@/constants/theme";
 import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { default as React } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryListProps } from "../registry";

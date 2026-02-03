@@ -8,13 +8,21 @@
  * entryId = <uuid> for editing an existing entry
  */
 
-import { getFormComponent } from '@/components/vault/registry';
-import { colors, spacing, typography } from '@/constants/theme';
-import { getTask } from '@/constants/vault';
-import { useCreateEntry, useDeleteEntry, useEntryQuery, useUpdateEntry } from '@/hooks/queries';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { UpgradePrompt } from "@/components/entitlements";
+import { getFormComponent } from "@/components/vault/registry";
+import { colors, spacing, typography } from "@/constants/theme";
+import { getTask } from "@/constants/vault";
+import {
+  QuotaExceededError,
+  useCreateEntry,
+  useDeleteEntry,
+  useEntryQuery,
+  useUpdateEntry,
+} from "@/hooks/queries";
+import { isQuotaExceededError } from "@/lib/entitlementHelpers";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -23,9 +31,10 @@ export default function EntryScreen() {
     entryId: string;
   }>();
   const router = useRouter();
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const task = getTask(sectionId, taskId);
-  const isNew = entryId === 'new';
+  const isNew = entryId === "new";
 
   // Get the form component for this task
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
@@ -42,15 +51,32 @@ export default function EntryScreen() {
 
   // Handle save
   const handleSave = useCallback(
-    async (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => {
+    async (data: {
+      title: string;
+      notes?: string;
+      metadata: Record<string, unknown>;
+    }) => {
       if (!task) return;
 
-      if (isNew) {
-        await createMutation.mutateAsync(data);
-      } else {
-        await updateMutation.mutateAsync({ entryId, data });
+      try {
+        if (isNew) {
+          await createMutation.mutateAsync(data);
+        } else {
+          await updateMutation.mutateAsync({ entryId, data });
+        }
+        router.back();
+      } catch (error) {
+        // Check for quota exceeded error (client-side or from API)
+        if (
+          error instanceof QuotaExceededError ||
+          isQuotaExceededError(error)
+        ) {
+          setShowUpgradePrompt(true);
+          return;
+        }
+        // Re-throw other errors to be handled by error boundaries
+        throw error;
       }
-      router.back();
     },
     [task, isNew, entryId, createMutation, updateMutation, router]
   );
@@ -98,35 +124,43 @@ export default function EntryScreen() {
   }
 
   return (
-    <FormComponent
-      taskKey={task.taskKey}
-      entryId={isNew ? undefined : entryId}
-      initialData={entry}
-      onSave={handleSave}
-      onDelete={isNew ? undefined : handleDelete}
-      onCancel={handleCancel}
-      isSaving={isSaving}
-    />
+    <>
+      <FormComponent
+        taskKey={task.taskKey}
+        entryId={isNew ? undefined : entryId}
+        initialData={entry}
+        onSave={handleSave}
+        onDelete={isNew ? undefined : handleDelete}
+        onCancel={handleCancel}
+        isSaving={isSaving}
+      />
+      <UpgradePrompt
+        visible={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        title="You've Reached Your Limit"
+        message="You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
     padding: spacing.xl,
   },
   errorText: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
   },
   loadingText: {

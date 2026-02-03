@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import {
@@ -12,12 +13,16 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { DevMenu } from "@/components/dev/DevMenu";
+import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
+import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
+import { UpgradePromptProvider } from "@/data/UpgradePromptContext";
 import { QueryProvider } from "@/providers/QueryProvider";
 
 SplashScreen.preventAutoHideAsync();
@@ -47,18 +52,27 @@ export default function RootLayout() {
   }
 
   return (
-    <OnboardingProvider>
-      <ClerkProvider tokenCache={tokenCache} publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}>
-        <QueryProvider>
-          <PlanProvider>
-            <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-              {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
-            </Stack>
-            <StatusBar style="dark" />
-            <DevMenu />
-          </PlanProvider>
-        </QueryProvider>
-      </ClerkProvider>
-    </OnboardingProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <UpgradePromptProvider>
+          <OnboardingProvider>
+            <ClerkProvider tokenCache={tokenCache} publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+              <QueryProvider>
+                <PlanProvider>
+                  <EntitlementsProvider>
+                    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+                      {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
+                    </Stack>
+                    <StatusBar style="dark" />
+                    <DevMenu />
+                  </EntitlementsProvider>
+                </PlanProvider>
+              </QueryProvider>
+            </ClerkProvider>
+          </OnboardingProvider>
+          <GlobalUpgradePrompt />
+        </UpgradePromptProvider>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }

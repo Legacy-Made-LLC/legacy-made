@@ -1,5 +1,8 @@
+import { QuotaIndicator, TierBadge } from "@/components/entitlements";
 import { SUPPORT_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
@@ -52,6 +55,7 @@ interface ProfileHeaderProps {
 // Profile Header Component
 function ProfileHeader({ onPress }: ProfileHeaderProps) {
   const { user } = useUser();
+  const { tierName } = useEntitlements();
   const initial =
     user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "?";
   const displayName = user?.firstName
@@ -81,6 +85,9 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
         </Text>
         <Text style={styles.profileEmail} numberOfLines={1}>
           {email}
+        </Text>
+        <Text style={styles.profilePlan} numberOfLines={1}>
+          {tierName} Plan
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
@@ -140,12 +147,16 @@ function AccountView({
   bottomInset: number;
 }) {
   const { user } = useUser();
+  const { tier, tierName, isFree, getQuotaInfo } = useEntitlements();
+  const { showUpgradePrompt } = useUpgradePrompt();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const entriesQuota = getQuotaInfo('entries');
 
   // Reset form when user changes or when entering edit mode
   useEffect(() => {
@@ -440,6 +451,45 @@ function AccountView({
             </View>
           </View>
         )}
+
+        {/* Subscription Section */}
+        <View style={styles.subscriptionSection}>
+          <Text style={styles.subscriptionSectionTitle}>SUBSCRIPTION</Text>
+          <View style={styles.accountFields}>
+            <View style={styles.accountField}>
+              <Text style={styles.fieldLabel}>Plan</Text>
+              <TierBadge tier={tier} tierName={tierName} />
+            </View>
+            {!isFree && entriesQuota && !entriesQuota.unlimited && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <View style={styles.accountField}>
+                  <Text style={styles.fieldLabel}>Entries</Text>
+                  <QuotaIndicator quota={entriesQuota} />
+                </View>
+              </>
+            )}
+            {isFree && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <Pressable
+                  onPress={() => showUpgradePrompt()}
+                  style={({ pressed }) => [
+                    styles.accountField,
+                    pressed && styles.upgradeFieldPressed,
+                  ]}
+                >
+                  <Text style={styles.upgradeFieldLabel}>Upgrade your plan</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
       {/* Footer with Sign Out */}
@@ -821,6 +871,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  profilePlan: {
+    fontSize: typography.sizes.caption,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textTertiary,
+    marginTop: 4,
+  },
 
   // Menu Sections
   menuScrollView: {
@@ -1159,5 +1215,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+
+  // Subscription Section
+  subscriptionSection: {
+    marginTop: spacing.lg,
+  },
+  subscriptionSectionTitle: {
+    fontSize: typography.sizes.label,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textTertiary,
+    letterSpacing: 1,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  upgradeFieldLabel: {
+    fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.primary,
+  },
+  upgradeFieldPressed: {
+    backgroundColor: colors.divider,
   },
 });
