@@ -17,6 +17,7 @@ export const colors = {
   // Accents
   primary: '#8a9785', // Deep navy for primary actions
   primaryPressed: '#7d8a79', // Darker navy for pressed state
+  guidanceTrigger: '#7D8A79', // Collapsed guidance trigger text
 
   // Semantic
   success: '#4A7C59', // Muted green
@@ -47,6 +48,7 @@ export const typography = {
     titleMedium: 17, // List item titles
     body: 16, // Body text
     bodySmall: 14, // Secondary text
+    trigger: 13, // Collapsed guidance trigger
     caption: 12, // Labels, hints
     label: 11, // Uppercase labels
   },

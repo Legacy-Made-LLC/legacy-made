@@ -9,12 +9,12 @@ import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
 import { SkeletonList } from '@/components/ui/SkeletonCard';
 import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { colors, spacing } from '@/constants/theme';
-import { getTaskByKey } from '@/constants/vault';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { spacing } from '@/constants/theme';
+import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
 import { listStyles } from './listStyles';
 import type { EntryListProps } from '../registry';
 
@@ -35,6 +35,21 @@ export function ContactList({
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
+  const section = getSectionByTaskKey(taskKey);
+
+  const renderGuidanceCard = () => {
+    if (!task?.guidance || !task?.triggerText) return null;
+    return (
+      <ExpandableGuidanceCard
+        icon={section?.ionIcon as keyof typeof Ionicons.glyphMap}
+        triggerText={task.triggerText}
+        heading={task.guidanceHeading}
+        detail={task.guidance}
+        tips={task.tips}
+        pacingNote={task.pacingNote}
+      />
+    );
+  };
 
   if (isLoading) {
     return (
@@ -43,6 +58,7 @@ export function ContactList({
         contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
+        {renderGuidanceCard()}
         <SkeletonList count={3} />
       </ScrollView>
     );
@@ -50,14 +66,19 @@ export function ContactList({
 
   if (entries.length === 0) {
     return (
-      <View style={[listStyles.emptyContainer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <Ionicons name="person-outline" size={48} color={colors.textTertiary} style={listStyles.emptyIcon} />
-        <Text style={listStyles.emptyTitle}>No contacts added yet</Text>
-        <Text style={listStyles.emptyDescription}>
-          Add the first person your loved ones should reach out to.
-        </Text>
-        <Button title="Add Contact" onPress={onAddPress} style={listStyles.emptyButton} />
-      </View>
+      <ScrollView
+        style={listStyles.container}
+        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderGuidanceCard()}
+        <EmptyState
+          title="No contacts added yet"
+          description="Add the first person your loved ones should reach out to."
+          buttonTitle="Add Contact"
+          onButtonPress={onAddPress}
+        />
+      </ScrollView>
     );
   }
 
@@ -67,7 +88,7 @@ export function ContactList({
       contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
       showsVerticalScrollIndicator={false}
     >
-      {task?.guidance && <GuidanceCard text={task.guidance} />}
+      {renderGuidanceCard()}
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as ContactMetadata;
