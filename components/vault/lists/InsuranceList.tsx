@@ -8,7 +8,7 @@ import { ScrollView, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { GuidanceCard } from '@/components/ui/GuidanceCard';
+import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
 import { SkeletonList } from '@/components/ui/SkeletonCard';
 import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
 import { colors, spacing } from '@/constants/theme';
@@ -35,12 +35,15 @@ export function InsuranceList({
   const section = getSectionByTaskKey(taskKey);
 
   const renderGuidanceCard = () => {
-    if (!task?.guidance) return null;
+    if (!task?.guidance || !task?.triggerText) return null;
     return (
-      <GuidanceCard
+      <ExpandableGuidanceCard
         icon={section?.ionIcon as keyof typeof Ionicons.glyphMap}
+        triggerText={task.triggerText}
         heading={task.guidanceHeading}
-        text={task.guidance}
+        detail={task.guidance}
+        tips={task.tips}
+        pacingNote={task.pacingNote}
       />
     );
   };
