@@ -3,11 +3,11 @@
  */
 
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
-import { Button } from "@/components/ui/Button";
 import { PressableCard } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
-import { colors, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { getTaskByKey, getSectionByTaskKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -74,18 +74,12 @@ export function PropertyList({
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}
-        <View style={listStyles.emptyContent}>
-          <Ionicons name="add-circle-outline" size={40} color={colors.textTertiary} style={listStyles.emptyIcon} />
-          <Text style={listStyles.emptyTitle}>Nothing added yet</Text>
-          <Text style={listStyles.emptyDescription}>
-            Add your property, vehicles, and other physical assets.
-          </Text>
-          <Button
-            title="Add Property"
-            onPress={onAddPress}
-            style={listStyles.emptyButton}
-          />
-        </View>
+        <EmptyState
+          title="Nothing added yet"
+          description="Add your property, vehicles, and other physical assets."
+          buttonTitle="Add Property"
+          onButtonPress={onAddPress}
+        />
       </ScrollView>
     );
   }

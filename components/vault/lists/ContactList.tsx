@@ -9,11 +9,11 @@ import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
 import { SkeletonList } from '@/components/ui/SkeletonCard';
 import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { colors, spacing } from '@/constants/theme';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { spacing } from '@/constants/theme';
 import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
 import { listStyles } from './listStyles';
 import type { EntryListProps } from '../registry';
@@ -72,14 +72,12 @@ export function ContactList({
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}
-        <View style={listStyles.emptyContent}>
-          <Ionicons name="add-circle-outline" size={40} color={colors.textTertiary} style={listStyles.emptyIcon} />
-          <Text style={listStyles.emptyTitle}>No contacts added yet</Text>
-          <Text style={listStyles.emptyDescription}>
-            Add the first person your loved ones should reach out to.
-          </Text>
-          <Button title="Add Contact" onPress={onAddPress} style={listStyles.emptyButton} />
-        </View>
+        <EmptyState
+          title="No contacts added yet"
+          description="Add the first person your loved ones should reach out to."
+          buttonTitle="Add Contact"
+          onButtonPress={onAddPress}
+        />
       </ScrollView>
     );
   }

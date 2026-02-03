@@ -7,11 +7,11 @@ import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
 import { SkeletonList } from '@/components/ui/SkeletonCard';
 import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { colors, spacing } from '@/constants/theme';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { spacing } from '@/constants/theme';
 import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
 import { listStyles } from './listStyles';
 import type { EntryListProps } from '../registry';
@@ -69,14 +69,12 @@ export function InsuranceList({
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}
-        <View style={listStyles.emptyContent}>
-          <Ionicons name="add-circle-outline" size={40} color={colors.textTertiary} style={listStyles.emptyIcon} />
-          <Text style={listStyles.emptyTitle}>No policies added yet</Text>
-          <Text style={listStyles.emptyDescription}>
-            Add your insurance policies so your loved ones know what coverage exists.
-          </Text>
-          <Button title="Add Policy" onPress={onAddPress} style={listStyles.emptyButton} />
-        </View>
+        <EmptyState
+          title="No policies added yet"
+          description="Add your insurance policies so your loved ones know what coverage exists."
+          buttonTitle="Add Policy"
+          onButtonPress={onAddPress}
+        />
       </ScrollView>
     );
   }

@@ -7,11 +7,11 @@ import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableCard } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
 import { SkeletonList } from '@/components/ui/SkeletonCard';
 import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { colors, spacing } from '@/constants/theme';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { spacing } from '@/constants/theme';
 import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
 import { listStyles } from './listStyles';
 import type { EntryListProps } from '../registry';
@@ -68,14 +68,12 @@ export function PetList({
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}
-        <View style={listStyles.emptyContent}>
-          <Ionicons name="add-circle-outline" size={40} color={colors.textTertiary} style={listStyles.emptyIcon} />
-          <Text style={listStyles.emptyTitle}>No pets added yet</Text>
-          <Text style={listStyles.emptyDescription}>
-            Add your pets so your family knows how to care for them.
-          </Text>
-          <Button title="Add Pet" onPress={onAddPress} style={listStyles.emptyButton} />
-        </View>
+        <EmptyState
+          title="No pets added yet"
+          description="Add your pets so your family knows how to care for them."
+          buttonTitle="Add Pet"
+          onButtonPress={onAddPress}
+        />
       </ScrollView>
     );
   }
