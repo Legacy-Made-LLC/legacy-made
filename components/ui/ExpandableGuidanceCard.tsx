@@ -5,37 +5,37 @@
  * Expanded: Card that fades in and expands over the question with X to close
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useCallback } from 'react';
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
+  LayoutChangeEvent,
   Pressable,
   StyleSheet,
-  LayoutChangeEvent,
-} from 'react-native';
+  Text,
+  View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
   Easing,
-  interpolate,
   Extrapolation,
-} from 'react-native-reanimated';
-import { colors, typography, spacing, borderRadius } from '@/constants/theme';
-import { PacingNote } from './PacingNote';
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { PacingNote } from "./PacingNote";
 
 // Animation configuration
 const ANIMATION_DURATION = 250;
 const EASING = Easing.out(Easing.ease);
 
 // Heights
-const COLLAPSED_HEIGHT = 44;
+const COLLAPSED_HEIGHT = 32;
 
 // Soft tint of primary for expanded card background
-const PRIMARY_SOFT = '#E8EBE7';
+const PRIMARY_SOFT = "#E8EBE7";
 // Darker shade of primary for heading text
-const PRIMARY_DARK = '#3F4A3F';
+const PRIMARY_DARK = "#3F4A3F";
 
 interface ExpandableGuidanceCardProps {
   /** Ionicons name for the section icon */
@@ -55,7 +55,7 @@ interface ExpandableGuidanceCardProps {
 }
 
 export function ExpandableGuidanceCard({
-  icon = 'bulb-outline',
+  icon = "bulb-outline",
   triggerText,
   heading,
   detail,
@@ -111,12 +111,15 @@ export function ExpandableGuidanceCard({
     });
   }, [isTipsExpanded, tipsExpandProgress, tipsArrowRotation]);
 
-  const onExpandedLayout = useCallback((event: LayoutChangeEvent) => {
-    const height = event.nativeEvent.layout.height;
-    if (height > 0 && height !== expandedHeight) {
-      setExpandedHeight(height);
-    }
-  }, [expandedHeight]);
+  const onExpandedLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const height = event.nativeEvent.layout.height;
+      if (height > 0 && height !== expandedHeight) {
+        setExpandedHeight(height);
+      }
+    },
+    [expandedHeight],
+  );
 
   const onTipsLayout = useCallback((event: LayoutChangeEvent) => {
     const height = event.nativeEvent.layout.height;
@@ -131,16 +134,26 @@ export function ExpandableGuidanceCard({
       expandProgress.value,
       [0, 1],
       [COLLAPSED_HEIGHT, expandedHeight],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
   const collapsedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(expandProgress.value, [0, 0.5], [1, 0], Extrapolation.CLAMP),
+    opacity: interpolate(
+      expandProgress.value,
+      [0, 0.5],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
   }));
 
   const expandedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(expandProgress.value, [0.3, 0.8], [0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(
+      expandProgress.value,
+      [0.3, 0.8],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
   }));
 
   const tipsArrowStyle = useAnimatedStyle(() => ({
@@ -148,9 +161,14 @@ export function ExpandableGuidanceCard({
   }));
 
   const tipsContainerStyle = useAnimatedStyle(() => ({
-    height: interpolate(tipsExpandProgress.value, [0, 1], [0, tipsHeight], Extrapolation.CLAMP),
+    height: interpolate(
+      tipsExpandProgress.value,
+      [0, 1],
+      [0, tipsHeight],
+      Extrapolation.CLAMP,
+    ),
     opacity: tipsExpandProgress.value,
-    overflow: 'hidden' as const,
+    overflow: "hidden" as const,
   }));
 
   const hasTips = tips && tips.length > 0;
@@ -168,11 +186,7 @@ export function ExpandableGuidanceCard({
         >
           <Ionicons name={icon} size={18} color={colors.primary} />
           <Text style={styles.questionText}>{triggerText}</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={16}
-            color={colors.primary}
-          />
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
         </Pressable>
       </Animated.View>
 
@@ -228,7 +242,7 @@ export function ExpandableGuidanceCard({
                 <View onLayout={onTipsLayout} style={styles.tipsContent}>
                   {tips.map((tip, index) => (
                     <View key={index} style={styles.tipItem}>
-                      <Text style={styles.tipBullet}>{'\u2022'}</Text>
+                      <Text style={styles.tipBullet}>{"\u2022"}</Text>
                       <Text style={styles.tipText}>{tip}</Text>
                     </View>
                   ))}
@@ -248,22 +262,22 @@ export function ExpandableGuidanceCard({
 const styles = StyleSheet.create({
   wrapper: {
     marginBottom: spacing.lg,
-    position: 'relative',
-    overflow: 'hidden',
+    position: "relative",
+    overflow: "hidden",
   },
   // Collapsed state styles
   collapsedContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 1,
   },
   collapsedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     minHeight: COLLAPSED_HEIGHT,
   },
   questionText: {
@@ -274,7 +288,7 @@ const styles = StyleSheet.create({
   },
   // Expanded state styles
   expandedContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -286,16 +300,16 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: spacing.md,
     right: spacing.md,
     width: 28,
     height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
   iconContainer: {
@@ -303,8 +317,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.md,
   },
   heading: {
@@ -313,23 +327,23 @@ const styles = StyleSheet.create({
     color: PRIMARY_DARK,
     marginBottom: spacing.sm,
     lineHeight: typography.sizes.body * typography.lineHeights.normal,
-    textAlign: 'center',
+    textAlign: "center",
   },
   detail: {
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
-    textAlign: 'center',
+    textAlign: "center",
   },
   // Tips section styles
   tipsSection: {
     marginTop: spacing.md,
-    width: '100%',
+    width: "100%",
   },
   tipsTrigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
     minHeight: 44,
   },
@@ -339,10 +353,10 @@ const styles = StyleSheet.create({
   },
   tipsContent: {
     paddingTop: spacing.md,
-    width: '100%',
+    width: "100%",
   },
   tipItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: spacing.sm,
   },
   tipBullet: {
