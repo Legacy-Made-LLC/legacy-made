@@ -5,14 +5,14 @@
  * Primary Contacts and Backup Contacts)
  */
 
-import { PressableCard } from '@/components/ui/Card';
-import { colors, spacing, typography } from '@/constants/theme';
-import type { VaultSection } from '@/constants/vault';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PressableCard } from "@/components/ui/Card";
+import { colors, spacing, typography } from "@/constants/theme";
+import type { VaultSection } from "@/constants/vault";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface TaskPickerProps {
   section: VaultSection;
@@ -54,7 +54,11 @@ export function TaskPicker({ section }: TaskPickerProps) {
               <Text style={styles.cardTitle}>{task.title}</Text>
               <Text style={styles.cardDescription}>{task.description}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textTertiary}
+            />
           </View>
         </PressableCard>
       ))}
@@ -78,22 +82,22 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   card: {
     marginBottom: spacing.md,
   },
   cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   cardIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: spacing.md,
   },
   taskNumber: {

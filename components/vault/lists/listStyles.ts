@@ -2,8 +2,8 @@
  * Shared styles for list components
  */
 
-import { StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/constants/theme';
+import { colors, spacing, typography } from "@/constants/theme";
+import { StyleSheet } from "react-native";
 
 export const listStyles = StyleSheet.create({
   container: {
@@ -18,9 +18,9 @@ export const listStyles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   cardText: {
     flex: 1,
@@ -42,7 +42,7 @@ export const listStyles = StyleSheet.create({
   },
   addCard: {
     marginBottom: spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   addText: {
     fontSize: typography.sizes.body,
@@ -51,8 +51,8 @@ export const listStyles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
   },
 });

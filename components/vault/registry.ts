@@ -5,32 +5,32 @@
  * This allows dynamic routing to render the correct components based on the task.
  */
 
-import type { ComponentType } from 'react';
-import type { Entry } from '@/api/types';
+import type { Entry } from "@/api/types";
+import type { ComponentType } from "react";
 
 // ============================================================================
 // List Component Registry
 // ============================================================================
 
-import { ContactList } from './lists/ContactList';
-import { FinancialList } from './lists/FinancialList';
-import { InsuranceList } from './lists/InsuranceList';
-import { DocumentList } from './lists/DocumentList';
-import { PropertyList } from './lists/PropertyList';
-import { PetList } from './lists/PetList';
-import { DigitalList } from './lists/DigitalList';
+import { ContactList } from "./lists/ContactList";
+import { DigitalList } from "./lists/DigitalList";
+import { DocumentList } from "./lists/DocumentList";
+import { FinancialList } from "./lists/FinancialList";
+import { InsuranceList } from "./lists/InsuranceList";
+import { PetList } from "./lists/PetList";
+import { PropertyList } from "./lists/PropertyList";
 
 // ============================================================================
 // Form Component Registry
 // ============================================================================
 
-import { ContactForm } from './forms/ContactForm';
-import { FinancialForm } from './forms/FinancialForm';
-import { InsuranceForm } from './forms/InsuranceForm';
-import { DocumentForm } from './forms/DocumentForm';
-import { PropertyForm } from './forms/PropertyForm';
-import { PetForm } from './forms/PetForm';
-import { DigitalForm } from './forms/DigitalForm';
+import { ContactForm } from "./forms/ContactForm";
+import { DigitalForm } from "./forms/DigitalForm";
+import { DocumentForm } from "./forms/DocumentForm";
+import { FinancialForm } from "./forms/FinancialForm";
+import { InsuranceForm } from "./forms/InsuranceForm";
+import { PetForm } from "./forms/PetForm";
+import { PropertyForm } from "./forms/PropertyForm";
 
 // ============================================================================
 // List Component Types
@@ -61,7 +61,11 @@ export interface EntryFormProps {
   /** Initial data for the form (when editing) */
   initialData?: Entry;
   /** Callback when form is saved */
-  onSave: (data: { title: string; notes?: string; metadata: Record<string, unknown> }) => Promise<void>;
+  onSave: (data: {
+    title: string;
+    notes?: string;
+    metadata: Record<string, unknown>;
+  }) => Promise<void>;
   /** Callback when entry is deleted (only for editing) */
   onDelete?: () => Promise<void>;
   /** Callback when form is cancelled */
@@ -71,47 +75,51 @@ export interface EntryFormProps {
 }
 
 export const listRegistry: Record<string, ComponentType<EntryListProps>> = {
-  'contacts.primary': ContactList,
-  'contacts.backup': ContactList,
-  'people': ContactList, // Reuses contact list (same data shape)
-  'financial': FinancialList,
-  'insurance': InsuranceList,
-  'documents.legal': DocumentList,
-  'documents.other': DocumentList,
-  'property': PropertyList,
-  'pets': PetList,
-  'digital.email': DigitalList,
-  'digital.passwords': DigitalList,
-  'digital.devices': DigitalList,
-  'digital.social': DigitalList,
+  "contacts.primary": ContactList,
+  "contacts.backup": ContactList,
+  people: ContactList, // Reuses contact list (same data shape)
+  financial: FinancialList,
+  insurance: InsuranceList,
+  "documents.legal": DocumentList,
+  "documents.other": DocumentList,
+  property: PropertyList,
+  pets: PetList,
+  "digital.email": DigitalList,
+  "digital.passwords": DigitalList,
+  "digital.devices": DigitalList,
+  "digital.social": DigitalList,
 };
 
 /**
  * Get the list component for a given task key
  */
-export function getListComponent(taskKey: string): ComponentType<EntryListProps> | undefined {
+export function getListComponent(
+  taskKey: string,
+): ComponentType<EntryListProps> | undefined {
   return listRegistry[taskKey];
 }
 
 export const formRegistry: Record<string, ComponentType<EntryFormProps>> = {
-  'contacts.primary': ContactForm,
-  'contacts.backup': ContactForm,
-  'people': ContactForm, // Reuses contact form (same data shape)
-  'financial': FinancialForm,
-  'insurance': InsuranceForm,
-  'documents.legal': DocumentForm,
-  'documents.other': DocumentForm,
-  'property': PropertyForm,
-  'pets': PetForm,
-  'digital.email': DigitalForm,
-  'digital.passwords': DigitalForm,
-  'digital.devices': DigitalForm,
-  'digital.social': DigitalForm,
+  "contacts.primary": ContactForm,
+  "contacts.backup": ContactForm,
+  people: ContactForm, // Reuses contact form (same data shape)
+  financial: FinancialForm,
+  insurance: InsuranceForm,
+  "documents.legal": DocumentForm,
+  "documents.other": DocumentForm,
+  property: PropertyForm,
+  pets: PetForm,
+  "digital.email": DigitalForm,
+  "digital.passwords": DigitalForm,
+  "digital.devices": DigitalForm,
+  "digital.social": DigitalForm,
 };
 
 /**
  * Get the form component for a given task key
  */
-export function getFormComponent(taskKey: string): ComponentType<EntryFormProps> | undefined {
+export function getFormComponent(
+  taskKey: string,
+): ComponentType<EntryFormProps> | undefined {
   return formRegistry[taskKey];
 }

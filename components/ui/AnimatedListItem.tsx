@@ -5,14 +5,14 @@
  * Creates a calm, cascading appearance as items load.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect } from "react";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
   Easing,
-} from 'react-native-reanimated';
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 
 // Animation configuration
 const FADE_DURATION = 300;
@@ -27,7 +27,11 @@ interface AnimatedListItemProps {
   delay?: number;
 }
 
-export function AnimatedListItem({ children, index, delay }: AnimatedListItemProps) {
+export function AnimatedListItem({
+  children,
+  index,
+  delay,
+}: AnimatedListItemProps) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(SLIDE_DISTANCE);
 
@@ -36,11 +40,17 @@ export function AnimatedListItem({ children, index, delay }: AnimatedListItemPro
   useEffect(() => {
     opacity.value = withDelay(
       staggerDelay,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) })
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     translateY.value = withDelay(
       staggerDelay,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) })
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
   }, [opacity, translateY, staggerDelay]);
 

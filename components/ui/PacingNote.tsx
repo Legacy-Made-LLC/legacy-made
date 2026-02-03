@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/constants/theme';
+import { colors, spacing, typography } from "@/constants/theme";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 interface PacingNoteProps {
   text?: string;
@@ -19,12 +19,12 @@ export function PacingNote({ text = DEFAULT_PACING_NOTE }: PacingNoteProps) {
 const styles = StyleSheet.create({
   container: {
     marginTop: spacing.md,
-    width: '100%',
+    width: "100%",
   },
   text: {
     fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });

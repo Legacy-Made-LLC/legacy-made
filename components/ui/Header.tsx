@@ -1,7 +1,7 @@
-import { colors, spacing } from '@/constants/theme';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing } from "@/constants/theme";
+import React from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface HeaderProps {
   onMenuPress: () => void;
@@ -47,9 +47,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     width: 36,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   menuButton: {
     padding: spacing.xs,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   menuIcon: {
     width: 20,
     height: 16,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   menuLine: {
     width: 20,

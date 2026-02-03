@@ -11,6 +11,12 @@ import { GuidanceCard } from "@/components/ui/GuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { colors, spacing } from "@/constants/theme";
 import { getTaskByKey } from "@/constants/vault";
+import { PressableCard } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
+import { SkeletonList } from "@/components/ui/SkeletonCard";
+import { spacing } from "@/constants/theme";
+import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -84,7 +90,10 @@ export function ContactList({
     return (
       <ScrollView
         style={listStyles.container}
-        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          listStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}

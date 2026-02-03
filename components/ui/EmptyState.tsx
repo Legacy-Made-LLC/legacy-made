@@ -2,11 +2,11 @@
  * EmptyState - Reusable empty state component for list views
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Button } from './Button';
-import { colors, typography, spacing } from '@/constants/theme';
+import { colors, spacing, typography } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Button } from "./Button";
 
 interface EmptyStateProps {
   title: string;
@@ -33,18 +33,22 @@ export function EmptyState({
       />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
-      <Button title={buttonTitle} onPress={onButtonPress} style={styles.button} />
+      <Button
+        title={buttonTitle}
+        onPress={onButtonPress}
+        style={styles.button}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: colors.border,
     borderRadius: 12,
   },
@@ -56,12 +60,12 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
-    textAlign: 'center',
+    textAlign: "center",
   },
   description: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
   },

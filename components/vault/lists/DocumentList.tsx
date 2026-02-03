@@ -2,19 +2,19 @@
  * DocumentList - Displays a list of legal document entries
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, View, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PressableCard } from '@/components/ui/Card';
-import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
-import { SkeletonList } from '@/components/ui/SkeletonCard';
-import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { spacing } from '@/constants/theme';
-import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
-import { listStyles } from './listStyles';
-import type { EntryListProps } from '../registry';
+import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
+import { PressableCard } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
+import { SkeletonList } from "@/components/ui/SkeletonCard";
+import { spacing } from "@/constants/theme";
+import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryListProps } from "../registry";
+import { listStyles } from "./listStyles";
 
 interface DocumentMetadata {
   documentType?: string;
@@ -51,7 +51,10 @@ export function DocumentList({
     return (
       <ScrollView
         style={listStyles.container}
-        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          listStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}
@@ -64,7 +67,10 @@ export function DocumentList({
     return (
       <ScrollView
         style={listStyles.container}
-        contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          listStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {renderGuidanceCard()}
@@ -81,14 +87,17 @@ export function DocumentList({
   return (
     <ScrollView
       style={listStyles.container}
-      contentContainerStyle={[listStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+      contentContainerStyle={[
+        listStyles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {renderGuidanceCard()}
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as DocumentMetadata;
-        const subtitle = metadata.location || '';
+        const subtitle = metadata.location || "";
 
         return (
           <AnimatedListItem key={entry.id} index={index}>
@@ -99,7 +108,9 @@ export function DocumentList({
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>
                   <Text style={listStyles.cardTitle}>{entry.title}</Text>
-                  {subtitle && <Text style={listStyles.cardSubtitle}>{subtitle}</Text>}
+                  {subtitle && (
+                    <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
+                  )}
                 </View>
                 <Text style={listStyles.chevron}>›</Text>
               </View>
