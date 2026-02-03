@@ -5,12 +5,6 @@
  */
 
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
-import { Button } from "@/components/ui/Button";
-import { PressableCard } from "@/components/ui/Card";
-import { GuidanceCard } from "@/components/ui/GuidanceCard";
-import { SkeletonList } from "@/components/ui/SkeletonCard";
-import { colors, spacing } from "@/constants/theme";
-import { getTaskByKey } from "@/constants/vault";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
@@ -18,24 +12,11 @@ import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { spacing } from "@/constants/theme";
 import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { default as React } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryListProps } from "../registry";
 import { listStyles } from "./listStyles";
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, View, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PressableCard } from '@/components/ui/Card';
-import { ExpandableGuidanceCard } from '@/components/ui/ExpandableGuidanceCard';
-import { SkeletonList } from '@/components/ui/SkeletonCard';
-import { AnimatedListItem } from '@/components/ui/AnimatedListItem';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { spacing } from '@/constants/theme';
-import { getTaskByKey, getSectionByTaskKey } from '@/constants/vault';
-import { listStyles } from './listStyles';
-import type { EntryListProps } from '../registry';
 
 interface ContactMetadata {
   firstName?: string;
