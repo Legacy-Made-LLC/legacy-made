@@ -3,12 +3,12 @@
  */
 
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
-import { Button } from "@/components/ui/Button";
 import { PressableCard } from "@/components/ui/Card";
-import { GuidanceCard } from "@/components/ui/GuidanceCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
-import { colors, spacing } from "@/constants/theme";
-import { getTaskByKey } from "@/constants/vault";
+import { spacing } from "@/constants/theme";
+import { getTaskByKey, getSectionByTaskKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -31,6 +31,21 @@ export function PropertyList({
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
+  const section = getSectionByTaskKey(taskKey);
+
+  const renderGuidanceCard = () => {
+    if (!task?.guidance || !task?.triggerText) return null;
+    return (
+      <ExpandableGuidanceCard
+        icon={section?.ionIcon as keyof typeof Ionicons.glyphMap}
+        triggerText={task.triggerText}
+        heading={task.guidanceHeading}
+        detail={task.guidance}
+        tips={task.tips}
+        pacingNote={task.pacingNote}
+      />
+    );
+  };
 
   if (isLoading) {
     return (
@@ -42,6 +57,7 @@ export function PropertyList({
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {renderGuidanceCard()}
         <SkeletonList count={3} />
       </ScrollView>
     );
@@ -49,28 +65,22 @@ export function PropertyList({
 
   if (entries.length === 0) {
     return (
-      <View
-        style={[
-          listStyles.emptyContainer,
+      <ScrollView
+        style={listStyles.container}
+        contentContainerStyle={[
+          listStyles.content,
           { paddingBottom: insets.bottom + spacing.lg },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons
-          name="home-outline"
-          size={48}
-          color={colors.textTertiary}
-          style={listStyles.emptyIcon}
+        {renderGuidanceCard()}
+        <EmptyState
+          title="Nothing added yet"
+          description="Add your property, vehicles, and other physical assets."
+          buttonTitle="Add Property"
+          onButtonPress={onAddPress}
         />
-        <Text style={listStyles.emptyTitle}>Nothing added yet</Text>
-        <Text style={listStyles.emptyDescription}>
-          Add your property, vehicles, and other physical assets.
-        </Text>
-        <Button
-          title="Add Property"
-          onPress={onAddPress}
-          style={listStyles.emptyButton}
-        />
-      </View>
+      </ScrollView>
     );
   }
 
@@ -83,7 +93,7 @@ export function PropertyList({
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {task?.guidance && <GuidanceCard text={task.guidance} />}
+      {renderGuidanceCard()}
 
       {entries.map((entry, index) => {
         const metadata = entry.metadata as PropertyMetadata;

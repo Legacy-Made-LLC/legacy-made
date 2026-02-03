@@ -4,16 +4,21 @@ import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PressableCard } from "@/components/ui/Card";
-import { borderRadius, colors, shadows, spacing, typography } from "@/constants/theme";
+import {
+  borderRadius,
+  colors,
+  shadows,
+  spacing,
+  typography,
+} from "@/constants/theme";
 import { useEntryCountsQuery } from "@/hooks/queries";
 
 // Pillar definitions for the home screen
@@ -77,11 +82,7 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
     <PressableCard onPress={onPress} style={styles.pillarCard}>
       <View style={styles.pillarContent}>
         <View style={styles.pillarIconContainer}>
-          <Ionicons
-            name={pillar.icon}
-            size={22}
-            color={colors.textTertiary}
-          />
+          <Ionicons name={pillar.icon} size={22} color={colors.textTertiary} />
         </View>
         <View style={styles.pillarTextContent}>
           <View style={styles.pillarHeader}>
@@ -93,9 +94,7 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
                 color={colors.textTertiary}
               />
             </View>
-            <Text style={styles.pillarDescription}>
-              {pillar.description}
-            </Text>
+            <Text style={styles.pillarDescription}>{pillar.description}</Text>
           </View>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
@@ -105,7 +104,7 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
                   {
                     width: progressAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
+                      outputRange: ["0%", "100%"],
                     }),
                   },
                 ]}
@@ -127,7 +126,10 @@ export default function HomeScreen() {
   const { data: counts = {} } = useEntryCountsQuery();
 
   // Calculate Information pillar progress (sum of all categories)
-  const informationCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const informationCount = Object.values(counts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
   // Get progress for each pillar
   const getPillarProgress = (pillarId: string) => {
@@ -170,23 +172,34 @@ export default function HomeScreen() {
       </View>
 
       {/* Guidance Card */}
-      <View style={styles.guidanceCard}>
+      {/* TODO: Implement after other app pillars are implemented. */}
+      {/* <View style={styles.guidanceCard}>
         <Text style={styles.guidanceTitle}>Not sure where to begin?</Text>
 
         <Pressable style={styles.guidanceOption}>
           <Text style={styles.guidanceOptionText}>How prepared am I?</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textTertiary}
+          />
         </Pressable>
 
         <Pressable style={styles.guidanceOption}>
           <Text style={styles.guidanceOptionText}>Where do I start?</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textTertiary}
+          />
         </Pressable>
 
         <Pressable style={styles.exploreLink}>
-          <Text style={styles.exploreLinkText}>I&apos;ll explore on my own</Text>
+          <Text style={styles.exploreLinkText}>
+            I&apos;ll explore on my own
+          </Text>
         </Pressable>
-      </View>
+      </View> */}
 
       {/* Pillar Cards */}
       <View style={styles.pillars}>
