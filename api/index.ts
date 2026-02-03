@@ -29,6 +29,14 @@ export type {
   InitVideoUploadRequest,
   InitVideoUploadResponse,
   DownloadUrlResponse,
+  // Entitlement types
+  SubscriptionTier,
+  Pillar,
+  QuotaFeature,
+  QuotaInfo,
+  EntitlementInfo,
+  EntitlementErrorCode,
+  EntitlementError,
 } from './types';
 
 // File utilities
@@ -47,6 +55,9 @@ export type { PlansService } from './plans';
 
 export { createFilesService } from './files';
 export type { FilesService } from './files';
+
+export { createEntitlementsService } from './entitlements';
+export type { EntitlementsService } from './entitlements';
 
 // Mappers
 export {

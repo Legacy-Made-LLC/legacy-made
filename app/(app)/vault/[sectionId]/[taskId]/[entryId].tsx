@@ -12,17 +12,20 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "@/api";
 import { apiFileToAttachment, type FileAttachment } from "@/api/types";
+import { UpgradePrompt } from "@/components/entitlements";
 import { getFormComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import { getTask } from "@/constants/vault";
 import { usePlan } from "@/data/PlanProvider";
 import {
+  QuotaExceededError,
   useCreateEntry,
   useDeleteEntry,
   useEntryQuery,
   useUpdateEntry,
 } from "@/hooks/queries";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { isQuotaExceededError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -37,6 +40,7 @@ export default function EntryScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { planId } = usePlan();
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const task = getTask(sectionId, taskId);
   const isNew = entryId === "new";
@@ -263,33 +267,46 @@ export default function EntryScreen() {
     }) => {
       if (!task || !planId) return;
 
-      // Prevent entry refetch from overwriting local attachments during save
-      isSavingRef.current = true;
+      try {
+        // Prevent entry refetch from overwriting local attachments during save
+        isSavingRef.current = true;
 
-      let savedEntryId: string;
+        let savedEntryId: string;
 
-      if (isNew) {
-        const createdEntry = await createMutation.mutateAsync(data);
-        savedEntryId = createdEntry.id;
-      } else {
-        await updateMutation.mutateAsync({ entryId, data });
-        savedEntryId = entryId;
+        if (isNew) {
+          const createdEntry = await createMutation.mutateAsync(data);
+          savedEntryId = createdEntry.id;
+        } else {
+          await updateMutation.mutateAsync({ entryId, data });
+          savedEntryId = entryId;
+        }
+
+        // Upload any pending files
+        const pendingFiles = attachments.filter(
+          (f) => !f.isRemote && f.uploadStatus !== "complete"
+        );
+        if (pendingFiles.length > 0) {
+          await uploadFiles(savedEntryId, attachments);
+
+          // Invalidate entry cache after uploads so it includes the new files
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.entries.single(planId, savedEntryId),
+          });
+        }
+
+        router.back();
+      } catch (error) {
+        // Check for quota exceeded error (client-side or from API)
+        if (
+          error instanceof QuotaExceededError ||
+          isQuotaExceededError(error)
+        ) {
+          setShowUpgradePrompt(true);
+          return;
+        }
+        // Re-throw other errors to be handled by error boundaries
+        throw error;
       }
-
-      // Upload any pending files
-      const pendingFiles = attachments.filter(
-        (f) => !f.isRemote && f.uploadStatus !== "complete"
-      );
-      if (pendingFiles.length > 0) {
-        await uploadFiles(savedEntryId, attachments);
-
-        // Invalidate entry cache after uploads so it includes the new files
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.entries.single(planId, savedEntryId),
-        });
-      }
-
-      router.back();
     },
     [
       task,
@@ -348,18 +365,26 @@ export default function EntryScreen() {
   }
 
   return (
-    <FormComponent
-      taskKey={task.taskKey}
-      entryId={isNew ? undefined : entryId}
-      initialData={entry}
-      onSave={handleSave}
-      onDelete={isNew ? undefined : handleDelete}
-      onCancel={handleCancel}
-      isSaving={isSaving || isDeletingFile}
-      attachments={attachmentsWithUploadState}
-      onAttachmentsChange={handleAttachmentsChange}
-      isUploading={isUploading}
-    />
+    <>
+      <FormComponent
+        taskKey={task.taskKey}
+        entryId={isNew ? undefined : entryId}
+        initialData={entry}
+        onSave={handleSave}
+        onDelete={isNew ? undefined : handleDelete}
+        onCancel={handleCancel}
+        isSaving={isSaving || isDeletingFile}
+        attachments={attachmentsWithUploadState}
+        onAttachmentsChange={handleAttachmentsChange}
+        isUploading={isUploading}
+      />
+      <UpgradePrompt
+        visible={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        title="You've Reached Your Limit"
+        message="You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+      />
+    </>
   );
 }
 

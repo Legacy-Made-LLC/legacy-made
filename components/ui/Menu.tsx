@@ -1,5 +1,8 @@
+import { QuotaIndicator, TierBadge } from "@/components/entitlements";
 import { SUPPORT_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
@@ -52,10 +55,9 @@ interface ProfileHeaderProps {
 // Profile Header Component
 function ProfileHeader({ onPress }: ProfileHeaderProps) {
   const { user } = useUser();
+  const { tierName } = useEntitlements();
   const initial =
-    user?.firstName?.[0] ||
-    user?.primaryEmailAddress?.emailAddress?.[0] ||
-    "?";
+    user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "?";
   const displayName = user?.firstName
     ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
     : user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "User";
@@ -71,10 +73,7 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
       ]}
     >
       {profileImageUrl ? (
-        <Image
-          source={{ uri: profileImageUrl }}
-          style={styles.avatarImage}
-        />
+        <Image source={{ uri: profileImageUrl }} style={styles.avatarImage} />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initial.toUpperCase()}</Text>
@@ -87,12 +86,11 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
         <Text style={styles.profileEmail} numberOfLines={1}>
           {email}
         </Text>
+        <Text style={styles.profilePlan} numberOfLines={1}>
+          {tierName} Plan
+        </Text>
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={colors.textTertiary}
-      />
+      <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
     </Pressable>
   );
 }
@@ -149,12 +147,16 @@ function AccountView({
   bottomInset: number;
 }) {
   const { user } = useUser();
+  const { tier, tierName, isFree, getQuotaInfo } = useEntitlements();
+  const { showUpgradePrompt } = useUpgradePrompt();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const entriesQuota = getQuotaInfo('entries');
 
   // Reset form when user changes or when entering edit mode
   useEffect(() => {
@@ -165,9 +167,7 @@ function AccountView({
   }, [user]);
 
   const initial =
-    firstName?.[0] ||
-    user?.primaryEmailAddress?.emailAddress?.[0] ||
-    "?";
+    firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "?";
   const email = user?.primaryEmailAddress?.emailAddress || "";
   const profileImageUrl = user?.imageUrl;
 
@@ -180,9 +180,12 @@ function AccountView({
 
     try {
       // Request permission
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        setError("Permission to access photos is required to change your profile picture.");
+        setError(
+          "Permission to access photos is required to change your profile picture.",
+        );
         return;
       }
 
@@ -318,7 +321,9 @@ function AccountView({
               />
             ) : (
               <View style={styles.accountAvatar}>
-                <Text style={styles.accountAvatarText}>{initial.toUpperCase()}</Text>
+                <Text style={styles.accountAvatarText}>
+                  {initial.toUpperCase()}
+                </Text>
               </View>
             )}
             {isEditing && (
@@ -339,7 +344,11 @@ function AccountView({
                 pressed && styles.editProfileButtonPressed,
               ]}
             >
-              <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+              <Ionicons
+                name="pencil-outline"
+                size={16}
+                color={colors.primary}
+              />
               <Text style={styles.editProfileText}>Edit Profile</Text>
             </Pressable>
           )}
@@ -385,7 +394,11 @@ function AccountView({
               <Text style={styles.inputLabel}>EMAIL</Text>
               <View style={styles.readOnlyField}>
                 <Text style={styles.readOnlyValue}>{email}</Text>
-                <Ionicons name="lock-closed-outline" size={16} color={colors.textTertiary} />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={16}
+                  color={colors.textTertiary}
+                />
               </View>
               <Text style={styles.fieldHint}>Email cannot be changed here</Text>
             </View>
@@ -438,10 +451,54 @@ function AccountView({
             </View>
           </View>
         )}
+
+        {/* Subscription Section */}
+        <View style={styles.subscriptionSection}>
+          <Text style={styles.subscriptionSectionTitle}>SUBSCRIPTION</Text>
+          <View style={styles.accountFields}>
+            <View style={styles.accountField}>
+              <Text style={styles.fieldLabel}>Plan</Text>
+              <TierBadge tier={tier} tierName={tierName} />
+            </View>
+            {!isFree && entriesQuota && !entriesQuota.unlimited && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <View style={styles.accountField}>
+                  <Text style={styles.fieldLabel}>Entries</Text>
+                  <QuotaIndicator quota={entriesQuota} />
+                </View>
+              </>
+            )}
+            {isFree && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <Pressable
+                  onPress={() => showUpgradePrompt()}
+                  style={({ pressed }) => [
+                    styles.accountField,
+                    pressed && styles.upgradeFieldPressed,
+                  ]}
+                >
+                  <Text style={styles.upgradeFieldLabel}>Upgrade your plan</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
       {/* Footer with Sign Out */}
-      <View style={[styles.accountFooter, { paddingBottom: bottomInset + spacing.lg }]}>
+      <View
+        style={[
+          styles.accountFooter,
+          { paddingBottom: bottomInset + spacing.lg },
+        ]}
+      >
         <Pressable
           onPress={onSignOut}
           style={({ pressed }) => [
@@ -680,7 +737,11 @@ export function Menu({ visible, onClose }: MenuProps) {
                     pressed && styles.mainSignOutButtonPressed,
                   ]}
                 >
-                  <Ionicons name="log-out-outline" size={20} color={colors.error} />
+                  <Ionicons
+                    name="log-out-outline"
+                    size={20}
+                    color={colors.error}
+                  />
                   <Text style={styles.mainSignOutText}>Log Out</Text>
                 </Pressable>
                 <Text style={styles.footerText}>Version 1.0.0</Text>
@@ -809,6 +870,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  profilePlan: {
+    fontSize: typography.sizes.caption,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textTertiary,
+    marginTop: 4,
   },
 
   // Menu Sections
@@ -1148,5 +1215,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+
+  // Subscription Section
+  subscriptionSection: {
+    marginTop: spacing.lg,
+  },
+  subscriptionSectionTitle: {
+    fontSize: typography.sizes.label,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textTertiary,
+    letterSpacing: 1,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  upgradeFieldLabel: {
+    fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.primary,
+  },
+  upgradeFieldPressed: {
+    backgroundColor: colors.divider,
   },
 });

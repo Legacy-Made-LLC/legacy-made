@@ -2,26 +2,31 @@
  * DigitalForm - Form for creating/editing digital access entries
  */
 
-import React, { useEffect, useMemo } from 'react';
 import {
-  ScrollView,
-  View,
-  Text,
+  FormInput,
+  FormTextArea,
+  digitalSchema,
+  FilePicker,
+} from "@/components/forms";
+import { Button } from "@/components/ui/Button";
+import { spacing } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
+import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Pressable,
-} from 'react-native';
-import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { FormInput, FormTextArea, digitalSchema, FilePicker } from '@/components/forms';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
-import type { EntryFormProps } from '../registry';
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
+import { formStyles } from "./formStyles";
 
-const importanceLevels = ['Critical', 'High', 'Medium', 'Low'] as const;
+const importanceLevels = ["Critical", "High", "Medium", "Low"] as const;
 
 type ImportanceLevel = (typeof importanceLevels)[number];
 
@@ -36,45 +41,45 @@ interface DigitalMetadata {
 // Get display labels based on task type
 function getLabels(taskKey: string) {
   switch (taskKey) {
-    case 'digital.email':
+    case "digital.email":
       return {
-        addTitle: 'Add Email Account',
-        editTitle: 'Edit Email Account',
-        deleteTitle: 'Delete Email Account',
-        namePlaceholder: 'e.g., Primary Email, Work Email',
-        servicePlaceholder: 'e.g., Gmail, Outlook, Yahoo',
+        addTitle: "Add Email Account",
+        editTitle: "Edit Email Account",
+        deleteTitle: "Delete Email Account",
+        namePlaceholder: "e.g., Primary Email, Work Email",
+        servicePlaceholder: "e.g., Gmail, Outlook, Yahoo",
       };
-    case 'digital.passwords':
+    case "digital.passwords":
       return {
-        addTitle: 'Add Password Info',
-        editTitle: 'Edit Password Info',
-        deleteTitle: 'Delete Password Info',
-        namePlaceholder: 'e.g., Password Manager, Browser Passwords',
-        servicePlaceholder: 'e.g., 1Password, LastPass, iCloud Keychain',
+        addTitle: "Add Password Info",
+        editTitle: "Edit Password Info",
+        deleteTitle: "Delete Password Info",
+        namePlaceholder: "e.g., Password Manager, Browser Passwords",
+        servicePlaceholder: "e.g., 1Password, LastPass, iCloud Keychain",
       };
-    case 'digital.devices':
+    case "digital.devices":
       return {
-        addTitle: 'Add Device',
-        editTitle: 'Edit Device',
-        deleteTitle: 'Delete Device',
-        namePlaceholder: 'e.g., iPhone, MacBook, iPad',
-        servicePlaceholder: 'e.g., Apple, Samsung, Dell',
+        addTitle: "Add Device",
+        editTitle: "Edit Device",
+        deleteTitle: "Delete Device",
+        namePlaceholder: "e.g., iPhone, MacBook, iPad",
+        servicePlaceholder: "e.g., Apple, Samsung, Dell",
       };
-    case 'digital.social':
+    case "digital.social":
       return {
-        addTitle: 'Add Social Account',
-        editTitle: 'Edit Social Account',
-        deleteTitle: 'Delete Social Account',
-        namePlaceholder: 'e.g., Facebook, Instagram, LinkedIn',
-        servicePlaceholder: 'e.g., Facebook, Instagram, Twitter/X',
+        addTitle: "Add Social Account",
+        editTitle: "Edit Social Account",
+        deleteTitle: "Delete Social Account",
+        namePlaceholder: "e.g., Facebook, Instagram, LinkedIn",
+        servicePlaceholder: "e.g., Facebook, Instagram, Twitter/X",
       };
     default:
       return {
-        addTitle: 'Add Account',
-        editTitle: 'Edit Account',
-        deleteTitle: 'Delete Account',
-        namePlaceholder: 'e.g., Primary Email',
-        servicePlaceholder: 'e.g., Gmail, 1Password, Apple ID',
+        addTitle: "Add Account",
+        editTitle: "Edit Account",
+        deleteTitle: "Delete Account",
+        namePlaceholder: "e.g., Primary Email",
+        servicePlaceholder: "e.g., Gmail, 1Password, Apple ID",
       };
   }
 }
@@ -99,13 +104,13 @@ export function DigitalForm({
 
   const defaultValues = useMemo(
     () => ({
-      accountName: initialData?.title ?? '',
-      service: initialMetadata?.service ?? '',
-      username: initialMetadata?.username ?? '',
-      importance: (initialMetadata?.importance ?? 'Medium') as string,
-      accessNotes: initialMetadata?.notes ?? initialData?.notes ?? '',
+      accountName: initialData?.title ?? "",
+      service: initialMetadata?.service ?? "",
+      username: initialMetadata?.username ?? "",
+      importance: (initialMetadata?.importance ?? "Medium") as string,
+      accessNotes: initialMetadata?.notes ?? initialData?.notes ?? "",
     }),
-    [initialData, initialMetadata]
+    [initialData, initialMetadata],
   );
 
   const form = useForm({
@@ -129,8 +134,9 @@ export function DigitalForm({
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save account';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save account";
+        Alert.alert("Error", message);
       }
     },
   });
@@ -144,39 +150,51 @@ export function DigitalForm({
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const accountName = form.getFieldValue('accountName');
-    Alert.alert(labels.deleteTitle, `Are you sure you want to delete ${accountName || 'this item'}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await onDelete();
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete';
-            Alert.alert('Error', message);
-          }
+    const accountName = form.getFieldValue("accountName");
+    Alert.alert(
+      labels.deleteTitle,
+      `Are you sure you want to delete ${accountName || "this item"}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await onDelete();
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : "Failed to delete";
+              Alert.alert("Error", message);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
     <KeyboardAvoidingView
       style={formStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          formStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         <form.Field name="accountName">
           {(field) => (
-            <FormInput field={field} label="Name" placeholder={labels.namePlaceholder} />
+            <FormInput
+              field={field}
+              label="Name"
+              placeholder={labels.namePlaceholder}
+            />
           )}
         </form.Field>
 
@@ -212,14 +230,16 @@ export function DigitalForm({
                     key={level}
                     style={[
                       formStyles.typeButton,
-                      field.state.value === level && formStyles.typeButtonSelected,
+                      field.state.value === level &&
+                        formStyles.typeButtonSelected,
                     ]}
                     onPress={() => field.handleChange(level)}
                   >
                     <Text
                       style={[
                         formStyles.typeButtonText,
-                        field.state.value === level && formStyles.typeButtonTextSelected,
+                        field.state.value === level &&
+                          formStyles.typeButtonTextSelected,
                       ]}
                     >
                       {level}
@@ -254,14 +274,16 @@ export function DigitalForm({
         )}
 
         <View style={formStyles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => {
               const busy = isSaving || isSubmitting || isUploading;
               const buttonTitle = isUploading
-                ? 'Uploading...'
+                ? "Uploading..."
                 : busy
-                  ? 'Saving...'
-                  : 'Save';
+                  ? "Saving..."
+                  : "Save";
               return (
                 <Button
                   title={buttonTitle}
@@ -275,7 +297,11 @@ export function DigitalForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title={labels.deleteTitle} variant="destructive" onPress={handleDelete} />
+            <Button
+              title={labels.deleteTitle}
+              variant="destructive"
+              onPress={handleDelete}
+            />
           </View>
         )}
       </ScrollView>

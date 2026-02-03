@@ -26,4 +26,8 @@ export const queryKeys = {
     // Single file detail
     single: (fileId: string) => ['files', 'detail', fileId] as const,
   },
+  entitlements: {
+    // Current user's entitlements
+    current: () => ['entitlements', 'current'] as const,
+  },
 } as const;

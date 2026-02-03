@@ -2,26 +2,32 @@
  * PetForm - Form for creating/editing pet entries
  */
 
-import React, { useEffect, useMemo } from 'react';
 import {
-  ScrollView,
-  View,
-  Text,
+  formatPhoneNumber,
+  FormInput,
+  FormTextArea,
+  petSchema,
+  FilePicker,
+} from "@/components/forms";
+import { Button } from "@/components/ui/Button";
+import { spacing } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
+import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Pressable,
-} from 'react-native';
-import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { FormInput, FormTextArea, petSchema, formatPhoneNumber, FilePicker } from '@/components/forms';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
-import type { EntryFormProps } from '../registry';
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
+import { formStyles } from "./formStyles";
 
-const speciesTypes = ['Dog', 'Cat', 'Bird', 'Fish', 'Other'] as const;
+const speciesTypes = ["Dog", "Cat", "Bird", "Fish", "Other"] as const;
 
 type SpeciesType = (typeof speciesTypes)[number];
 
@@ -52,15 +58,16 @@ export function PetForm({
 
   const defaultValues = useMemo(
     () => ({
-      name: initialData?.title ?? '',
-      species: (initialMetadata?.species ?? 'Dog') as string,
-      breed: initialMetadata?.breed ?? '',
-      veterinarian: initialMetadata?.veterinarian ?? '',
-      vetPhone: initialMetadata?.vetPhone ?? '',
-      designatedCaretaker: initialMetadata?.designatedCaretaker ?? '',
-      careInstructions: initialMetadata?.careInstructions ?? initialData?.notes ?? '',
+      name: initialData?.title ?? "",
+      species: (initialMetadata?.species ?? "Dog") as string,
+      breed: initialMetadata?.breed ?? "",
+      veterinarian: initialMetadata?.veterinarian ?? "",
+      vetPhone: initialMetadata?.vetPhone ?? "",
+      designatedCaretaker: initialMetadata?.designatedCaretaker ?? "",
+      careInstructions:
+        initialMetadata?.careInstructions ?? initialData?.notes ?? "",
     }),
-    [initialData, initialMetadata]
+    [initialData, initialMetadata],
   );
 
   const form = useForm({
@@ -86,48 +93,57 @@ export function PetForm({
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save pet';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save pet";
+        Alert.alert("Error", message);
       }
     },
   });
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Pet' : 'Edit Pet',
+      title: isNew ? "Add Pet" : "Edit Pet",
     });
   }, [isNew, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const name = form.getFieldValue('name');
-    Alert.alert('Delete Pet', `Are you sure you want to delete ${name || 'this pet'}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await onDelete();
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete pet';
-            Alert.alert('Error', message);
-          }
+    const name = form.getFieldValue("name");
+    Alert.alert(
+      "Delete Pet",
+      `Are you sure you want to delete ${name || "this pet"}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await onDelete();
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : "Failed to delete pet";
+              Alert.alert("Error", message);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
     <KeyboardAvoidingView
       style={formStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          formStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -152,14 +168,16 @@ export function PetForm({
                     key={type}
                     style={[
                       formStyles.typeButton,
-                      field.state.value === type && formStyles.typeButtonSelected,
+                      field.state.value === type &&
+                        formStyles.typeButtonSelected,
                     ]}
                     onPress={() => field.handleChange(type)}
                   >
                     <Text
                       style={[
                         formStyles.typeButtonText,
-                        field.state.value === type && formStyles.typeButtonTextSelected,
+                        field.state.value === type &&
+                          formStyles.typeButtonTextSelected,
                       ]}
                     >
                       {type}
@@ -173,7 +191,11 @@ export function PetForm({
 
         <form.Field name="breed">
           {(field) => (
-            <FormInput field={field} label="Breed/Description" placeholder="e.g., Golden Retriever, orange tabby" />
+            <FormInput
+              field={field}
+              label="Breed/Description"
+              placeholder="e.g., Golden Retriever, orange tabby"
+            />
           )}
         </form.Field>
 
@@ -198,7 +220,9 @@ export function PetForm({
                   label="Phone"
                   placeholder="(555) 123-4567"
                   keyboardType="phone-pad"
-                  onValueChange={(text) => field.handleChange(formatPhoneNumber(text))}
+                  onValueChange={(text) =>
+                    field.handleChange(formatPhoneNumber(text))
+                  }
                   containerStyle={{ marginBottom: 0 }}
                 />
               )}
@@ -239,14 +263,16 @@ export function PetForm({
         )}
 
         <View style={formStyles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => {
               const busy = isSaving || isSubmitting || isUploading;
               const buttonTitle = isUploading
-                ? 'Uploading...'
+                ? "Uploading..."
                 : busy
-                  ? 'Saving...'
-                  : 'Save';
+                  ? "Saving..."
+                  : "Save";
               return (
                 <Button
                   title={buttonTitle}
@@ -260,7 +286,11 @@ export function PetForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title="Delete Pet" variant="destructive" onPress={handleDelete} />
+            <Button
+              title="Delete Pet"
+              variant="destructive"
+              onPress={handleDelete}
+            />
           </View>
         )}
       </ScrollView>

@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
-  Animated,
+  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PressableCard } from "@/components/ui/Card";
+import { CircularProgress } from "@/components/ui/CircularProgress";
 import {
   borderRadius,
   colors,
@@ -20,6 +21,11 @@ import {
   typography,
 } from "@/constants/theme";
 import { useEntryCountsQuery } from "@/hooks/queries";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CARD_GAP = spacing.sm;
+const HORIZONTAL_PADDING = spacing.lg;
+const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
 // Pillar definitions for the home screen
 const pillars = [
@@ -57,8 +63,9 @@ const pillars = [
   },
 ];
 
-// Animation configuration
-const PROGRESS_ANIMATION_DURATION = 400;
+// Circular progress configuration
+const CIRCLE_SIZE = 64;
+const CIRCLE_STROKE_WIDTH = 4;
 
 interface PillarCardProps {
   pillar: (typeof pillars)[number];
@@ -67,53 +74,37 @@ interface PillarCardProps {
 }
 
 function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
-  const progressAnim = useRef(new Animated.Value(0)).current;
   const progressPercent = Math.min(currentProgress / pillar.totalItems, 1);
-
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: progressPercent,
-      duration: PROGRESS_ANIMATION_DURATION,
-      useNativeDriver: false,
-    }).start();
-  }, [progressPercent, progressAnim]);
 
   return (
     <PressableCard onPress={onPress} style={styles.pillarCard}>
       <View style={styles.pillarContent}>
-        <View style={styles.pillarIconContainer}>
-          <Ionicons name={pillar.icon} size={22} color={colors.textTertiary} />
-        </View>
-        <View style={styles.pillarTextContent}>
-          <View style={styles.pillarHeader}>
-            <View style={styles.pillarTitleRow}>
-              <Text style={styles.pillarTitle}>{pillar.title}</Text>
+        {/* Icon with circular progress */}
+        <View style={styles.pillarIconWrapper}>
+          <CircularProgress
+            progress={progressPercent}
+            size={CIRCLE_SIZE}
+            strokeWidth={CIRCLE_STROKE_WIDTH}
+          >
+            <View style={styles.pillarIconContainer}>
               <Ionicons
-                name="chevron-forward"
-                size={20}
+                name={pillar.icon}
+                size={24}
                 color={colors.textTertiary}
               />
             </View>
-            <Text style={styles.pillarDescription}>{pillar.description}</Text>
-          </View>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <Animated.View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: progressAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0%", "100%"],
-                    }),
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {currentProgress}/{pillar.totalItems}
-            </Text>
-          </View>
+          </CircularProgress>
+        </View>
+
+        {/* Title and description at bottom */}
+        <View style={styles.pillarTextContent}>
+          <Text style={styles.pillarTitle}>{pillar.title}</Text>
+          <Text style={styles.pillarDescription} numberOfLines={2}>
+            {pillar.description}
+          </Text>
+          <Text style={styles.progressText}>
+            {currentProgress} of {pillar.totalItems}
+          </Text>
         </View>
       </View>
     </PressableCard>
@@ -173,21 +164,32 @@ export default function HomeScreen() {
 
       {/* TODO: Add guidance card */}
       {/* Guidance Card */}
+      {/* TODO: Implement after other app pillars are implemented. */}
       {/* <View style={styles.guidanceCard}>
         <Text style={styles.guidanceTitle}>Not sure where to begin?</Text>
 
         <Pressable style={styles.guidanceOption}>
           <Text style={styles.guidanceOptionText}>How prepared am I?</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textTertiary}
+          />
         </Pressable>
 
         <Pressable style={styles.guidanceOption}>
           <Text style={styles.guidanceOptionText}>Where do I start?</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textTertiary}
+          />
         </Pressable>
 
         <Pressable style={styles.exploreLink}>
-          <Text style={styles.exploreLinkText}>I&apos;ll explore on my own</Text>
+          <Text style={styles.exploreLinkText}>
+            I&apos;ll explore on my own
+          </Text>
         </Pressable>
       </View> */}
 
@@ -281,71 +283,52 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
   },
-  // Pillar Cards
+  // Pillar Cards - Two column grid
   pillars: {
-    gap: spacing.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: CARD_GAP,
   },
   pillarCard: {
+    width: CARD_WIDTH,
     marginBottom: 0,
   },
   pillarContent: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+  },
+  pillarIconWrapper: {
+    marginBottom: spacing.md,
   },
   pillarIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.surfaceSecondary,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.md,
   },
   pillarTextContent: {
-    flex: 1,
-  },
-  pillarHeader: {
-    marginBottom: spacing.sm,
-  },
-  pillarTitleRow: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
   pillarTitle: {
     fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.titleMedium,
     color: colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: spacing.xs,
+    textAlign: "center",
   },
   pillarDescription: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+    textAlign: "center",
+    marginBottom: spacing.sm,
   },
   progressText: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
-    minWidth: 28,
-    textAlign: "right",
   },
 });

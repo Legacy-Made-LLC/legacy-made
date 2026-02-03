@@ -4,12 +4,12 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
-import { contactSchemaWithRequiredPhone, FilePicker } from '@/components/forms';
-import { ContactFormFieldsWithForm } from '@/components/forms/ContactFormFields';
-import { colors, spacing, typography } from '@/constants/theme';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { useNavigation } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
+import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
+import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
+import { colors, spacing, typography } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,9 +19,9 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { EntryFormProps } from '../registry';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
 
 interface ContactMetadata {
   firstName: string;
@@ -58,18 +58,20 @@ export function ContactForm({
   const isNew = !entryId;
 
   // Extract initial values from initialData
-  const initialMetadata = initialData?.metadata as unknown as ContactMetadata | undefined;
+  const initialMetadata = initialData?.metadata as unknown as
+    | ContactMetadata
+    | undefined;
 
   const defaultValues = useMemo<ContactFormValues>(
     () => ({
-      firstName: initialMetadata?.firstName ?? '',
-      lastName: initialMetadata?.lastName ?? '',
-      relationship: initialMetadata?.relationship ?? '',
-      phone: initialMetadata?.phone ?? '',
-      email: initialMetadata?.email ?? '',
-      reason: initialMetadata?.reason ?? initialData?.notes ?? '',
+      firstName: initialMetadata?.firstName ?? "",
+      lastName: initialMetadata?.lastName ?? "",
+      relationship: initialMetadata?.relationship ?? "",
+      phone: initialMetadata?.phone ?? "",
+      email: initialMetadata?.email ?? "",
+      reason: initialMetadata?.reason ?? initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -87,7 +89,7 @@ export function ContactForm({
         phone: value.phone.trim(),
         email: value.email.trim() || undefined,
         reason: value.reason.trim() || undefined,
-        isPrimary: taskKey === 'contacts.primary',
+        isPrimary: taskKey === "contacts.primary",
       };
 
       try {
@@ -97,35 +99,37 @@ export function ContactForm({
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save contact';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save contact";
+        Alert.alert("Error", message);
       }
     },
   });
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'Add Contact' : 'Edit Contact',
+      title: isNew ? "Add Contact" : "Edit Contact",
     });
   }, [isNew, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const firstName = form.getFieldValue('firstName');
-    const lastName = form.getFieldValue('lastName');
-    const name = `${firstName} ${lastName}`.trim() || 'this contact';
-    Alert.alert('Delete Contact', `Are you sure you want to delete ${name}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    const firstName = form.getFieldValue("firstName");
+    const lastName = form.getFieldValue("lastName");
+    const name = `${firstName} ${lastName}`.trim() || "this contact";
+    Alert.alert("Delete Contact", `Are you sure you want to delete ${name}?`, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: async () => {
           try {
             await onDelete();
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete contact';
-            Alert.alert('Error', message);
+            const message =
+              err instanceof Error ? err.message : "Failed to delete contact";
+            Alert.alert("Error", message);
           }
         },
       },
@@ -135,16 +139,23 @@ export function ContactForm({
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <ContactFormFieldsWithForm form={form} showReasonField={true} phoneRequired={true} />
+        <ContactFormFieldsWithForm
+          form={form}
+          showReasonField={true}
+          phoneRequired={true}
+        />
 
         {onAttachmentsChange && (
           <FilePicker
@@ -159,14 +170,16 @@ export function ContactForm({
         )}
 
         <View style={styles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => {
               const busy = isSaving || isSubmitting || isUploading;
               const buttonTitle = isUploading
-                ? 'Uploading...'
+                ? "Uploading..."
                 : busy
-                  ? 'Saving...'
-                  : 'Save';
+                  ? "Saving..."
+                  : "Save";
               return (
                 <Pressable
                   style={({ pressed }) => [
@@ -194,7 +207,10 @@ export function ContactForm({
         {!isNew && onDelete && (
           <View style={styles.deleteContainer}>
             <Pressable
-              style={({ pressed }) => [styles.deleteButton, pressed && styles.deleteButtonPressed]}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.deleteButtonPressed,
+              ]}
               onPress={handleDelete}
             >
               <Text style={styles.deleteButtonText}>Delete Contact</Text>
@@ -225,8 +241,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     height: 52,
     borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   primaryButtonPressed: {
     backgroundColor: colors.primaryPressed,
@@ -245,7 +261,7 @@ const styles = StyleSheet.create({
   },
   deleteContainer: {
     marginTop: spacing.xl,
-    alignItems: 'center',
+    alignItems: "center",
   },
   deleteButton: {
     paddingVertical: spacing.md,

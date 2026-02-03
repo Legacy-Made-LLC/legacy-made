@@ -15,4 +15,7 @@ export {
   useCreateEntry,
   useUpdateEntry,
   useDeleteEntry,
+  QuotaExceededError,
 } from './useEntriesMutations';
+
+export { useEntitlementsQuery } from './useEntitlementsQuery';

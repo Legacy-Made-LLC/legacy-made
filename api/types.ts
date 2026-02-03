@@ -55,7 +55,7 @@ export interface DigitalAccessMetadata {
   recoveryEmail?: string;
   notes?: string;
   /** Importance level: critical, high, medium, low */
-  importance?: 'critical' | 'high' | 'medium' | 'low';
+  importance?: "critical" | "high" | "medium" | "low";
 }
 
 // ============================================================================
@@ -327,6 +327,24 @@ export interface DeleteResponse {
   deleted: boolean;
 }
 
+/**
+ * Quota information included in list responses
+ */
+export interface EntriesQuota {
+  limit: number;
+  current: number;
+  remaining: number | null;
+  unlimited: boolean;
+}
+
+/**
+ * Response shape for listing entries
+ */
+export interface EntriesListResponse<T = Record<string, unknown>> {
+  data: Entry<T>[];
+  quota: EntriesQuota;
+}
+
 // ============================================================================
 // Plan Type
 // ============================================================================
@@ -337,4 +355,84 @@ export interface Plan {
   name: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ============================================================================
+// Entitlement Types
+// ============================================================================
+
+/**
+ * Subscription tier levels
+ */
+export type SubscriptionTier = "free" | "individual" | "family";
+
+/**
+ * Feature pillars in the app
+ */
+export type Pillar = "important_info" | "wishes" | "messages" | "family_access";
+
+/**
+ * Features that have quota limits
+ */
+export type QuotaFeature =
+  | "entries"
+  | "trusted_contacts"
+  | "family_profiles"
+  | "legacy_messages"
+  | "storage_mb";
+
+/**
+ * Information about a quota limit
+ */
+export interface QuotaInfo {
+  /** Identifier for the quota type */
+  feature: QuotaFeature;
+  /** Human-readable name (e.g., "important information items") */
+  displayName: string;
+  /** Maximum allowed for this feature (-1 for unlimited) */
+  limit: number;
+  /** Current usage count */
+  current: number;
+  /** Convenience flag indicating if limit === -1 */
+  unlimited: boolean;
+}
+
+/**
+ * User's current entitlement information
+ */
+export interface EntitlementInfo {
+  /** Current subscription tier */
+  tier: SubscriptionTier;
+  /** Human-readable tier name (e.g., "Free", "Individual", "Family") */
+  tierName: string;
+  /** Marketing tagline for the tier */
+  tierDescription: string;
+  /** Pillars where the user can create and edit content */
+  pillars: Pillar[];
+  /** Pillars where the user can view content but cannot edit */
+  viewOnlyPillars: Pillar[];
+  /** Quota information for limited features */
+  quotas: QuotaInfo[];
+}
+
+/**
+ * Entitlement error codes from the API
+ */
+export type EntitlementErrorCode =
+  | "PILLAR_LOCKED"
+  | "PILLAR_VIEW_ONLY"
+  | "QUOTA_EXCEEDED";
+
+/**
+ * Entitlement error response from API
+ */
+export interface EntitlementError {
+  code: EntitlementErrorCode;
+  message: string;
+  details?: {
+    pillar?: Pillar;
+    feature?: QuotaFeature;
+    limit?: number;
+    current?: number;
+  };
 }

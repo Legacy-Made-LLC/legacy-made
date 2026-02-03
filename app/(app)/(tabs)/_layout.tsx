@@ -1,11 +1,47 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Image, StyleSheet } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import type { Pillar } from "@/api/types";
 import { colors, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
 
 const iconSize = 26;
+
+/**
+ * Mapping from tab names to pillars
+ */
+const TAB_TO_PILLAR: Record<string, Pillar> = {
+  information: 'important_info',
+  wishes: 'wishes',
+  legacy: 'messages',
+  family: 'family_access',
+};
+
+/**
+ * Tab icon wrapper that shows a lock badge when the pillar is locked
+ */
+function TabIconWithLock({
+  icon,
+  isLocked,
+}: {
+  icon: React.ReactNode;
+  isLocked: boolean;
+}) {
+  if (!isLocked) {
+    return <>{icon}</>;
+  }
+
+  return (
+    <View style={styles.lockedIconContainer}>
+      {icon}
+      <View style={styles.lockBadge}>
+        <Ionicons name="lock-closed" size={8} color={colors.surface} />
+      </View>
+    </View>
+  );
+}
 
 // Home icon with special circular background
 function HomeTabIcon({ focused }: { focused: boolean }) {
@@ -27,6 +63,12 @@ function HomeTabIcon({ focused }: { focused: boolean }) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { isLockedPillar } = useEntitlements();
+
+  // Check if each pillar is locked
+  const isWishesLocked = isLockedPillar(TAB_TO_PILLAR.wishes);
+  const isLegacyLocked = isLockedPillar(TAB_TO_PILLAR.legacy);
+  const isFamilyLocked = isLockedPillar(TAB_TO_PILLAR.family);
 
   return (
     <Tabs
@@ -67,10 +109,15 @@ export default function TabsLayout() {
         options={{
           title: "Wishes",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "heart" : "heart-outline"}
-              size={iconSize}
-              color={color}
+            <TabIconWithLock
+              isLocked={isWishesLocked}
+              icon={
+                <Ionicons
+                  name={focused ? "heart" : "heart-outline"}
+                  size={iconSize}
+                  color={isWishesLocked ? colors.textTertiary : color}
+                />
+              }
             />
           ),
         }}
@@ -87,10 +134,15 @@ export default function TabsLayout() {
         options={{
           title: "Legacy",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "videocam" : "videocam-outline"}
-              size={iconSize}
-              color={color}
+            <TabIconWithLock
+              isLocked={isLegacyLocked}
+              icon={
+                <Ionicons
+                  name={focused ? "videocam" : "videocam-outline"}
+                  size={iconSize}
+                  color={isLegacyLocked ? colors.textTertiary : color}
+                />
+              }
             />
           ),
         }}
@@ -100,10 +152,15 @@ export default function TabsLayout() {
         options={{
           title: "Family",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "people" : "people-outline"}
-              size={iconSize}
-              color={color}
+            <TabIconWithLock
+              isLocked={isFamilyLocked}
+              icon={
+                <Ionicons
+                  name={focused ? "people" : "people-outline"}
+                  size={iconSize}
+                  color={isFamilyLocked ? colors.textTertiary : color}
+                />
+              }
             />
           ),
         }}
@@ -119,5 +176,19 @@ const styles = StyleSheet.create({
   },
   homeIconFocused: {
     opacity: 0.8,
+  },
+  lockedIconContainer: {
+    position: "relative",
+  },
+  lockBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.textTertiary,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
