@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { spacing } from "@/constants/theme";
-import { getTaskByKey, getSectionByTaskKey } from "@/constants/vault";
+import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";

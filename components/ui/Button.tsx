@@ -1,16 +1,20 @@
-import React from 'react';
-import { Text, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import {
+  colors,
+  componentStyles,
+  spacing,
+  typography,
+} from "@/constants/theme";
+import React from "react";
+import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { Pressable } from 'react-native';
-import { colors, typography, spacing, componentStyles } from '@/constants/theme';
+} from "react-native-reanimated";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-type ButtonVariant = 'primary' | 'secondary' | 'subtle' | 'destructive';
+type ButtonVariant = "primary" | "secondary" | "subtle" | "destructive";
 
 interface ButtonProps {
   title: string;
@@ -23,7 +27,7 @@ interface ButtonProps {
 export function Button({
   title,
   onPress,
-  variant = 'primary',
+  variant = "primary",
   disabled = false,
   style,
 }: ButtonProps) {
@@ -44,13 +48,13 @@ export function Button({
   const getButtonStyle = () => {
     if (disabled) return styles.disabled;
     switch (variant) {
-      case 'primary':
+      case "primary":
         return styles.primary;
-      case 'secondary':
+      case "secondary":
         return styles.secondary;
-      case 'subtle':
+      case "subtle":
         return styles.subtle;
-      case 'destructive':
+      case "destructive":
         return styles.destructive;
       default:
         return styles.primary;
@@ -60,13 +64,13 @@ export function Button({
   const getTextStyle = () => {
     if (disabled) return styles.disabledText;
     switch (variant) {
-      case 'primary':
+      case "primary":
         return styles.primaryText;
-      case 'secondary':
+      case "secondary":
         return styles.secondaryText;
-      case 'subtle':
+      case "subtle":
         return styles.subtleText;
-      case 'destructive':
+      case "destructive":
         return styles.destructiveText;
       default:
         return styles.primaryText;
@@ -90,8 +94,8 @@ const styles = StyleSheet.create({
   button: {
     height: componentStyles.button.height,
     borderRadius: componentStyles.button.borderRadius,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
   },
   primary: {
@@ -103,10 +107,10 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   subtle: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   destructive: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   disabled: {
     backgroundColor: colors.border,

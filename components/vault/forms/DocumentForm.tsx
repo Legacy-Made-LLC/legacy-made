@@ -2,38 +2,38 @@
  * DocumentForm - Form for creating/editing legal document entries
  */
 
-import React, { useEffect, useMemo } from 'react';
+import { FormInput, FormTextArea, documentSchema } from "@/components/forms";
+import { Button } from "@/components/ui/Button";
+import { spacing } from "@/constants/theme";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useNavigation } from "expo-router";
+import React, { useEffect, useMemo } from "react";
 import {
-  ScrollView,
-  View,
-  Text,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Pressable,
-} from 'react-native';
-import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { FormInput, FormTextArea, documentSchema } from '@/components/forms';
-import { Button } from '@/components/ui/Button';
-import { spacing } from '@/constants/theme';
-import { formStyles } from './formStyles';
-import type { EntryFormProps } from '../registry';
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { EntryFormProps } from "../registry";
+import { formStyles } from "./formStyles";
 
 const legalDocumentTypes = [
-  'Will',
-  'Trust',
-  'Power of Attorney',
-  'Healthcare Directive',
-  'Other',
+  "Will",
+  "Trust",
+  "Power of Attorney",
+  "Healthcare Directive",
+  "Other",
 ] as const;
 
 const otherDocumentTypes = [
-  'Birth Certificate',
-  'Passport',
-  'Social Security Card',
-  'Other',
+  "Birth Certificate",
+  "Passport",
+  "Social Security Card",
+  "Other",
 ] as const;
 
 type LegalDocumentType = (typeof legalDocumentTypes)[number];
@@ -62,22 +62,22 @@ export function DocumentForm({
   const isNew = !entryId;
 
   // Determine which document types to show based on taskKey
-  const isLegalDocs = taskKey === 'documents.legal';
+  const isLegalDocs = taskKey === "documents.legal";
   const documentTypes = isLegalDocs ? legalDocumentTypes : otherDocumentTypes;
-  const defaultDocType = isLegalDocs ? 'Will' : 'Birth Certificate';
+  const defaultDocType = isLegalDocs ? "Will" : "Birth Certificate";
 
   const initialMetadata = initialData?.metadata as DocumentMetadata | undefined;
 
   const defaultValues = useMemo(
     () => ({
       documentType: (initialMetadata?.documentType ?? defaultDocType) as string,
-      location: initialMetadata?.location ?? '',
-      holder: initialMetadata?.holder ?? '',
-      preparer: initialMetadata?.preparer ?? '',
-      preparerPhone: initialMetadata?.preparerPhone ?? '',
-      notes: initialMetadata?.notes ?? initialData?.notes ?? '',
+      location: initialMetadata?.location ?? "",
+      holder: initialMetadata?.holder ?? "",
+      preparer: initialMetadata?.preparer ?? "",
+      preparerPhone: initialMetadata?.preparerPhone ?? "",
+      notes: initialMetadata?.notes ?? initialData?.notes ?? "",
     }),
-    [initialData, initialMetadata, defaultDocType]
+    [initialData, initialMetadata, defaultDocType],
   );
 
   const form = useForm({
@@ -106,14 +106,15 @@ export function DocumentForm({
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save document';
-        Alert.alert('Error', message);
+        const message =
+          err instanceof Error ? err.message : "Failed to save document";
+        Alert.alert("Error", message);
       }
     },
   });
 
   useEffect(() => {
-    const docLabel = isLegalDocs ? 'Legal Document' : 'Document';
+    const docLabel = isLegalDocs ? "Legal Document" : "Document";
     navigation.setOptions({
       title: isNew ? `Add ${docLabel}` : `Edit ${docLabel}`,
     });
@@ -122,37 +123,43 @@ export function DocumentForm({
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const documentType = form.getFieldValue('documentType');
+    const documentType = form.getFieldValue("documentType");
     Alert.alert(
-      'Delete Document',
-      `Are you sure you want to delete ${documentType || 'this document'}?`,
+      "Delete Document",
+      `Are you sure you want to delete ${documentType || "this document"}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             try {
               await onDelete();
             } catch (err) {
-              const message = err instanceof Error ? err.message : 'Failed to delete document';
-              Alert.alert('Error', message);
+              const message =
+                err instanceof Error
+                  ? err.message
+                  : "Failed to delete document";
+              Alert.alert("Error", message);
             }
           },
         },
-      ]
+      ],
     );
   };
 
   return (
     <KeyboardAvoidingView
       style={formStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={100}
     >
       <ScrollView
         style={formStyles.scrollView}
-        contentContainerStyle={[formStyles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+        contentContainerStyle={[
+          formStyles.content,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -166,14 +173,16 @@ export function DocumentForm({
                     key={type}
                     style={[
                       formStyles.typeButton,
-                      field.state.value === type && formStyles.typeButtonSelected,
+                      field.state.value === type &&
+                        formStyles.typeButtonSelected,
                     ]}
                     onPress={() => field.handleChange(type)}
                   >
                     <Text
                       style={[
                         formStyles.typeButtonText,
-                        field.state.value === type && formStyles.typeButtonTextSelected,
+                        field.state.value === type &&
+                          formStyles.typeButtonTextSelected,
                       ]}
                     >
                       {type}
@@ -246,10 +255,12 @@ export function DocumentForm({
         </form.Field>
 
         <View style={formStyles.buttonContainer}>
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
             {([canSubmit, isSubmitting]) => (
               <Button
-                title={isSaving || isSubmitting ? 'Saving...' : 'Save'}
+                title={isSaving || isSubmitting ? "Saving..." : "Save"}
                 onPress={() => form.handleSubmit()}
                 disabled={isSaving || isSubmitting || !canSubmit}
               />
@@ -259,7 +270,11 @@ export function DocumentForm({
 
         {!isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
-            <Button title="Delete Document" variant="destructive" onPress={handleDelete} />
+            <Button
+              title="Delete Document"
+              variant="destructive"
+              onPress={handleDelete}
+            />
           </View>
         )}
       </ScrollView>

@@ -5,13 +5,13 @@
  * Handles navigation based on whether the section has one or multiple tasks.
  */
 
-import { PressableCard } from '@/components/ui/Card';
-import { colors, spacing, typography } from '@/constants/theme';
-import type { VaultSection } from '@/constants/vault';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { PressableCard } from "@/components/ui/Card";
+import { colors, spacing, typography } from "@/constants/theme";
+import type { VaultSection } from "@/constants/vault";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
 
 interface SectionCardProps {
   section: VaultSection;
@@ -34,7 +34,7 @@ export function SectionCard({ section, counts }: SectionCardProps) {
   // Calculate completion for this section
   // Goal: at least 1 entry per task
   const completedTasks = section.tasks.filter(
-    (task) => (counts[task.taskKey] || 0) > 0
+    (task) => (counts[task.taskKey] || 0) > 0,
   ).length;
   const goalCount = section.tasks.length;
   const progress = goalCount > 0 ? completedTasks / goalCount : 0;
@@ -62,7 +62,11 @@ export function SectionCard({ section, counts }: SectionCardProps) {
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{section.title}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.textTertiary}
+              />
             </View>
             <Text style={styles.description}>{section.description}</Text>
           </View>
@@ -74,7 +78,7 @@ export function SectionCard({ section, counts }: SectionCardProps) {
                   {
                     width: progressAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
+                      outputRange: ["0%", "100%"],
                     }),
                   },
                 ]}
@@ -95,16 +99,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   iconContainer: {
     width: 44,
     height: 44,
     borderRadius: 12,
     backgroundColor: colors.surfaceSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: spacing.md,
   },
   textContent: {
@@ -114,9 +118,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   title: {
     fontFamily: typography.fontFamily.semibold,
@@ -131,8 +135,8 @@ const styles = StyleSheet.create({
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
   progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   progressBar: {
@@ -140,10 +144,10 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: colors.surfaceSecondary,
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: colors.primary,
     borderRadius: 2,
   },
@@ -152,6 +156,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
     minWidth: 28,
-    textAlign: 'right',
+    textAlign: "right",
   },
 });

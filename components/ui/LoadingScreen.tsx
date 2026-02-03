@@ -1,13 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors, spacing, typography } from '@/constants/theme';
-import { Button } from './Button';
+import { colors, spacing, typography } from "@/constants/theme";
+import React from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { Button } from "./Button";
 
 interface LoadingScreenProps {
   message?: string;
 }
 
-export function LoadingScreen({ message = 'Loading...' }: LoadingScreenProps) {
+export function LoadingScreen({ message = "Loading..." }: LoadingScreenProps) {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color={colors.primary} />
@@ -22,8 +22,8 @@ interface ErrorScreenProps {
 }
 
 export function ErrorScreen({
-  message = 'Something went wrong',
-  onRetry
+  message = "Something went wrong",
+  onRetry,
 }: ErrorScreenProps) {
   return (
     <View style={styles.container}>
@@ -44,8 +44,8 @@ export function ErrorScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.background,
     padding: spacing.xl,
   },
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorIcon: {
     fontSize: 48,
@@ -64,12 +64,12 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorMessage: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
   },

@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/constants/theme';
+import { colors, spacing, typography } from "@/constants/theme";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 interface SectionHeaderProps {
   title: string;

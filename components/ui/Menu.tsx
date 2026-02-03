@@ -53,9 +53,7 @@ interface ProfileHeaderProps {
 function ProfileHeader({ onPress }: ProfileHeaderProps) {
   const { user } = useUser();
   const initial =
-    user?.firstName?.[0] ||
-    user?.primaryEmailAddress?.emailAddress?.[0] ||
-    "?";
+    user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "?";
   const displayName = user?.firstName
     ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ""}`
     : user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "User";
@@ -71,10 +69,7 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
       ]}
     >
       {profileImageUrl ? (
-        <Image
-          source={{ uri: profileImageUrl }}
-          style={styles.avatarImage}
-        />
+        <Image source={{ uri: profileImageUrl }} style={styles.avatarImage} />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initial.toUpperCase()}</Text>
@@ -88,11 +83,7 @@ function ProfileHeader({ onPress }: ProfileHeaderProps) {
           {email}
         </Text>
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={colors.textTertiary}
-      />
+      <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
     </Pressable>
   );
 }
@@ -165,9 +156,7 @@ function AccountView({
   }, [user]);
 
   const initial =
-    firstName?.[0] ||
-    user?.primaryEmailAddress?.emailAddress?.[0] ||
-    "?";
+    firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || "?";
   const email = user?.primaryEmailAddress?.emailAddress || "";
   const profileImageUrl = user?.imageUrl;
 
@@ -180,9 +169,12 @@ function AccountView({
 
     try {
       // Request permission
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        setError("Permission to access photos is required to change your profile picture.");
+        setError(
+          "Permission to access photos is required to change your profile picture.",
+        );
         return;
       }
 
@@ -318,7 +310,9 @@ function AccountView({
               />
             ) : (
               <View style={styles.accountAvatar}>
-                <Text style={styles.accountAvatarText}>{initial.toUpperCase()}</Text>
+                <Text style={styles.accountAvatarText}>
+                  {initial.toUpperCase()}
+                </Text>
               </View>
             )}
             {isEditing && (
@@ -339,7 +333,11 @@ function AccountView({
                 pressed && styles.editProfileButtonPressed,
               ]}
             >
-              <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+              <Ionicons
+                name="pencil-outline"
+                size={16}
+                color={colors.primary}
+              />
               <Text style={styles.editProfileText}>Edit Profile</Text>
             </Pressable>
           )}
@@ -385,7 +383,11 @@ function AccountView({
               <Text style={styles.inputLabel}>EMAIL</Text>
               <View style={styles.readOnlyField}>
                 <Text style={styles.readOnlyValue}>{email}</Text>
-                <Ionicons name="lock-closed-outline" size={16} color={colors.textTertiary} />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={16}
+                  color={colors.textTertiary}
+                />
               </View>
               <Text style={styles.fieldHint}>Email cannot be changed here</Text>
             </View>
@@ -441,7 +443,12 @@ function AccountView({
       </ScrollView>
 
       {/* Footer with Sign Out */}
-      <View style={[styles.accountFooter, { paddingBottom: bottomInset + spacing.lg }]}>
+      <View
+        style={[
+          styles.accountFooter,
+          { paddingBottom: bottomInset + spacing.lg },
+        ]}
+      >
         <Pressable
           onPress={onSignOut}
           style={({ pressed }) => [
@@ -680,7 +687,11 @@ export function Menu({ visible, onClose }: MenuProps) {
                     pressed && styles.mainSignOutButtonPressed,
                   ]}
                 >
-                  <Ionicons name="log-out-outline" size={20} color={colors.error} />
+                  <Ionicons
+                    name="log-out-outline"
+                    size={20}
+                    color={colors.error}
+                  />
                   <Text style={styles.mainSignOutText}>Log Out</Text>
                 </Pressable>
                 <Text style={styles.footerText}>Version 1.0.0</Text>

@@ -5,16 +5,16 @@
  * Uses a subtle pulse animation to indicate loading state.
  */
 
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { colors, componentStyles, shadows, spacing } from "@/constants/theme";
+import React, { useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withRepeat,
-  withTiming,
   withSequence,
-} from 'react-native-reanimated';
-import { colors, shadows, componentStyles, spacing } from '@/constants/theme';
+  withTiming,
+} from "react-native-reanimated";
 
 // Animation configuration
 const PULSE_DURATION = 1000;
@@ -33,10 +33,10 @@ export function SkeletonCard({ showSubtitle = true }: SkeletonCardProps) {
     opacity.value = withRepeat(
       withSequence(
         withTiming(PULSE_MAX_OPACITY, { duration: PULSE_DURATION }),
-        withTiming(PULSE_MIN_OPACITY, { duration: PULSE_DURATION })
+        withTiming(PULSE_MIN_OPACITY, { duration: PULSE_DURATION }),
       ),
       -1, // Infinite repeat
-      false // Don't reverse
+      false, // Don't reverse
     );
   }, [opacity]);
 
@@ -66,7 +66,10 @@ interface SkeletonListProps {
   showSubtitle?: boolean;
 }
 
-export function SkeletonList({ count = 3, showSubtitle = true }: SkeletonListProps) {
+export function SkeletonList({
+  count = 3,
+  showSubtitle = true,
+}: SkeletonListProps) {
   return (
     <>
       {Array.from({ length: count }).map((_, index) => (
@@ -85,23 +88,23 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   textContent: {
     flex: 1,
   },
   titleBar: {
     height: 18,
-    width: '70%',
+    width: "70%",
     backgroundColor: colors.surfaceSecondary,
     borderRadius: 4,
     marginBottom: spacing.sm,
   },
   subtitleBar: {
     height: 14,
-    width: '45%',
+    width: "45%",
     backgroundColor: colors.surfaceSecondary,
     borderRadius: 4,
   },

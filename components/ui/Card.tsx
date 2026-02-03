@@ -1,17 +1,17 @@
-import React from 'react';
+import { colors, componentStyles, shadows } from "@/constants/theme";
+import React from "react";
 import {
-  View,
   Pressable,
   StyleSheet,
-  type ViewStyle,
+  View,
   type StyleProp,
-} from 'react-native';
+  type ViewStyle,
+} from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { colors, shadows, componentStyles } from '@/constants/theme';
+} from "react-native-reanimated";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
