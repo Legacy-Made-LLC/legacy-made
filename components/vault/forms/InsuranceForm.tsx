@@ -52,6 +52,7 @@ export function InsuranceForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -279,6 +280,8 @@ export function InsuranceForm({
             maxFiles={5}
             placeholder="Add policy documents or ID cards"
             helpText="Attach scans of insurance cards, policy documents, or related files"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

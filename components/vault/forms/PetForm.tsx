@@ -49,6 +49,7 @@ export function PetForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -259,6 +260,8 @@ export function PetForm({
             maxFiles={10}
             placeholder="Add photos or vet records"
             helpText="Attach photos of your pet, vaccination records, or other documents"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

@@ -11,8 +11,8 @@ export default function WishesScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
 
-  const isLocked = isLockedPillar('wishes');
-  const isViewOnly = isViewOnlyPillar('wishes');
+  const isLocked = isLockedPillar("wishes");
+  const isViewOnly = isViewOnlyPillar("wishes");
 
   // Show locked overlay if pillar is locked
   if (isLocked) {
@@ -25,7 +25,9 @@ export default function WishesScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+    <View
+      style={[styles.container, { paddingBottom: insets.bottom + spacing.lg }]}
+    >
       {isViewOnly && (
         <View style={styles.viewOnlyHeader}>
           <ViewOnlyBadge />
@@ -33,7 +35,11 @@ export default function WishesScreen() {
       )}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="heart-outline" size={40} color={colors.textTertiary} />
+          <Ionicons
+            name="heart-outline"
+            size={40}
+            color={colors.textTertiary}
+          />
         </View>
         <Text style={styles.title}>Wishes & Guidance</Text>
         <Text style={styles.subtitle}>
@@ -49,11 +55,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingTop: spacing.lg,
   },
   viewOnlyHeader: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-    alignItems: "flex-start",
+    alignItems: "center",
   },
   content: {
     flex: 1,

@@ -10,6 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '@/constants/theme';
 import { FileAttachment } from '@/api/types';
+import { StorageIndicator } from '@/components/entitlements/StorageIndicator';
+import { useEntitlements } from '@/data/EntitlementsProvider';
 import { useFilePicker, PickerMode } from '@/hooks/useFilePicker';
 import { FilePreviewList } from './FilePreview';
 import { FilePreviewModal } from './FilePreviewModal';
@@ -33,6 +35,10 @@ interface FilePickerProps {
   placeholder?: string;
   /** Help text displayed below the picker */
   helpText?: string;
+  /** Whether to show storage indicator */
+  showStorageIndicator?: boolean;
+  /** Callback when user tries to add files but is blocked due to quota */
+  onUpgradeRequired?: () => void;
 }
 
 interface PickerOption {
@@ -56,13 +62,18 @@ export function FilePicker({
   disabled = false,
   placeholder = 'Tap to add files',
   helpText,
+  showStorageIndicator = false,
+  onUpgradeRequired,
 }: FilePickerProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const { isLoading, pickFromLibrary, pickFromCamera, pickDocument } =
     useFilePicker({ mode });
 
-  const canAddMore = value.length < maxFiles;
+  // Check entitlements for upload permissions
+  const { canUpload, isStorageFull } = useEntitlements();
+  const canUploadFiles = canUpload();
+  const storageFull = isStorageFull();
 
   /**
    * Handle file selection from any source
@@ -134,7 +145,15 @@ export function FilePicker({
    * Handle add button press - show options if multiple, otherwise pick directly
    */
   const handleAddPress = useCallback(() => {
-    if (disabled || !canAddMore) return;
+    if (disabled) return;
+
+    // Check if user is blocked from uploading due to quota
+    if (!canUploadFiles || storageFull) {
+      onUpgradeRequired?.();
+      return;
+    }
+
+    if (value.length >= maxFiles) return;
 
     if (pickerOptions.length === 1) {
       // Single option - pick directly
@@ -143,7 +162,7 @@ export function FilePicker({
       // Multiple options - show menu
       setShowOptions(true);
     }
-  }, [disabled, canAddMore, pickerOptions, handleFilePicked]);
+  }, [disabled, canUploadFiles, storageFull, value.length, maxFiles, pickerOptions, handleFilePicked, onUpgradeRequired]);
 
   return (
     <View style={styles.container}>
@@ -161,15 +180,15 @@ export function FilePicker({
         </View>
       )}
 
-      {/* Add button */}
-      {canAddMore && (
+      {/* Add button - show if under max files, even if blocked (to allow upgrade prompt) */}
+      {value.length < maxFiles && (
         <Pressable
           onPress={handleAddPress}
           disabled={disabled || isLoading}
           style={({ pressed }) => [
             styles.addButton,
             pressed && styles.addButtonPressed,
-            disabled && styles.addButtonDisabled,
+            (disabled || !canUploadFiles) && styles.addButtonDisabled,
           ]}
         >
           {isLoading ? (
@@ -177,17 +196,23 @@ export function FilePicker({
           ) : (
             <>
               <Ionicons
-                name="add-circle-outline"
+                name={!canUploadFiles ? "lock-closed-outline" : "add-circle-outline"}
                 size={24}
-                color={disabled ? colors.textTertiary : colors.primary}
+                color={disabled || !canUploadFiles ? colors.textTertiary : colors.primary}
               />
               <Text
                 style={[
                   styles.addButtonText,
-                  disabled && styles.addButtonTextDisabled,
+                  (disabled || !canUploadFiles) && styles.addButtonTextDisabled,
                 ]}
               >
-                {value.length === 0 ? placeholder : 'Add Another'}
+                {!canUploadFiles
+                  ? 'Upgrade to Add Files'
+                  : storageFull
+                    ? 'Storage Full'
+                    : value.length === 0
+                      ? placeholder
+                      : 'Add Another'}
               </Text>
             </>
           )}
@@ -203,6 +228,13 @@ export function FilePicker({
 
       {/* Help text */}
       {helpText && <Text style={styles.helpText}>{helpText}</Text>}
+
+      {/* Storage indicator */}
+      {showStorageIndicator && (
+        <View style={styles.storageContainer}>
+          <StorageIndicator compact />
+        </View>
+      )}
 
       {/* Options modal */}
       <Modal
@@ -304,6 +336,9 @@ const styles = StyleSheet.create({
   helpText: {
     fontSize: typography.sizes.caption,
     color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  storageContainer: {
     marginTop: spacing.sm,
   },
 

@@ -1,12 +1,13 @@
-import { FormInput, signUpSchema } from '@/components/forms';
-import { OnboardingHeader } from '@/components/onboarding/OnboardingHeader';
-import { onboardingStyles as styles } from '@/components/onboarding/onboardingStyles';
-import { colors } from '@/constants/theme';
-import { useOnboardingContext } from '@/data/OnboardingContext';
-import { useSignUp } from '@clerk/clerk-expo';
-import { revalidateLogic, useForm } from '@tanstack/react-form';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { FormInput, signUpSchema } from "@/components/forms";
+import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
+import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
+import { EXTERNAL_LINKS } from "@/constants/links";
+import { colors } from "@/constants/theme";
+import { useOnboardingContext } from "@/data/OnboardingContext";
+import { useSignUp } from "@clerk/clerk-expo";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,8 +17,8 @@ import {
   ScrollView,
   Text,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AccountCreationScreen() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function AccountCreationScreen() {
   } = useOnboardingContext();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const form = useForm({
     defaultValues: {
@@ -50,7 +51,7 @@ export default function AccountCreationScreen() {
       if (!isLoaded) return;
 
       setIsLoading(true);
-      setError('');
+      setError("");
 
       try {
         // Update context with form values
@@ -64,14 +65,16 @@ export default function AccountCreationScreen() {
           emailAddress: value.email.trim(),
         });
 
-        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-        router.push('/(onboarding)/verify-otp');
+        await signUp.prepareEmailAddressVerification({
+          strategy: "email_code",
+        });
+        router.push("/(onboarding)/verify-otp");
       } catch (err: unknown) {
         const clerkError = err as { errors?: { message: string }[] };
         if (clerkError.errors && clerkError.errors.length > 0) {
           setError(clerkError.errors[0].message);
         } else {
-          setError('An error occurred. Please try again.');
+          setError("An error occurred. Please try again.");
         }
       } finally {
         setIsLoading(false);
@@ -81,7 +84,7 @@ export default function AccountCreationScreen() {
 
   const handleSignIn = () => {
     setHasCompletedInitialOnboarding(true);
-    router.replace('/(auth)/sign-in');
+    router.replace("/(auth)/sign-in");
   };
 
   return (
@@ -89,7 +92,7 @@ export default function AccountCreationScreen() {
       <OnboardingHeader showBackButton />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoid}
       >
         <ScrollView
@@ -100,7 +103,8 @@ export default function AccountCreationScreen() {
         >
           <Text style={styles.formTitle}>Tell us about you</Text>
           <Text style={styles.formSubtitle}>
-            This helps us personalize your experience and keep your information secure.
+            This helps us personalize your experience and keep your information
+            secure.
           </Text>
 
           {error ? (
@@ -173,13 +177,16 @@ export default function AccountCreationScreen() {
             <Text style={styles.verificationExplanation}>
               We&apos;ll send a code to your email to verify it&apos;s you.
             </Text>
-            <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
               {([canSubmit, isSubmitting]) => (
                 <Pressable
                   style={({ pressed }) => [
                     styles.primaryButton,
                     pressed && styles.primaryButtonPressed,
-                    (!canSubmit || isLoading || isSubmitting) && styles.primaryButtonDisabled,
+                    (!canSubmit || isLoading || isSubmitting) &&
+                      styles.primaryButtonDisabled,
                   ]}
                   onPress={() => form.handleSubmit()}
                   disabled={!canSubmit || isLoading || isSubmitting}
@@ -200,17 +207,17 @@ export default function AccountCreationScreen() {
               )}
             </form.Subscribe>
             <Text style={styles.termsText}>
-              By continuing, you agree to our{' '}
+              By continuing, you agree to our{" "}
               <Text
                 style={styles.termsLink}
-                onPress={() => Linking.openURL('https://legacymade.com/terms-of-service')}
+                onPress={() => Linking.openURL(EXTERNAL_LINKS.termsOfService)}
               >
                 Terms of Service
-              </Text>{' '}
-              and{' '}
+              </Text>{" "}
+              and{" "}
               <Text
                 style={styles.termsLink}
-                onPress={() => Linking.openURL('https://legacymade.com/privacy-policy')}
+                onPress={() => Linking.openURL(EXTERNAL_LINKS.privacyPolicy)}
               >
                 Privacy Policy
               </Text>
@@ -220,7 +227,7 @@ export default function AccountCreationScreen() {
 
           <View style={styles.signInContainer}>
             <Text style={styles.signInText}>
-              Already have an account?{' '}
+              Already have an account?{" "}
               <Text style={styles.signInLink} onPress={handleSignIn}>
                 Sign In
               </Text>

@@ -6,6 +6,7 @@
 
 export { TierBadge } from './TierBadge';
 export { QuotaIndicator } from './QuotaIndicator';
+export { StorageIndicator } from './StorageIndicator';
 export { UpgradePrompt } from './UpgradePrompt';
 export { GlobalUpgradePrompt } from './GlobalUpgradePrompt';
 export { LockedFeatureOverlay } from './LockedFeatureOverlay';

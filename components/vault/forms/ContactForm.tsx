@@ -52,6 +52,7 @@ export function ContactForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -166,6 +167,8 @@ export function ContactForm({
             maxFiles={1}
             placeholder="Add a photo of this person"
             helpText="Adding a photo helps your family identify who to contact"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

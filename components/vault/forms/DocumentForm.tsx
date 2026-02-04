@@ -64,6 +64,7 @@ export function DocumentForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -272,6 +273,8 @@ export function DocumentForm({
             maxFiles={5}
             placeholder="Add document scan or photo"
             helpText="Attach scanned copies, photos, or PDF files of this document"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

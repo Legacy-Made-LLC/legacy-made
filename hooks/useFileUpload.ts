@@ -7,6 +7,11 @@
 
 import { useApi } from "@/api";
 import type { FileAttachment, FileUploadStatus } from "@/api/types";
+import {
+  formatStorageMB,
+  isStorageQuotaError,
+  parseStorageQuotaError,
+} from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useUser } from "@clerk/clerk-expo";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,6 +26,8 @@ interface UploadResult {
   fileId?: string;
   /** Error message on failure */
   error?: string;
+  /** Whether the error was a storage quota exceeded error */
+  isStorageQuotaError?: boolean;
 }
 
 interface FileUploadState {
@@ -50,6 +57,10 @@ interface UseFileUploadReturn {
   isUploading: boolean;
   /** Cancel all ongoing uploads */
   cancelUploads: () => void;
+  /** Whether a storage quota error was encountered */
+  hasStorageQuotaError: boolean;
+  /** Clear the storage quota error state */
+  clearStorageQuotaError: () => void;
 }
 
 /**
@@ -118,9 +129,17 @@ export function useFileUpload(
     Record<string, FileUploadState>
   >({});
   const [isUploading, setIsUploading] = useState(false);
+  const [hasStorageQuotaError, setHasStorageQuotaError] = useState(false);
 
   // Abort controller for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  /**
+   * Clear the storage quota error state
+   */
+  const clearStorageQuotaError = useCallback(() => {
+    setHasStorageQuotaError(false);
+  }, []);
 
   /**
    * Update state for a single file
@@ -189,6 +208,19 @@ export function useFileUpload(
 
         return { uri, success: true, fileId: initResponse.fileId };
       } catch (error) {
+        // Check if this is a storage quota error
+        if (isStorageQuotaError(error)) {
+          const quotaDetails = parseStorageQuotaError(error);
+          const message =
+            quotaDetails
+              ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
+              : "Storage quota exceeded";
+          updateFileState(uri, { status: "error", error: message });
+          onFileError?.(file, message);
+          setHasStorageQuotaError(true);
+          return { uri, success: false, error: message, isStorageQuotaError: true };
+        }
+
         const message =
           error instanceof Error ? error.message : "Upload failed";
         updateFileState(uri, { status: "error", error: message });
@@ -252,6 +284,19 @@ export function useFileUpload(
 
         return { uri, success: true, fileId: initResponse.fileId };
       } catch (error) {
+        // Check if this is a storage quota error
+        if (isStorageQuotaError(error)) {
+          const quotaDetails = parseStorageQuotaError(error);
+          const message =
+            quotaDetails
+              ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
+              : "Storage quota exceeded";
+          updateFileState(uri, { status: "error", error: message });
+          onFileError?.(file, message);
+          setHasStorageQuotaError(true);
+          return { uri, success: false, error: message, isStorageQuotaError: true };
+        }
+
         const message =
           error instanceof Error ? error.message : "Upload failed";
         updateFileState(uri, { status: "error", error: message });
@@ -270,6 +315,9 @@ export function useFileUpload(
       entryId: string,
       files: FileAttachment[]
     ): Promise<UploadResult[]> => {
+      // Clear any previous storage quota error
+      setHasStorageQuotaError(false);
+
       // Filter to only pending files (not already remote)
       const pendingFiles = files.filter(
         (f) => !f.isRemote && f.uploadStatus !== "complete"
@@ -325,6 +373,11 @@ export function useFileUpload(
         },
       });
 
+      // Invalidate entitlements to refresh storage quota after uploads
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entitlements.current(),
+      });
+
       onAllComplete?.(results);
 
       return results;
@@ -351,5 +404,7 @@ export function useFileUpload(
     uploadStates,
     isUploading,
     cancelUploads,
+    hasStorageQuotaError,
+    clearStorageQuotaError,
   };
 }

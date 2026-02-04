@@ -7,24 +7,20 @@
  * Easy to dismiss with "Maybe later" option.
  */
 
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useRef } from 'react';
+import { Ionicons } from "@expo/vector-icons";
 import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { FullWindowOverlay } from 'react-native-screens';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
+import * as WebBrowser from "expo-web-browser";
+import React, { useCallback, useEffect, useRef } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FullWindowOverlay } from "react-native-screens";
 
-import { colors, spacing, typography, borderRadius } from '@/constants/theme';
-
-// Configurable upgrade URL
-const UPGRADE_URL = process.env.EXPO_PUBLIC_UPGRADE_URL ?? 'https://legacymade.com/upgrade';
+import { EXTERNAL_LINKS } from "@/constants/links";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 
 interface UpgradePromptProps {
   visible: boolean;
@@ -38,7 +34,7 @@ interface UpgradePromptProps {
 export function UpgradePrompt({
   visible,
   onClose,
-  title = 'Unlock More Features',
+  title = "Unlock More Features",
   message = "You've made great progress organizing your legacy. Upgrade to continue adding more and unlock additional features.",
   onUpgrade,
 }: UpgradePromptProps) {
@@ -53,11 +49,14 @@ export function UpgradePrompt({
     }
   }, [visible]);
 
-  const handleSheetChanges = useCallback((index: number) => {
-    if (index === -1) {
-      onClose();
-    }
-  }, [onClose]);
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   const renderBackdrop = useCallback(
     (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
@@ -68,13 +67,13 @@ export function UpgradePrompt({
         opacity={0.4}
       />
     ),
-    []
+    [],
   );
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     onUpgrade?.();
-    await WebBrowser.openBrowserAsync(UPGRADE_URL);
     bottomSheetModalRef.current?.dismiss();
+    WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
   };
 
   const handleDismiss = () => {
@@ -84,12 +83,12 @@ export function UpgradePrompt({
   // Use FullWindowOverlay on iOS to render above other modals
   const containerComponent = useCallback(
     ({ children }: { children?: React.ReactNode }) =>
-      Platform.OS === 'ios' ? (
+      Platform.OS === "ios" ? (
         <FullWindowOverlay>{children}</FullWindowOverlay>
       ) : (
         <>{children}</>
       ),
-    []
+    [],
   );
 
   return (
@@ -103,7 +102,9 @@ export function UpgradePrompt({
       handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
     >
-      <BottomSheetView style={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <BottomSheetView
+        style={[styles.content, { paddingBottom: insets.bottom + spacing.lg }]}
+      >
         {/* Sparkles icon - positive framing */}
         <View style={styles.iconContainer}>
           <Ionicons name="sparkles" size={32} color={colors.primary} />
@@ -159,24 +160,24 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E8F0E6', // Soft sage
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
+    backgroundColor: "#E8F0E6", // Soft sage
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
     marginBottom: spacing.lg,
   },
   title: {
     fontFamily: typography.fontFamily.serif,
     fontSize: typography.sizes.displayMedium,
     color: colors.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.sm,
   },
   message: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
   },
@@ -184,8 +185,8 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   upgradeButtonPressed: {
@@ -198,8 +199,8 @@ const styles = StyleSheet.create({
   },
   dismissButton: {
     paddingVertical: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   dismissButtonPressed: {
     opacity: 0.7,

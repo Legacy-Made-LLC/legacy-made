@@ -94,6 +94,7 @@ export function DigitalForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -270,6 +271,8 @@ export function DigitalForm({
             maxFiles={5}
             placeholder="Add screenshots or documents"
             helpText="Attach screenshots of recovery codes, QR codes, or other helpful documents"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

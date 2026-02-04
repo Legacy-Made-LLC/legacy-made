@@ -8,6 +8,7 @@ import { ApiClientError } from '@/api/client';
 import type {
   EntitlementError,
   EntitlementErrorCode,
+  StorageQuotaError,
 } from '@/api/types';
 
 /**
@@ -38,8 +39,12 @@ interface ExtendedApiError {
   details?: {
     pillar?: string;
     feature?: string;
+    tier?: string;
     limit?: number;
     current?: number;
+    requested?: number;
+    upgradeRequired?: boolean;
+    suggestedTier?: string;
   };
 }
 
@@ -58,7 +63,7 @@ export function parseEntitlementError(error: unknown): EntitlementError | null {
     return null;
   }
 
-  // Check for entitlement error codes
+  // Check for entitlement error codes (traditional format)
   const code = originalError.code;
   const validCodes: EntitlementErrorCode[] = [
     'PILLAR_LOCKED',
@@ -66,15 +71,28 @@ export function parseEntitlementError(error: unknown): EntitlementError | null {
     'QUOTA_EXCEEDED',
   ];
 
-  if (!code || !validCodes.includes(code as EntitlementErrorCode)) {
-    return null;
+  if (code && validCodes.includes(code as EntitlementErrorCode)) {
+    return {
+      code: code as EntitlementErrorCode,
+      message: originalError.message ?? 'Access denied',
+      details: originalError.details as EntitlementError['details'],
+    };
   }
 
-  return {
-    code: code as EntitlementErrorCode,
-    message: originalError.message ?? 'Access denied',
-    details: originalError.details as EntitlementError['details'],
-  };
+  // Check for storage quota error format (error: "quota_exceeded")
+  if (originalError.error === 'quota_exceeded' && originalError.details?.feature === 'storage_mb') {
+    return {
+      code: 'QUOTA_EXCEEDED',
+      message: originalError.message ?? 'Storage quota exceeded',
+      details: {
+        feature: 'storage_mb',
+        limit: originalError.details.limit,
+        current: originalError.details.current,
+      },
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -95,6 +113,11 @@ export function getEntitlementErrorMessage(error: unknown): string {
       return 'You can view this content, but editing requires an upgraded plan.';
 
     case 'QUOTA_EXCEEDED': {
+      // Check if this is a storage quota error
+      if (parsed.details?.feature === 'storage_mb') {
+        return 'This file would exceed your storage limit. Upgrade your plan for more storage.';
+      }
+
       const limit = parsed.details?.limit;
       if (limit !== undefined) {
         return `You have reached your limit of ${limit} items. Upgrade your plan to add more.`;
@@ -113,4 +136,43 @@ export function getEntitlementErrorMessage(error: unknown): string {
 export function isQuotaExceededError(error: unknown): boolean {
   const parsed = parseEntitlementError(error);
   return parsed?.code === 'QUOTA_EXCEEDED';
+}
+
+/**
+ * Check if a storage quota error was thrown
+ */
+export function isStorageQuotaError(error: unknown): boolean {
+  const parsed = parseEntitlementError(error);
+  return parsed?.code === 'QUOTA_EXCEEDED' && parsed?.details?.feature === 'storage_mb';
+}
+
+/**
+ * Parse storage quota error details from an API error
+ * Returns null if not a storage quota error
+ */
+export function parseStorageQuotaError(error: unknown): StorageQuotaError['details'] | null {
+  if (!(error instanceof ApiClientError)) {
+    return null;
+  }
+
+  const originalError = error.originalError as ExtendedApiError | undefined;
+  if (!originalError || typeof originalError !== 'object') {
+    return null;
+  }
+
+  if (originalError.error !== 'quota_exceeded' || originalError.details?.feature !== 'storage_mb') {
+    return null;
+  }
+
+  return originalError.details as StorageQuotaError['details'];
+}
+
+/**
+ * Format bytes to human-readable MB string
+ */
+export function formatStorageMB(mb: number): string {
+  if (mb >= 1000) {
+    return `${(mb / 1000).toFixed(1)} GB`;
+  }
+  return `${Math.round(mb)} MB`;
 }

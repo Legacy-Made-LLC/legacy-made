@@ -51,6 +51,7 @@ export function FinancialForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -245,6 +246,8 @@ export function FinancialForm({
             maxFiles={5}
             placeholder="Add statements or documents"
             helpText="Attach account statements, debit cards, or other documents"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

@@ -436,3 +436,27 @@ export interface EntitlementError {
     current?: number;
   };
 }
+
+/**
+ * Storage quota exceeded error from file upload endpoints
+ * Returned with 403 status from /files/upload/init and /files/video/init
+ */
+export interface StorageQuotaError {
+  statusCode: 403;
+  error: "quota_exceeded";
+  message: string;
+  details: {
+    feature: "storage_mb";
+    tier: SubscriptionTier;
+    /** Storage limit in MB */
+    limit: number;
+    /** Current storage used in MB */
+    current: number;
+    /** Size of requested file in MB */
+    requested: number;
+    /** Whether upgrading would help */
+    upgradeRequired: boolean;
+    /** Suggested tier to upgrade to */
+    suggestedTier?: SubscriptionTier;
+  };
+}

@@ -54,6 +54,7 @@ export function PropertyForm({
   attachments,
   onAttachmentsChange,
   isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -279,6 +280,8 @@ export function PropertyForm({
             maxFiles={10}
             placeholder="Add photos or documents"
             helpText="Attach photos of the property, vehicle, or related documents"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
           />
         )}
 

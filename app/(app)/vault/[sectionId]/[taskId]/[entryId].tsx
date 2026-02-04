@@ -25,7 +25,7 @@ import {
   useUpdateEntry,
 } from "@/hooks/queries";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { isQuotaExceededError } from "@/lib/entitlementHelpers";
+import { isQuotaExceededError, isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -44,6 +44,7 @@ export default function EntryScreen() {
 
   const task = getTask(sectionId, taskId);
   const isNew = entryId === "new";
+  const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] = useState(false);
 
   // Get the form component for this task
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
@@ -147,8 +148,16 @@ export default function EntryScreen() {
     }
   }, [attachments]);
 
+  // Show storage upgrade prompt when storage quota error occurs
+  useEffect(() => {
+    if (hasStorageQuotaError) {
+      setShowStorageUpgradePrompt(true);
+      clearStorageQuotaError();
+    }
+  }, [hasStorageQuotaError, clearStorageQuotaError]);
+
   // File upload hook
-  const { uploadFiles, uploadStates, isUploading } = useFileUpload({
+  const { uploadFiles, uploadStates, isUploading, hasStorageQuotaError, clearStorageQuotaError } = useFileUpload({
     onFileUploaded: (file, fileId) => {
       // Update attachment with backend ID and mark as remote
       setAttachments((prev) =>
@@ -241,6 +250,10 @@ export default function EntryScreen() {
                 setAttachments((prev) =>
                   prev.filter((a) => getFileIdentifier(a) !== fileToDelete.id)
                 );
+                // Invalidate entitlements to refresh storage quota after deletion
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.entitlements.current(),
+                });
               } catch (error) {
                 const message =
                   error instanceof Error
@@ -255,7 +268,7 @@ export default function EntryScreen() {
         ]
       );
     },
-    [filesService]
+    [filesService, queryClient]
   );
 
   // Handle save
@@ -296,7 +309,12 @@ export default function EntryScreen() {
 
         router.back();
       } catch (error) {
-        // Check for quota exceeded error (client-side or from API)
+        // Check for storage quota exceeded error
+        if (isStorageQuotaError(error)) {
+          setShowStorageUpgradePrompt(true);
+          return;
+        }
+        // Check for general quota exceeded error (entries, etc.)
         if (
           error instanceof QuotaExceededError ||
           isQuotaExceededError(error)
@@ -306,6 +324,8 @@ export default function EntryScreen() {
         }
         // Re-throw other errors to be handled by error boundaries
         throw error;
+      } finally {
+        isSavingRef.current = false;
       }
     },
     [
@@ -377,12 +397,19 @@ export default function EntryScreen() {
         attachments={attachmentsWithUploadState}
         onAttachmentsChange={handleAttachmentsChange}
         isUploading={isUploading}
+        onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
       />
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
         title="You've Reached Your Limit"
         message="You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+      />
+      <UpgradePrompt
+        visible={showStorageUpgradePrompt}
+        onClose={() => setShowStorageUpgradePrompt(false)}
+        title="Storage Limit Reached"
+        message="This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important files safe."
       />
     </>
   );
