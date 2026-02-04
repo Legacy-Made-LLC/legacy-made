@@ -4,7 +4,7 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
-import { contactSchemaWithRequiredPhone } from "@/components/forms";
+import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
 import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
 import { colors, spacing, typography } from "@/constants/theme";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
@@ -49,6 +49,10 @@ export function ContactForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -154,32 +158,52 @@ export function ContactForm({
           phoneRequired={true}
         />
 
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Photo"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="image"
+            maxFiles={1}
+            placeholder="Add a photo of this person"
+            helpText="Adding a photo helps your family identify who to contact"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
+          />
+        )}
+
         <View style={styles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {([canSubmit, isSubmitting]) => (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  pressed && styles.primaryButtonPressed,
-                  (isSaving || isSubmitting || !canSubmit) &&
-                    styles.primaryButtonDisabled,
-                ]}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              >
-                <Text
-                  style={[
-                    styles.primaryButtonText,
-                    (isSaving || isSubmitting) &&
-                      styles.primaryButtonTextDisabled,
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? "Uploading..."
+                : busy
+                  ? "Saving..."
+                  : "Save";
+              return (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    pressed && styles.primaryButtonPressed,
+                    (busy || !canSubmit) && styles.primaryButtonDisabled,
                   ]}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
                 >
-                  {isSaving || isSubmitting ? "Saving..." : "Save"}
-                </Text>
-              </Pressable>
-            )}
+                  <Text
+                    style={[
+                      styles.primaryButtonText,
+                      busy && styles.primaryButtonTextDisabled,
+                    ]}
+                  >
+                    {buttonTitle}
+                  </Text>
+                </Pressable>
+              );
+            }}
           </form.Subscribe>
         </View>
 

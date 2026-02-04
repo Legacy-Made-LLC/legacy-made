@@ -2,7 +2,12 @@
  * DocumentForm - Form for creating/editing legal document entries
  */
 
-import { FormInput, FormTextArea, documentSchema } from "@/components/forms";
+import {
+  FormInput,
+  FormTextArea,
+  documentSchema,
+  FilePicker,
+} from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
@@ -56,6 +61,10 @@ export function DocumentForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -95,6 +104,7 @@ export function DocumentForm({
         preparerPhone: value.preparerPhone.trim() || undefined,
         notes: value.notes.trim() || undefined,
       };
+      // Note: Files are uploaded separately via file API, not stored in metadata
 
       // Use document type as the title
       const title = value.documentType;
@@ -254,17 +264,39 @@ export function DocumentForm({
           )}
         </form.Field>
 
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Attachments"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="all"
+            maxFiles={5}
+            placeholder="Add document scan or photo"
+            helpText="Attach scanned copies, photos, or PDF files of this document"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
+          />
+        )}
+
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {([canSubmit, isSubmitting]) => (
-              <Button
-                title={isSaving || isSubmitting ? "Saving..." : "Save"}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              />
-            )}
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? "Uploading..."
+                : busy
+                  ? "Saving..."
+                  : "Save";
+              return (
+                <Button
+                  title={buttonTitle}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
+                />
+              );
+            }}
           </form.Subscribe>
         </View>
 

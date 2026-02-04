@@ -17,6 +17,18 @@ export type {
   ApiError,
   DeleteResponse,
   Plan,
+  // File types
+  ApiFile,
+  ApiFileStorageType,
+  ApiFileUploadStatus,
+  FileAttachment,
+  FileType,
+  FileUploadStatus,
+  InitUploadRequest,
+  InitUploadResponse,
+  InitVideoUploadRequest,
+  InitVideoUploadResponse,
+  DownloadUrlResponse,
   // Entitlement types
   SubscriptionTier,
   Pillar,
@@ -26,6 +38,9 @@ export type {
   EntitlementErrorCode,
   EntitlementError,
 } from './types';
+
+// File utilities
+export { apiFileToAttachment } from './types';
 
 // Client
 export { createApiClient, ApiClientError } from './client';
@@ -37,6 +52,9 @@ export type { EntriesService } from './entries';
 
 export { createPlansService } from './plans';
 export type { PlansService } from './plans';
+
+export { createFilesService } from './files';
+export type { FilesService } from './files';
 
 export { createEntitlementsService } from './entitlements';
 export type { EntitlementsService } from './entitlements';

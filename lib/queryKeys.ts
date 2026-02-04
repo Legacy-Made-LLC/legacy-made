@@ -20,6 +20,12 @@ export const queryKeys = {
     // Current user's plan
     current: () => ['plan', 'current'] as const,
   },
+  files: {
+    // Files for a specific entry
+    byEntry: (entryId: string) => ['files', entryId] as const,
+    // Single file detail
+    single: (fileId: string) => ['files', 'detail', fileId] as const,
+  },
   entitlements: {
     // Current user's entitlements
     current: () => ['entitlements', 'current'] as const,

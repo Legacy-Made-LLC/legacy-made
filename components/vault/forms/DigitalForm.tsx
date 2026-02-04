@@ -2,7 +2,12 @@
  * DigitalForm - Form for creating/editing digital access entries
  */
 
-import { FormInput, FormTextArea, digitalSchema } from "@/components/forms";
+import {
+  FormInput,
+  FormTextArea,
+  digitalSchema,
+  FilePicker,
+} from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
@@ -86,6 +91,10 @@ export function DigitalForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -253,17 +262,39 @@ export function DigitalForm({
           )}
         </form.Field>
 
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Screenshots & Documents"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="all"
+            maxFiles={5}
+            placeholder="Add screenshots or documents"
+            helpText="Attach screenshots of recovery codes, QR codes, or other helpful documents"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
+          />
+        )}
+
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {([canSubmit, isSubmitting]) => (
-              <Button
-                title={isSaving || isSubmitting ? "Saving..." : "Save"}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              />
-            )}
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? "Uploading..."
+                : busy
+                  ? "Saving..."
+                  : "Save";
+              return (
+                <Button
+                  title={buttonTitle}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
+                />
+              );
+            }}
           </form.Subscribe>
         </View>
 

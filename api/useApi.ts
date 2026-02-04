@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { createApiClient } from './client';
 import { createEntriesService } from './entries';
 import { createEntitlementsService } from './entitlements';
+import { createFilesService } from './files';
 import { createPlansService } from './plans';
 
 /**
@@ -48,6 +49,10 @@ export function useApi() {
     return createPlansService(client);
   }, [client]);
 
+  const files = useMemo(() => {
+    return createFilesService(client);
+  }, [client]);
+
   const entitlements = useMemo(() => {
     return createEntitlementsService(client);
   }, [client]);
@@ -57,6 +62,8 @@ export function useApi() {
     client,
     /** Entries service with CRUD operations */
     entries,
+    /** Files service for upload and management */
+    files,
     /** Plans service */
     plans,
     /** Entitlements service */

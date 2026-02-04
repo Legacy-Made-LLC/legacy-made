@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -162,6 +162,7 @@ export default function HomeScreen() {
         </Text>
       </View>
 
+      {/* TODO: Add guidance card */}
       {/* Guidance Card */}
       {/* TODO: Implement after other app pillars are implemented. */}
       {/* <View style={styles.guidanceCard}>

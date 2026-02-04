@@ -7,6 +7,7 @@ import {
   FormInput,
   FormTextArea,
   petSchema,
+  FilePicker,
 } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
@@ -45,6 +46,10 @@ export function PetForm({
   onSave,
   onDelete,
   isSaving,
+  attachments,
+  onAttachmentsChange,
+  isUploading,
+  onStorageUpgradeRequired,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -246,17 +251,39 @@ export function PetForm({
           )}
         </form.Field>
 
+        {onAttachmentsChange && (
+          <FilePicker
+            label="Photos & Records"
+            value={attachments ?? []}
+            onChange={onAttachmentsChange}
+            mode="all"
+            maxFiles={10}
+            placeholder="Add photos or vet records"
+            helpText="Attach photos of your pet, vaccination records, or other documents"
+            showStorageIndicator
+            onUpgradeRequired={onStorageUpgradeRequired}
+          />
+        )}
+
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {([canSubmit, isSubmitting]) => (
-              <Button
-                title={isSaving || isSubmitting ? "Saving..." : "Save"}
-                onPress={() => form.handleSubmit()}
-                disabled={isSaving || isSubmitting || !canSubmit}
-              />
-            )}
+            {([canSubmit, isSubmitting]) => {
+              const busy = isSaving || isSubmitting || isUploading;
+              const buttonTitle = isUploading
+                ? "Uploading..."
+                : busy
+                  ? "Saving..."
+                  : "Save";
+              return (
+                <Button
+                  title={buttonTitle}
+                  onPress={() => form.handleSubmit()}
+                  disabled={busy || !canSubmit}
+                />
+              );
+            }}
           </form.Subscribe>
         </View>
 

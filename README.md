@@ -10,7 +10,15 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables
+
+   Copy `.env.example` to `.env` and fill in the required values:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Start the app
 
    ```bash
    npx expo start
@@ -24,6 +32,46 @@ In the output, you'll find options to open the app in a
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Environment Variables
+
+Create a `.env` file in the project root with the following variables:
+
+### Required
+
+| Variable | Description |
+|----------|-------------|
+| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for authentication. Get this from your [Clerk Dashboard](https://dashboard.clerk.com/). |
+| `EXPO_PUBLIC_API_URL` | Base URL for the Legacy Made API server. Use `http://localhost:3000` for local development. |
+
+### Optional (External Links)
+
+These variables configure the external website URLs used throughout the app. All have sensible defaults pointing to `https://mylegacymade.com`.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EXPO_PUBLIC_BASE_URL` | `https://mylegacymade.com` | Base URL used to construct other link defaults. Only needed if hosting on a different domain. |
+| `EXPO_PUBLIC_HELP_URL` | `{BASE_URL}/help` | URL for the help/FAQ page. |
+| `EXPO_PUBLIC_SUPPORT_URL` | `{BASE_URL}/support` | URL for the contact support page. |
+| `EXPO_PUBLIC_PRIVACY_POLICY_URL` | `{BASE_URL}/privacy-policy` | URL for the privacy policy page. |
+| `EXPO_PUBLIC_TERMS_URL` | `{BASE_URL}/terms-of-service` | URL for the terms of service page. |
+| `EXPO_PUBLIC_UPGRADE_URL` | `{BASE_URL}/upgrade` | URL for the subscription upgrade page. |
+
+### Example `.env` file
+
+```bash
+# Required
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+EXPO_PUBLIC_API_URL=http://localhost:3000
+
+# Optional - uncomment to override defaults
+# EXPO_PUBLIC_BASE_URL=https://mylegacymade.com
+# EXPO_PUBLIC_HELP_URL=https://mylegacymade.com/help
+# EXPO_PUBLIC_SUPPORT_URL=https://mylegacymade.com/support
+# EXPO_PUBLIC_PRIVACY_POLICY_URL=https://mylegacymade.com/privacy-policy
+# EXPO_PUBLIC_TERMS_URL=https://mylegacymade.com/terms-of-service
+# EXPO_PUBLIC_UPGRADE_URL=https://mylegacymade.com/upgrade
+```
 
 ## Get a fresh project
 
