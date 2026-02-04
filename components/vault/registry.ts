@@ -63,7 +63,7 @@ export interface EntryFormProps {
   /** Callback when form is saved */
   onSave: (data: {
     title: string;
-    notes?: string;
+    notes?: string | null;
     metadata: Record<string, unknown>;
   }) => Promise<void>;
   /** Callback when entry is deleted (only for editing) */
