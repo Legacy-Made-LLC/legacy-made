@@ -33,11 +33,11 @@ type SpeciesType = (typeof speciesTypes)[number];
 
 interface PetMetadata {
   species: SpeciesType;
-  breed?: string;
-  veterinarian?: string;
-  vetPhone?: string;
-  careInstructions?: string;
-  designatedCaretaker?: string;
+  breed?: string | null;
+  veterinarian?: string | null;
+  vetPhone?: string | null;
+  careInstructions?: string | null;
+  designatedCaretaker?: string | null;
 }
 
 export function PetForm({
@@ -80,17 +80,17 @@ export function PetForm({
     onSubmit: async ({ value }) => {
       const metadata: PetMetadata = {
         species: value.species as SpeciesType,
-        breed: value.breed.trim() || undefined,
-        veterinarian: value.veterinarian.trim() || undefined,
-        vetPhone: value.vetPhone.trim() || undefined,
-        designatedCaretaker: value.designatedCaretaker.trim() || undefined,
-        careInstructions: value.careInstructions.trim() || undefined,
+        breed: value.breed.trim() || null,
+        veterinarian: value.veterinarian.trim() || null,
+        vetPhone: value.vetPhone.trim() || null,
+        designatedCaretaker: value.designatedCaretaker.trim() || null,
+        careInstructions: value.careInstructions.trim() || null,
       };
 
       try {
         await onSave({
           title: value.name.trim(),
-          notes: value.careInstructions.trim() || undefined,
+          notes: value.careInstructions.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {

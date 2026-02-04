@@ -38,11 +38,11 @@ type OwnershipType = (typeof ownershipTypes)[number];
 interface PropertyMetadata {
   responsibilityType: PropertyType;
   ownership?: OwnershipType;
-  addressDescription?: string;
-  lienHolder?: string;
-  documentsLocation?: string;
-  keyLocation?: string;
-  notes?: string;
+  addressDescription?: string | null;
+  lienHolder?: string | null;
+  documentsLocation?: string | null;
+  keyLocation?: string | null;
+  notes?: string | null;
 }
 
 export function PropertyForm({
@@ -86,11 +86,11 @@ export function PropertyForm({
       const metadata: PropertyMetadata = {
         responsibilityType: value.propertyType as PropertyType,
         ownership: value.ownership as OwnershipType,
-        addressDescription: value.addressDescription.trim() || undefined,
-        lienHolder: value.lienHolder.trim() || undefined,
-        documentsLocation: value.documentsLocation.trim() || undefined,
-        keyLocation: value.keyLocation.trim() || undefined,
-        notes: value.notes.trim() || undefined,
+        addressDescription: value.addressDescription.trim() || null,
+        lienHolder: value.lienHolder.trim() || null,
+        documentsLocation: value.documentsLocation.trim() || null,
+        keyLocation: value.keyLocation.trim() || null,
+        notes: value.notes.trim() || null,
       };
 
       // Generate title from type
@@ -99,7 +99,7 @@ export function PropertyForm({
       try {
         await onSave({
           title,
-          notes: value.notes.trim() || undefined,
+          notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {

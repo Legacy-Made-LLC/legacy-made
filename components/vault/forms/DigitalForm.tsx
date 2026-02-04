@@ -32,10 +32,10 @@ type ImportanceLevel = (typeof importanceLevels)[number];
 
 interface DigitalMetadata {
   service: string;
-  username?: string;
-  recoveryEmail?: string;
+  username?: string | null;
+  recoveryEmail?: string | null;
   importance: ImportanceLevel;
-  notes?: string;
+  notes?: string | null;
 }
 
 // Get display labels based on task type
@@ -123,15 +123,15 @@ export function DigitalForm({
     onSubmit: async ({ value }) => {
       const metadata: DigitalMetadata = {
         service: value.service.trim(),
-        username: value.username.trim() || undefined,
+        username: value.username.trim() || null,
         importance: value.importance as ImportanceLevel,
-        notes: value.accessNotes.trim() || undefined,
+        notes: value.accessNotes.trim() || null,
       };
 
       try {
         await onSave({
           title: value.accountName.trim(),
-          notes: value.accessNotes.trim() || undefined,
+          notes: value.accessNotes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {

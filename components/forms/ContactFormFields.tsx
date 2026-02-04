@@ -24,6 +24,7 @@ export const RELATIONSHIP_OPTIONS = [
   'Child',
   'Sibling',
   'Parent',
+  'Close Family',
   'Close Friend',
   'Attorney',
   'Financial Advisor',

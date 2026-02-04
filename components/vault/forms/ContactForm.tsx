@@ -28,8 +28,8 @@ interface ContactMetadata {
   lastName: string;
   relationship: string;
   phone: string;
-  email?: string;
-  reason?: string;
+  email?: string | null;
+  reason?: string | null;
   isPrimary?: boolean;
 }
 
@@ -88,15 +88,15 @@ export function ContactForm({
         lastName: value.lastName.trim(),
         relationship: value.relationship.trim(),
         phone: value.phone.trim(),
-        email: value.email.trim() || undefined,
-        reason: value.reason.trim() || undefined,
+        email: value.email.trim() || null,
+        reason: value.reason.trim() || null,
         isPrimary: taskKey === "contacts.primary",
       };
 
       try {
         await onSave({
           title,
-          notes: value.reason.trim() || undefined,
+          notes: value.reason.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {

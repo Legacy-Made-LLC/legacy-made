@@ -48,10 +48,10 @@ type DocumentType = LegalDocumentType | OtherDocumentType;
 interface DocumentMetadata {
   documentType: DocumentType;
   location: string;
-  holder?: string;
-  preparer?: string;
-  preparerPhone?: string;
-  notes?: string;
+  holder?: string | null;
+  preparer?: string | null;
+  preparerPhone?: string | null;
+  notes?: string | null;
 }
 
 export function DocumentForm({
@@ -99,10 +99,10 @@ export function DocumentForm({
       const metadata: DocumentMetadata = {
         documentType: value.documentType as DocumentType,
         location: value.location.trim(),
-        holder: value.holder.trim() || undefined,
-        preparer: value.preparer.trim() || undefined,
-        preparerPhone: value.preparerPhone.trim() || undefined,
-        notes: value.notes.trim() || undefined,
+        holder: value.holder.trim() || null,
+        preparer: value.preparer.trim() || null,
+        preparerPhone: value.preparerPhone.trim() || null,
+        notes: value.notes.trim() || null,
       };
       // Note: Files are uploaded separately via file API, not stored in metadata
 
@@ -112,7 +112,7 @@ export function DocumentForm({
       try {
         await onSave({
           title,
-          notes: value.notes.trim() || undefined,
+          notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {

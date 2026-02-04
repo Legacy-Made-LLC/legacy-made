@@ -35,12 +35,12 @@ type PolicyType = (typeof policyTypes)[number];
 interface InsuranceMetadata {
   provider: string;
   policyType: PolicyType;
-  policyNumber?: string;
-  contactInfo?: string;
-  coverageDetails?: string;
-  beneficiaries?: string;
-  agentName?: string;
-  agentPhone?: string;
+  policyNumber?: string | null;
+  contactInfo?: string | null;
+  coverageDetails?: string | null;
+  beneficiaries?: string | null;
+  agentName?: string | null;
+  agentPhone?: string | null;
 }
 
 export function InsuranceForm({
@@ -86,11 +86,11 @@ export function InsuranceForm({
       const metadata: InsuranceMetadata = {
         provider: value.provider.trim(),
         policyType: value.policyType as PolicyType,
-        policyNumber: value.policyNumber.trim() || undefined,
-        coverageDetails: value.coverageDetails.trim() || undefined,
-        beneficiaries: value.beneficiaries.trim() || undefined,
-        agentName: value.agentName.trim() || undefined,
-        agentPhone: value.agentPhone.trim() || undefined,
+        policyNumber: value.policyNumber.trim() || null,
+        coverageDetails: value.coverageDetails.trim() || null,
+        beneficiaries: value.beneficiaries.trim() || null,
+        agentName: value.agentName.trim() || null,
+        agentPhone: value.agentPhone.trim() || null,
       };
 
       // Generate title from provider + policy type
@@ -99,7 +99,7 @@ export function InsuranceForm({
       try {
         await onSave({
           title,
-          notes: value.notes.trim() || undefined,
+          notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {

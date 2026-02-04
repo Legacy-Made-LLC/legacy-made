@@ -36,10 +36,10 @@ type AccountType = (typeof accountTypes)[number];
 interface FinancialMetadata {
   institution: string;
   accountType: AccountType;
-  accountOwners?: string;
-  accountNumber?: string;
-  contactInfo?: string;
-  notes?: string;
+  accountOwners?: string | null;
+  accountNumber?: string | null;
+  contactInfo?: string | null;
+  notes?: string | null;
 }
 
 export function FinancialForm({
@@ -83,9 +83,9 @@ export function FinancialForm({
       const metadata: FinancialMetadata = {
         institution: value.institution.trim(),
         accountType: value.accountType as AccountType,
-        accountOwners: value.accountOwners.trim() || undefined,
-        accountNumber: value.accountNumber.trim() || undefined,
-        notes: value.notes.trim() || undefined,
+        accountOwners: value.accountOwners.trim() || null,
+        accountNumber: value.accountNumber.trim() || null,
+        notes: value.notes.trim() || null,
       };
 
       // Use account name if provided, otherwise generate from institution + type
@@ -96,7 +96,7 @@ export function FinancialForm({
       try {
         await onSave({
           title,
-          notes: value.notes.trim() || undefined,
+          notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
         });
       } catch (err) {
