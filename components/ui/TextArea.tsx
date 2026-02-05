@@ -25,9 +25,11 @@ const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 interface TextAreaProps extends Omit<TextInputProps, "style" | "multiline"> {
   label: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Override default minHeight */
+  minHeight?: number;
 }
 
-export function TextArea({ label, containerStyle, ...props }: TextAreaProps) {
+export function TextArea({ label, containerStyle, minHeight, ...props }: TextAreaProps) {
   const borderColor = useSharedValue(colors.border);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -49,7 +51,7 @@ export function TextArea({ label, containerStyle, ...props }: TextAreaProps) {
         {...props}
         multiline
         textAlignVertical="top"
-        style={[styles.textArea, animatedStyle]}
+        style={[styles.textArea, minHeight != null && { minHeight }, animatedStyle]}
         placeholderTextColor={colors.textTertiary}
         onFocus={handleFocus}
         onBlur={handleBlur}

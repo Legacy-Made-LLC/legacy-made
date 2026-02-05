@@ -79,6 +79,7 @@ export function PetList({
           description="Add your pets so your family knows how to care for them."
           buttonTitle="Add Pet"
           onButtonPress={onAddPress}
+          style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
     );
@@ -105,7 +106,10 @@ export function PetList({
           <AnimatedListItem key={entry.id} index={index}>
             <PressableCard
               onPress={() => onEntryPress(entry.id)}
-              style={listStyles.card}
+              style={[
+                listStyles.card,
+                { marginTop: index === 0 ? spacing.sm : 0 },
+              ]}
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>

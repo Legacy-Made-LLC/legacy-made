@@ -2,6 +2,7 @@
  * PropertyForm - Form for creating/editing property and vehicle entries
  */
 
+import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, propertySchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
@@ -29,6 +30,28 @@ const propertyTypes = [
   "Other",
 ] as const;
 const ownershipTypes = ["Own", "Lease", "Rent", "Finance"] as const;
+
+/** Display schema for property metadata */
+const PROPERTY_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    responsibilityType: {
+      label: "Property Type",
+      order: 1,
+      valueLabels: Object.fromEntries(propertyTypes.map((t) => [t, t])),
+    },
+    ownership: {
+      label: "Ownership",
+      order: 2,
+      valueLabels: Object.fromEntries(ownershipTypes.map((t) => [t, t])),
+    },
+    addressDescription: { label: "Address/Description", order: 3 },
+    lienHolder: { label: "Mortgage/Lien Holder", order: 4 },
+    documentsLocation: { label: "Where Documents are Stored", order: 5 },
+    keyLocation: { label: "Key/Access Location", order: 6 },
+    notes: { label: "Notes", order: 7 },
+  },
+};
 
 type PropertyType = (typeof propertyTypes)[number];
 type OwnershipType = (typeof ownershipTypes)[number];
@@ -99,6 +122,7 @@ export function PropertyForm({
           title,
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: PROPERTY_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =

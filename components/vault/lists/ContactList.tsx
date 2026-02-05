@@ -83,6 +83,7 @@ export function ContactList({
           description="Add the first person your loved ones should reach out to."
           buttonTitle="Add Contact"
           onButtonPress={onAddPress}
+          style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
     );
@@ -110,7 +111,10 @@ export function ContactList({
           <AnimatedListItem key={entry.id} index={index}>
             <PressableCard
               onPress={() => onEntryPress(entry.id)}
-              style={listStyles.card}
+              style={[
+                listStyles.card,
+                { marginTop: index === 0 ? spacing.sm : 0 },
+              ]}
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>

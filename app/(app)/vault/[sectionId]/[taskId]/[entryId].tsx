@@ -53,8 +53,11 @@ export default function EntryScreen() {
   // Get the form component for this task
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
 
-  // Fetch entry data if editing
-  const { data: entry, isLoading } = useEntryQuery(isNew ? undefined : entryId);
+  // Fetch entry data if editing (pass taskKey to enable initialData from list cache)
+  const { data: entry, isLoading } = useEntryQuery(
+    isNew ? undefined : entryId,
+    task?.taskKey,
+  );
 
   // API for file operations
   const { files: filesService } = useApi();

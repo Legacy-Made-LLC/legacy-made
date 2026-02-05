@@ -170,6 +170,18 @@ export default function AppLayout() {
               title: '',
             }}
           />
+          <Stack.Screen
+            name="wishes/[sectionId]/index"
+            options={{
+              title: '',
+            }}
+          />
+          <Stack.Screen
+            name="wishes/[sectionId]/[taskId]/index"
+            options={{
+              title: '',
+            }}
+          />
         </Stack>
       </View>
     </View>

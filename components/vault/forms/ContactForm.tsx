@@ -4,6 +4,7 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
+import type { MetadataSchema } from "@/api/types";
 import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
 import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -20,6 +21,24 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
+
+/** Display schema for contact metadata */
+const CONTACT_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    firstName: { label: "First Name", order: 1 },
+    lastName: { label: "Last Name", order: 2 },
+    relationship: { label: "Relationship", order: 3 },
+    phone: { label: "Phone", order: 4 },
+    email: { label: "Email", order: 5 },
+    reason: { label: "Why This Person?", order: 6 },
+    isPrimary: {
+      label: "Primary Contact",
+      order: 7,
+      valueLabels: { true: "Yes", false: "No" },
+    },
+  },
+};
 
 interface ContactMetadata {
   firstName: string;
@@ -96,6 +115,7 @@ export function ContactForm({
           title,
           notes: value.reason.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: CONTACT_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =
@@ -227,8 +247,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   buttonContainer: {
     marginTop: spacing.lg,

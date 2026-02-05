@@ -79,6 +79,7 @@ export function DocumentList({
           description="Add your important legal documents so your family knows where to find them."
           buttonTitle="Add Document"
           onButtonPress={onAddPress}
+          style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
     );
@@ -103,7 +104,10 @@ export function DocumentList({
           <AnimatedListItem key={entry.id} index={index}>
             <PressableCard
               onPress={() => onEntryPress(entry.id)}
-              style={listStyles.card}
+              style={[
+                listStyles.card,
+                { marginTop: index === 0 ? spacing.sm : 0 },
+              ]}
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>

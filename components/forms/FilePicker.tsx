@@ -1,20 +1,20 @@
-import React, { useState, useCallback } from 'react';
+import { FileAttachment } from "@/api/types";
+import { StorageIndicator } from "@/components/entitlements/StorageIndicator";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { PickerMode, useFilePicker } from "@/hooks/useFilePicker";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Modal,
   ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/constants/theme';
-import { FileAttachment } from '@/api/types';
-import { StorageIndicator } from '@/components/entitlements/StorageIndicator';
-import { useEntitlements } from '@/data/EntitlementsProvider';
-import { useFilePicker, PickerMode } from '@/hooks/useFilePicker';
-import { FilePreviewList } from './FilePreview';
-import { FilePreviewModal } from './FilePreviewModal';
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { FilePreviewList } from "./FilePreview";
+import { FilePreviewModal } from "./FilePreviewModal";
 
 interface FilePickerProps {
   /** Label displayed above the picker */
@@ -56,11 +56,11 @@ export function FilePicker({
   label,
   value,
   onChange,
-  mode = 'all',
+  mode = "all",
   maxFiles = 10,
   allowCamera = true,
   disabled = false,
-  placeholder = 'Tap to add files',
+  placeholder = "Tap to add files",
   helpText,
   showStorageIndicator = false,
   onUpgradeRequired,
@@ -86,7 +86,7 @@ export function FilePicker({
         onChange([...value, file]);
       }
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   /**
@@ -97,7 +97,7 @@ export function FilePicker({
     (identifier: string) => {
       onChange(value.filter((f) => (f.id || f.uri) !== identifier));
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   /**
@@ -107,31 +107,36 @@ export function FilePicker({
     const options: PickerOption[] = [];
 
     // Photo library option (for images, videos, or media modes)
-    if (mode !== 'document') {
+    if (mode !== "document") {
       options.push({
-        id: 'library',
-        label: mode === 'video' ? 'Choose Video' : mode === 'image' ? 'Choose Photo' : 'Choose from Library',
-        icon: 'images-outline',
+        id: "library",
+        label:
+          mode === "video"
+            ? "Choose Video"
+            : mode === "image"
+              ? "Choose Photo"
+              : "Choose from Library",
+        icon: "images-outline",
         action: pickFromLibrary,
       });
     }
 
     // Camera option (for images or media modes, when allowed)
-    if (allowCamera && mode !== 'document' && mode !== 'video') {
+    if (allowCamera && mode !== "document" && mode !== "video") {
       options.push({
-        id: 'camera',
-        label: 'Take Photo',
-        icon: 'camera-outline',
+        id: "camera",
+        label: "Take Photo",
+        icon: "camera-outline",
         action: pickFromCamera,
       });
     }
 
     // Document option (for document or all modes)
-    if (mode === 'document' || mode === 'all') {
+    if (mode === "document" || mode === "all") {
       options.push({
-        id: 'document',
-        label: 'Choose Document',
-        icon: 'document-outline',
+        id: "document",
+        label: "Choose Document",
+        icon: "document-outline",
         action: pickDocument,
       });
     }
@@ -162,7 +167,16 @@ export function FilePicker({
       // Multiple options - show menu
       setShowOptions(true);
     }
-  }, [disabled, canUploadFiles, storageFull, value.length, maxFiles, pickerOptions, handleFilePicked, onUpgradeRequired]);
+  }, [
+    disabled,
+    canUploadFiles,
+    storageFull,
+    value.length,
+    maxFiles,
+    pickerOptions,
+    handleFilePicked,
+    onUpgradeRequired,
+  ]);
 
   return (
     <View style={styles.container}>
@@ -196,9 +210,15 @@ export function FilePicker({
           ) : (
             <>
               <Ionicons
-                name={!canUploadFiles ? "lock-closed-outline" : "add-circle-outline"}
+                name={
+                  !canUploadFiles ? "lock-closed-outline" : "add-circle-outline"
+                }
                 size={24}
-                color={disabled || !canUploadFiles ? colors.textTertiary : colors.primary}
+                color={
+                  disabled || !canUploadFiles
+                    ? colors.textTertiary
+                    : colors.primary
+                }
               />
               <Text
                 style={[
@@ -207,12 +227,12 @@ export function FilePicker({
                 ]}
               >
                 {!canUploadFiles
-                  ? 'Upgrade to Add Files'
+                  ? "Upgrade to Add Files"
                   : storageFull
-                    ? 'Storage Full'
+                    ? "Storage Full"
                     : value.length === 0
                       ? placeholder
-                      : 'Add Another'}
+                      : "Add Another"}
               </Text>
             </>
           )}
@@ -293,7 +313,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.label,
     fontWeight: typography.weights.medium,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },
@@ -301,13 +321,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: colors.border,
     borderRadius: borderRadius.md,
     backgroundColor: colors.surface,
@@ -330,13 +350,14 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: spacing.sm,
   },
   helpText: {
     fontSize: typography.sizes.caption,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+    textAlign: "center",
   },
   storageContainer: {
     marginTop: spacing.sm,
@@ -345,8 +366,8 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   optionsContainer: {
     backgroundColor: colors.surface,
@@ -360,12 +381,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.titleMedium,
     fontWeight: typography.weights.semibold,
     color: colors.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.lg,
   },
   optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
@@ -380,13 +401,13 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: spacing.sm,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
   cancelLabel: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

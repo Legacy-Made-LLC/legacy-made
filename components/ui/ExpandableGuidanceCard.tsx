@@ -30,12 +30,12 @@ const ANIMATION_DURATION = 250;
 const EASING = Easing.out(Easing.ease);
 
 // Heights
-const COLLAPSED_HEIGHT = 32;
+const MIN_COLLAPSED_HEIGHT = 32;
 
-// Soft tint of primary for expanded card background
-const PRIMARY_SOFT = "#E8EBE7";
-// Darker shade of primary for heading text
-const PRIMARY_DARK = "#3F4A3F";
+// Default colors (sage green for Information Vault)
+const DEFAULT_ACCENT = colors.primary;
+const DEFAULT_TINT = colors.featureInformationTint;
+const DEFAULT_DARK = colors.featureInformationDark;
 
 interface ExpandableGuidanceCardProps {
   /** Ionicons name for the section icon */
@@ -52,6 +52,12 @@ interface ExpandableGuidanceCardProps {
   pacingNote?: string;
   /** Whether the card starts expanded */
   initialExpanded?: boolean;
+  /** Primary accent color for icons and text (defaults to sage green) */
+  accentColor?: string;
+  /** Soft tint color for expanded card background (defaults to sage tint) */
+  accentTint?: string;
+  /** Dark accent color for heading text (defaults to dark sage) */
+  accentDark?: string;
 }
 
 export function ExpandableGuidanceCard({
@@ -62,8 +68,12 @@ export function ExpandableGuidanceCard({
   tips,
   pacingNote,
   initialExpanded = false,
+  accentColor = DEFAULT_ACCENT,
+  accentTint = DEFAULT_TINT,
+  accentDark = DEFAULT_DARK,
 }: ExpandableGuidanceCardProps) {
   const [isTipsExpanded, setIsTipsExpanded] = useState(false);
+  const [collapsedHeight, setCollapsedHeight] = useState(MIN_COLLAPSED_HEIGHT);
   const [expandedHeight, setExpandedHeight] = useState(300); // Initial estimate
   const [tipsHeight, setTipsHeight] = useState(0);
 
@@ -128,12 +138,22 @@ export function ExpandableGuidanceCard({
     }
   }, []);
 
+  const onCollapsedLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const height = event.nativeEvent.layout.height;
+      if (height > 0 && height !== collapsedHeight) {
+        setCollapsedHeight(height);
+      }
+    },
+    [collapsedHeight],
+  );
+
   // Animated styles
   const wrapperStyle = useAnimatedStyle(() => ({
     height: interpolate(
       expandProgress.value,
       [0, 1],
-      [COLLAPSED_HEIGHT, expandedHeight],
+      [collapsedHeight, expandedHeight],
       Extrapolation.CLAMP,
     ),
   }));
@@ -179,20 +199,26 @@ export function ExpandableGuidanceCard({
       <Animated.View style={[styles.collapsedContainer, collapsedStyle]}>
         <Pressable
           onPress={handleExpand}
+          onLayout={onCollapsedLayout}
           style={styles.collapsedRow}
           accessibilityRole="button"
           accessibilityState={{ expanded: false }}
           accessibilityLabel={triggerText}
         >
-          <Ionicons name={icon} size={18} color={colors.primary} />
-          <Text style={styles.questionText}>{triggerText}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          <Ionicons name={icon} size={18} color={accentColor} />
+          <Text style={[styles.questionText, { color: accentColor }]}>
+            {triggerText}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={accentColor} />
         </Pressable>
       </Animated.View>
 
       {/* Expanded state - card overlaid on top */}
       <Animated.View style={[styles.expandedContainer, expandedStyle]}>
-        <View onLayout={onExpandedLayout} style={styles.expandedCard}>
+        <View
+          onLayout={onExpandedLayout}
+          style={[styles.expandedCard, { backgroundColor: accentTint }]}
+        >
           {/* Close button in top right */}
           <Pressable
             onPress={handleCollapse}
@@ -206,11 +232,15 @@ export function ExpandableGuidanceCard({
 
           {/* Centered icon with circle */}
           <View style={styles.iconContainer}>
-            <Ionicons name={icon} size={24} color={colors.primary} />
+            <Ionicons name={icon} size={24} color={accentColor} />
           </View>
 
           {/* Heading */}
-          {heading && <Text style={styles.heading}>{heading}</Text>}
+          {heading && (
+            <Text style={[styles.heading, { color: accentDark }]}>
+              {heading}
+            </Text>
+          )}
 
           {/* Detail text */}
           <Text style={styles.detail}>{detail}</Text>
@@ -261,7 +291,7 @@ export function ExpandableGuidanceCard({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     position: "relative",
     overflow: "hidden",
   },
@@ -278,12 +308,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     paddingVertical: spacing.xs,
-    minHeight: COLLAPSED_HEIGHT,
+    minHeight: MIN_COLLAPSED_HEIGHT,
   },
   questionText: {
     flex: 1,
     fontSize: typography.sizes.bodySmall,
-    color: colors.primary,
     fontFamily: typography.fontFamily.medium,
   },
   // Expanded state styles
@@ -295,11 +324,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   expandedCard: {
-    backgroundColor: PRIMARY_SOFT,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: "center",
   },
   closeButton: {
@@ -324,7 +350,6 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: typography.sizes.body,
     fontWeight: typography.weights.semibold,
-    color: PRIMARY_DARK,
     marginBottom: spacing.sm,
     lineHeight: typography.sizes.body * typography.lineHeights.normal,
     textAlign: "center",

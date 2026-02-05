@@ -12,7 +12,6 @@ export const listStyles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
   },
   card: {
     marginBottom: spacing.md,

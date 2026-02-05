@@ -80,6 +80,7 @@ export function InsuranceList({
           description="Add your insurance policies so your loved ones know what coverage exists."
           buttonTitle="Add Policy"
           onButtonPress={onAddPress}
+          style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
     );
@@ -110,7 +111,10 @@ export function InsuranceList({
           <AnimatedListItem key={entry.id} index={index}>
             <PressableCard
               onPress={() => onEntryPress(entry.id)}
-              style={listStyles.card}
+              style={[
+                listStyles.card,
+                { marginTop: index === 0 ? spacing.sm : 0 },
+              ]}
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>

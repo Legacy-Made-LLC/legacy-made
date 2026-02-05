@@ -30,4 +30,14 @@ export const queryKeys = {
     // Current user's entitlements
     current: () => ['entitlements', 'current'] as const,
   },
+  wishes: {
+    // All wishes for a plan
+    all: (planId: string) => ['wishes', planId] as const,
+    // Wishes filtered by taskKey
+    byTaskKey: (planId: string, taskKey: string) => ['wishes', planId, taskKey] as const,
+    // Single wish detail
+    single: (planId: string, wishId: string) => ['wishes', planId, 'detail', wishId] as const,
+    // Wish counts for dashboard
+    counts: (planId: string) => ['wishes', planId, 'counts'] as const,
+  },
 } as const;

@@ -5,7 +5,7 @@
  * This allows dynamic routing to render the correct components based on the task.
  */
 
-import type { Entry, FileAttachment } from "@/api/types";
+import type { Entry, FileAttachment, MetadataSchema } from "@/api/types";
 import type { ComponentType } from "react";
 
 // ============================================================================
@@ -65,6 +65,7 @@ export interface EntryFormProps {
     title: string;
     notes?: string | null;
     metadata: Record<string, unknown>;
+    metadataSchema: MetadataSchema;
   }) => Promise<void>;
   /** Callback when entry is deleted (only for editing) */
   onDelete?: () => Promise<void>;

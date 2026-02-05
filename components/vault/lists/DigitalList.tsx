@@ -125,6 +125,7 @@ export function DigitalList({
           description={labels.emptyDescription}
           buttonTitle={labels.addButton}
           onButtonPress={onAddPress}
+          style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
     );
@@ -151,7 +152,10 @@ export function DigitalList({
           <AnimatedListItem key={entry.id} index={index}>
             <PressableCard
               onPress={() => onEntryPress(entry.id)}
-              style={listStyles.card}
+              style={[
+                listStyles.card,
+                { marginTop: index === 0 ? spacing.sm : 0 },
+              ]}
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>
