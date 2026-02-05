@@ -62,8 +62,12 @@ export interface DigitalAccessMetadata {
 // File Types (Backend Response)
 // ============================================================================
 
-export type ApiFileStorageType = 'r2' | 'mux';
-export type ApiFileUploadStatus = 'pending' | 'uploading' | 'complete' | 'failed';
+export type ApiFileStorageType = "r2" | "mux";
+export type ApiFileUploadStatus =
+  | "pending"
+  | "uploading"
+  | "complete"
+  | "failed";
 
 /**
  * File record from backend API response
@@ -97,9 +101,9 @@ export interface ApiFile {
 // File Attachment Types (Client-side)
 // ============================================================================
 
-export type FileUploadStatus = 'pending' | 'uploading' | 'complete' | 'error';
+export type FileUploadStatus = "pending" | "uploading" | "complete" | "error";
 
-export type FileType = 'image' | 'video' | 'document';
+export type FileType = "image" | "video" | "document";
 
 /**
  * Client-side file attachment representation
@@ -150,24 +154,24 @@ export interface FileAttachment {
  * Converts an API file response to a client-side FileAttachment
  */
 export function apiFileToAttachment(file: ApiFile): FileAttachment {
-  const type: FileType = file.mimeType.startsWith('image/')
-    ? 'image'
-    : file.mimeType.startsWith('video/')
-      ? 'video'
-      : 'document';
+  const type: FileType = file.mimeType.startsWith("image/")
+    ? "image"
+    : file.mimeType.startsWith("video/")
+      ? "video"
+      : "document";
 
   // Videos are "processing" if they're on the server but not yet complete (Mux transcoding)
-  const isProcessing = type === 'video' && file.uploadStatus !== 'complete';
+  const isProcessing = type === "video" && file.uploadStatus !== "complete";
 
   return {
     id: file.id,
-    uri: file.downloadUrl || '',
+    uri: file.downloadUrl || "",
     fileName: file.filename,
     fileSize: file.sizeBytes,
     mimeType: file.mimeType,
     type,
     thumbnailUri: file.thumbnailUrl || undefined,
-    uploadStatus: file.uploadStatus === 'complete' ? 'complete' : 'pending',
+    uploadStatus: file.uploadStatus === "complete" ? "complete" : "pending",
     isRemote: true,
     isProcessing,
     playbackId: file.playbackId || undefined,
@@ -218,7 +222,7 @@ export interface InitVideoUploadRequest {
 export interface InitUploadResponse {
   fileId: string;
   uploadUrl: string;
-  uploadMethod: 'PUT';
+  uploadMethod: "PUT";
   expiresAt: string;
   /** For multipart uploads (>100MB) - not implemented in MVP */
   uploadId?: string;
@@ -290,7 +294,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   taskKey: string;
   /** Optional title - may be omitted since each entry type presents data differently */
   title?: string;
-  notes?: string;
+  notes?: string | null;
   sortOrder?: number;
   metadata: T;
 }
@@ -300,7 +304,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
  */
 export interface UpdateEntryRequest<T = Record<string, unknown>> {
   title?: string;
-  notes?: string;
+  notes?: string | null;
   sortOrder?: number;
   metadata?: Partial<T>;
 }

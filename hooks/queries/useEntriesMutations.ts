@@ -28,7 +28,7 @@ export class QuotaExceededError extends Error {
 
   constructor(limit: number, current: number) {
     super(
-      `You've reached your limit of ${limit} entries. Upgrade your plan to add more.`
+      `You've reached your limit of ${limit} entries. Upgrade your plan to add more.`,
     );
     this.name = "QuotaExceededError";
     this.limit = limit;
@@ -38,13 +38,13 @@ export class QuotaExceededError extends Error {
 
 interface CreateEntryData<T = Record<string, unknown>> {
   title?: string;
-  notes?: string;
+  notes?: string | null;
   metadata: T;
 }
 
 interface UpdateEntryData<T = Record<string, unknown>> {
   title?: string;
-  notes?: string;
+  notes?: string | null;
   metadata?: Partial<T>;
 }
 
@@ -53,7 +53,7 @@ interface UpdateEntryData<T = Record<string, unknown>> {
  */
 function updateEntriesQuota(
   entitlements: EntitlementInfo | undefined,
-  delta: number
+  delta: number,
 ): EntitlementInfo | undefined {
   if (!entitlements) return undefined;
 
@@ -62,7 +62,7 @@ function updateEntriesQuota(
     quotas: entitlements.quotas.map((quota) =>
       quota.feature === "entries"
         ? { ...quota, current: Math.max(0, quota.current + delta) }
-        : quota
+        : quota,
     ),
   };
 }
@@ -73,7 +73,7 @@ function updateEntriesQuota(
  * Includes client-side quota checking to prevent unnecessary API calls.
  */
 export function useCreateEntry<T = Record<string, unknown>>(
-  taskKey: string | undefined
+  taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
@@ -115,10 +115,10 @@ export function useCreateEntry<T = Record<string, unknown>>(
 
       // Snapshot the previous values
       const previousEntries = queryClient.getQueryData<Entry<T>[]>(
-        queryKeys.entries.byTaskKey(planId, taskKey)
+        queryKeys.entries.byTaskKey(planId, taskKey),
       );
       const previousEntitlements = queryClient.getQueryData<EntitlementInfo>(
-        queryKeys.entitlements.current()
+        queryKeys.entitlements.current(),
       );
 
       // Create optimistic entry with temporary ID
@@ -137,13 +137,13 @@ export function useCreateEntry<T = Record<string, unknown>>(
       // Optimistically add entry to cache
       queryClient.setQueryData<Entry<T>[]>(
         queryKeys.entries.byTaskKey(planId, taskKey),
-        [...(previousEntries ?? []), optimisticEntry]
+        [...(previousEntries ?? []), optimisticEntry],
       );
 
       // Optimistically increment entries quota
       queryClient.setQueryData<EntitlementInfo>(
         queryKeys.entitlements.current(),
-        updateEntriesQuota(previousEntitlements, 1)
+        updateEntriesQuota(previousEntitlements, 1),
       );
 
       return { previousEntries, previousEntitlements };
@@ -155,7 +155,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
       if (context?.previousEntries) {
         queryClient.setQueryData(
           queryKeys.entries.byTaskKey(planId, taskKey),
-          context.previousEntries
+          context.previousEntries,
         );
       }
 
@@ -163,7 +163,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
       if (context?.previousEntitlements) {
         queryClient.setQueryData(
           queryKeys.entitlements.current(),
-          context.previousEntitlements
+          context.previousEntitlements,
         );
       }
     },
@@ -192,7 +192,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
  * Hook for updating an existing entry with optimistic updates
  */
 export function useUpdateEntry<T = Record<string, unknown>>(
-  taskKey: string | undefined
+  taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
@@ -228,7 +228,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
 
       // Snapshot the previous value
       const previousEntries = queryClient.getQueryData<Entry<T>[]>(
-        queryKeys.entries.byTaskKey(planId, taskKey)
+        queryKeys.entries.byTaskKey(planId, taskKey),
       );
 
       // Optimistically update the cache
@@ -245,8 +245,8 @@ export function useUpdateEntry<T = Record<string, unknown>>(
                     metadata: { ...entry.metadata, ...data.metadata },
                   }),
                 }
-              : entry
-          )
+              : entry,
+          ),
         );
       }
 
@@ -258,7 +258,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
       // Rollback on error
       queryClient.setQueryData(
         queryKeys.entries.byTaskKey(planId, taskKey),
-        context.previousEntries
+        context.previousEntries,
       );
     },
     onSettled: (_data, _error, variables) => {
@@ -280,7 +280,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
  * Hook for deleting an entry with optimistic updates
  */
 export function useDeleteEntry<T = Record<string, unknown>>(
-  taskKey: string | undefined
+  taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
@@ -307,24 +307,24 @@ export function useDeleteEntry<T = Record<string, unknown>>(
 
       // Snapshot the previous values
       const previousEntries = queryClient.getQueryData<Entry<T>[]>(
-        queryKeys.entries.byTaskKey(planId, taskKey)
+        queryKeys.entries.byTaskKey(planId, taskKey),
       );
       const previousEntitlements = queryClient.getQueryData<EntitlementInfo>(
-        queryKeys.entitlements.current()
+        queryKeys.entitlements.current(),
       );
 
       // Optimistically remove entry from cache
       if (previousEntries) {
         queryClient.setQueryData<Entry<T>[]>(
           queryKeys.entries.byTaskKey(planId, taskKey),
-          previousEntries.filter((entry) => entry.id !== entryId)
+          previousEntries.filter((entry) => entry.id !== entryId),
         );
       }
 
       // Optimistically decrement entries quota
       queryClient.setQueryData<EntitlementInfo>(
         queryKeys.entitlements.current(),
-        updateEntriesQuota(previousEntitlements, -1)
+        updateEntriesQuota(previousEntitlements, -1),
       );
 
       return { previousEntries, previousEntitlements };
@@ -336,7 +336,7 @@ export function useDeleteEntry<T = Record<string, unknown>>(
       if (context?.previousEntries) {
         queryClient.setQueryData(
           queryKeys.entries.byTaskKey(planId, taskKey),
-          context.previousEntries
+          context.previousEntries,
         );
       }
 
@@ -344,7 +344,7 @@ export function useDeleteEntry<T = Record<string, unknown>>(
       if (context?.previousEntitlements) {
         queryClient.setQueryData(
           queryKeys.entitlements.current(),
-          context.previousEntitlements
+          context.previousEntitlements,
         );
       }
     },

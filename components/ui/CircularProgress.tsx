@@ -20,6 +20,7 @@ interface CircularProgressProps {
   strokeWidth?: number;
   progressColor?: string;
   trackColor?: string;
+  backgroundColor?: string;
   children?: React.ReactNode;
 }
 
@@ -29,6 +30,7 @@ export function CircularProgress({
   strokeWidth = 3,
   progressColor = colors.primary,
   trackColor = colors.surfaceSecondary,
+  backgroundColor = colors.surface,
   children,
 }: CircularProgressProps) {
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -160,7 +162,7 @@ export function CircularProgress({
             width: innerRadius * 2,
             height: innerRadius * 2,
             borderRadius: innerRadius,
-            backgroundColor: colors.surface,
+            backgroundColor: backgroundColor,
           },
         ]}
       />

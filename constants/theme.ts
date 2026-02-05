@@ -5,7 +5,7 @@
 
 export const colors = {
   // Backgrounds
-  background: '#FAF9F7', // Warm off-white
+  background: '#F9F8F8', // Near white
   surface: '#FFFFFF', // Pure white for cards
   surfaceSecondary: '#F5F4F2', // Subtle gray for secondary surfaces
 
@@ -18,6 +18,18 @@ export const colors = {
   primary: '#8a9785', // Deep navy for primary actions
   primaryPressed: '#7d8a79', // Darker navy for pressed state
   guidanceTrigger: '#7D8A79', // Collapsed guidance trigger text
+
+  // Feature Colors (Four Pillars)
+  featureInformation: '#8a9785', // Sage green - Information Vault
+  featureWishes: '#B8A9C9', // Soft lavender - Wishes & Guidance
+  featureLegacy: '#A3C4D8', // Soft blue - Legacy Messages
+  featureFamily: '#E0B8A8', // Warm blush/peach - Family Access
+
+  // Feature Background Tints (soft for card backgrounds)
+  featureInformationTint: '#EEF2EC', // Soft sage tint
+  featureWishesTint: '#F2EDF6', // Soft lavender tint
+  featureLegacyTint: '#ECF2F6', // Soft blue tint
+  featureFamilyTint: '#F8F0ED', // Soft blush tint
 
   // Semantic
   success: '#4A7C59', // Muted green
@@ -84,11 +96,11 @@ export const borderRadius = {
 
 export const shadows = {
   card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
 };
 

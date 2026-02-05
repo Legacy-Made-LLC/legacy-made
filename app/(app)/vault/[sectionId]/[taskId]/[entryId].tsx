@@ -25,7 +25,10 @@ import {
   useUpdateEntry,
 } from "@/hooks/queries";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { isQuotaExceededError, isStorageQuotaError } from "@/lib/entitlementHelpers";
+import {
+  isQuotaExceededError,
+  isStorageQuotaError,
+} from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -44,7 +47,8 @@ export default function EntryScreen() {
 
   const task = getTask(sectionId, taskId);
   const isNew = entryId === "new";
-  const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] = useState(false);
+  const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
+    useState(false);
 
   // Get the form component for this task
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
@@ -96,9 +100,17 @@ export default function EntryScreen() {
   // This ensures the next time the entry is viewed, it reflects the deleted files
   useEffect(() => {
     return () => {
-      if (filesDeletedRef.current && planIdRef.current && entryIdRef.current && entryIdRef.current !== "new") {
+      if (
+        filesDeletedRef.current &&
+        planIdRef.current &&
+        entryIdRef.current &&
+        entryIdRef.current !== "new"
+      ) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.entries.single(planIdRef.current, entryIdRef.current),
+          queryKey: queryKeys.entries.single(
+            planIdRef.current,
+            entryIdRef.current,
+          ),
         });
       }
     };
@@ -112,11 +124,14 @@ export default function EntryScreen() {
   useEffect(() => {
     // Check if there are any processing videos
     const hasProcessingVideos = attachments.some(
-      (a) => a.type === "video" && a.isProcessing && a.isRemote
+      (a) => a.type === "video" && a.isProcessing && a.isRemote,
     );
 
     // If no processing videos or max retries reached, don't poll
-    if (!hasProcessingVideos || videoPollingRetryCount.current >= VIDEO_POLLING_MAX_RETRIES) {
+    if (
+      !hasProcessingVideos ||
+      videoPollingRetryCount.current >= VIDEO_POLLING_MAX_RETRIES
+    ) {
       return;
     }
 
@@ -141,12 +156,41 @@ export default function EntryScreen() {
   // Reset polling retry count when attachments change and no longer have processing videos
   useEffect(() => {
     const hasProcessingVideos = attachments.some(
-      (a) => a.type === "video" && a.isProcessing && a.isRemote
+      (a) => a.type === "video" && a.isProcessing && a.isRemote,
     );
     if (!hasProcessingVideos) {
       videoPollingRetryCount.current = 0;
     }
   }, [attachments]);
+
+  // File upload hook
+  const {
+    uploadFiles,
+    uploadStates,
+    isUploading,
+    hasStorageQuotaError,
+    clearStorageQuotaError,
+  } = useFileUpload({
+    onFileUploaded: (file, fileId) => {
+      // Update attachment with backend ID and mark as remote
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.uri === file.uri
+            ? { ...a, id: fileId, uploadStatus: "complete", isRemote: true }
+            : a,
+        ),
+      );
+    },
+    onFileError: (file, error) => {
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.uri === file.uri
+            ? { ...a, uploadStatus: "error", errorMessage: error }
+            : a,
+        ),
+      );
+    },
+  });
 
   // Show storage upgrade prompt when storage quota error occurs
   useEffect(() => {
@@ -155,29 +199,6 @@ export default function EntryScreen() {
       clearStorageQuotaError();
     }
   }, [hasStorageQuotaError, clearStorageQuotaError]);
-
-  // File upload hook
-  const { uploadFiles, uploadStates, isUploading, hasStorageQuotaError, clearStorageQuotaError } = useFileUpload({
-    onFileUploaded: (file, fileId) => {
-      // Update attachment with backend ID and mark as remote
-      setAttachments((prev) =>
-        prev.map((a) =>
-          a.uri === file.uri
-            ? { ...a, id: fileId, uploadStatus: "complete", isRemote: true }
-            : a
-        )
-      );
-    },
-    onFileError: (file, error) => {
-      setAttachments((prev) =>
-        prev.map((a) =>
-          a.uri === file.uri
-            ? { ...a, uploadStatus: "error", errorMessage: error }
-            : a
-        )
-      );
-    },
-  });
 
   // Merge upload states into attachments for UI display
   const attachmentsWithUploadState = attachments.map((attachment) => {
@@ -214,8 +235,9 @@ export default function EntryScreen() {
           current.isRemote &&
           current.id &&
           !newAttachments.some(
-            (newFile) => getFileIdentifier(newFile) === getFileIdentifier(current)
-          )
+            (newFile) =>
+              getFileIdentifier(newFile) === getFileIdentifier(current),
+          ),
       );
 
       // If no remote files were removed, just update state
@@ -248,7 +270,7 @@ export default function EntryScreen() {
                 filesDeletedRef.current = true;
                 // Remove from state after successful deletion (use id for remote files)
                 setAttachments((prev) =>
-                  prev.filter((a) => getFileIdentifier(a) !== fileToDelete.id)
+                  prev.filter((a) => getFileIdentifier(a) !== fileToDelete.id),
                 );
                 // Invalidate entitlements to refresh storage quota after deletion
                 queryClient.invalidateQueries({
@@ -265,17 +287,17 @@ export default function EntryScreen() {
               }
             },
           },
-        ]
+        ],
       );
     },
-    [filesService, queryClient]
+    [filesService, queryClient],
   );
 
   // Handle save
   const handleSave = useCallback(
     async (data: {
       title: string;
-      notes?: string;
+      notes?: string | null;
       metadata: Record<string, unknown>;
     }) => {
       if (!task || !planId) return;
@@ -285,6 +307,7 @@ export default function EntryScreen() {
         isSavingRef.current = true;
 
         let savedEntryId: string;
+        const wasNew = isNew;
 
         if (isNew) {
           const createdEntry = await createMutation.mutateAsync(data);
@@ -296,15 +319,62 @@ export default function EntryScreen() {
 
         // Upload any pending files
         const pendingFiles = attachments.filter(
-          (f) => !f.isRemote && f.uploadStatus !== "complete"
+          (f) => !f.isRemote && f.uploadStatus !== "complete",
         );
         if (pendingFiles.length > 0) {
-          await uploadFiles(savedEntryId, attachments);
+          // Helper to handle upload failures - stays on page and shows error
+          const handleUploadFailure = (errorMessage: string) => {
+            // If this was a new entry, replace the route so we're now editing
+            // the created entry (prevents duplicate entry creation on retry)
+            if (wasNew) {
+              router.replace(
+                `/(app)/vault/${sectionId}/${taskId}/${savedEntryId}`,
+              );
+            }
 
-          // Invalidate entry cache after uploads so it includes the new files
-          await queryClient.invalidateQueries({
-            queryKey: queryKeys.entries.single(planId, savedEntryId),
-          });
+            Alert.alert(
+              "Upload Failed",
+              `${errorMessage} Your entry has been saved. Try adding the files again.`,
+            );
+          };
+
+          try {
+            const uploadResults = await uploadFiles(savedEntryId, attachments);
+
+            // Invalidate entry cache after uploads so it includes the new files
+            await queryClient.invalidateQueries({
+              queryKey: queryKeys.entries.single(planId, savedEntryId),
+            });
+
+            // Check for upload failures (excluding storage quota errors which show their own prompt)
+            const failedUploads = uploadResults.filter(
+              (r) => !r.success && !r.isStorageQuotaError,
+            );
+
+            if (failedUploads.length > 0) {
+              const failedCount = failedUploads.length;
+              handleUploadFailure(
+                `${failedCount} file${failedCount > 1 ? "s" : ""} failed to upload.`,
+              );
+              // Don't navigate away - stay on page to show error state
+              return;
+            }
+          } catch (uploadError) {
+            // Check if it's a storage quota error thrown by uploadFiles
+            if (isStorageQuotaError(uploadError)) {
+              if (wasNew) {
+                router.replace(
+                  `/(app)/vault/${sectionId}/${taskId}/${savedEntryId}`,
+                );
+              }
+              setShowStorageUpgradePrompt(true);
+              return;
+            }
+
+            // Handle any other thrown errors from uploadFiles
+            handleUploadFailure("An error occurred during file upload.");
+            return;
+          }
         }
 
         router.back();
@@ -333,13 +403,15 @@ export default function EntryScreen() {
       planId,
       isNew,
       entryId,
+      sectionId,
+      taskId,
       createMutation,
       updateMutation,
       attachments,
       uploadFiles,
       queryClient,
       router,
-    ]
+    ],
   );
 
   // Handle delete

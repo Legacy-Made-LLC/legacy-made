@@ -10,14 +10,12 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Linking,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AccountCreationScreen() {
@@ -91,16 +89,13 @@ export default function AccountCreationScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <OnboardingHeader showBackButton />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoid}
+      <KeyboardAwareScrollView
+        style={styles.formScrollView}
+        contentContainerStyle={styles.formContent}
+        bottomOffset={20}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.formScrollView}
-          contentContainerStyle={styles.formContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
           <Text style={styles.formTitle}>Tell us about you</Text>
           <Text style={styles.formSubtitle}>
             This helps us personalize your experience and keep your information
@@ -233,8 +228,7 @@ export default function AccountCreationScreen() {
               </Text>
             </Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

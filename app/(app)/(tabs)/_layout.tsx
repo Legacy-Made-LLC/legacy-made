@@ -95,11 +95,12 @@ export default function TabsLayout() {
         name="information"
         options={{
           title: "Info",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarActiveTintColor: colors.featureInformation,
+          tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? "document-text" : "document-text-outline"}
               size={iconSize}
-              color={color}
+              color={focused ? colors.featureInformation : colors.textTertiary}
             />
           ),
         }}
@@ -108,14 +109,15 @@ export default function TabsLayout() {
         name="wishes"
         options={{
           title: "Wishes",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarActiveTintColor: colors.featureWishes,
+          tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isWishesLocked}
               icon={
                 <Ionicons
                   name={focused ? "heart" : "heart-outline"}
                   size={iconSize}
-                  color={isWishesLocked ? colors.textTertiary : color}
+                  color={isWishesLocked ? colors.textTertiary : (focused ? colors.featureWishes : colors.textTertiary)}
                 />
               }
             />
@@ -133,14 +135,15 @@ export default function TabsLayout() {
         name="legacy"
         options={{
           title: "Legacy",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarActiveTintColor: colors.featureLegacy,
+          tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isLegacyLocked}
               icon={
                 <Ionicons
                   name={focused ? "videocam" : "videocam-outline"}
                   size={iconSize}
-                  color={isLegacyLocked ? colors.textTertiary : color}
+                  color={isLegacyLocked ? colors.textTertiary : (focused ? colors.featureLegacy : colors.textTertiary)}
                 />
               }
             />
@@ -151,14 +154,15 @@ export default function TabsLayout() {
         name="family"
         options={{
           title: "Family",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarActiveTintColor: colors.featureFamily,
+          tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isFamilyLocked}
               icon={
                 <Ionicons
                   name={focused ? "people" : "people-outline"}
                   size={iconSize}
-                  color={isFamilyLocked ? colors.textTertiary : color}
+                  color={isFamilyLocked ? colors.textTertiary : (focused ? colors.featureFamily : colors.textTertiary)}
                 />
               }
             />

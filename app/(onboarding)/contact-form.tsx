@@ -8,7 +8,8 @@ import { useOnboardingContext } from '@/data/OnboardingContext';
 import { revalidateLogic, useForm, useStore } from '@tanstack/react-form';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ContactFormScreen() {
@@ -67,16 +68,13 @@ export default function ContactFormScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <OnboardingHeader showBackButton />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoid}
+      <KeyboardAwareScrollView
+        style={styles.formScrollView}
+        contentContainerStyle={styles.formContent}
+        bottomOffset={20}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.formScrollView}
-          contentContainerStyle={styles.formContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
           <Text style={styles.formTitle}>Who should be called first?</Text>
           <Text style={styles.formSubtitle}>
             This is the first person your family would reach out to.
@@ -108,8 +106,7 @@ export default function ContactFormScreen() {
               )}
             </form.Subscribe>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

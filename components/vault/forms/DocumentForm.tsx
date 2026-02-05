@@ -15,13 +15,11 @@ import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
 import { formStyles } from "./formStyles";
@@ -159,20 +157,16 @@ export function DocumentForm({
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={formStyles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={100}
+      contentContainerStyle={[
+        formStyles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
+      bottomOffset={20}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        style={formStyles.scrollView}
-        contentContainerStyle={[
-          formStyles.content,
-          { paddingBottom: insets.bottom + spacing.lg },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
         <form.Field name="documentType">
           {(field) => (
             <View style={formStyles.fieldContainer}>
@@ -309,7 +303,6 @@ export function DocumentForm({
             />
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }

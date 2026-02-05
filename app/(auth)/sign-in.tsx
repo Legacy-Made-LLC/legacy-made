@@ -4,14 +4,12 @@ import { revalidateLogic, useForm } from '@tanstack/react-form';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormInput, signInSchema } from '@/components/forms';
@@ -81,17 +79,15 @@ export default function SignInScreen() {
   });
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg },
+      ]}
+      bottomOffset={20}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
         <Pressable
           onPress={router.back}
           style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
@@ -147,8 +143,7 @@ export default function SignInScreen() {
             <Button title="Create Account" onPress={() => { }} variant="subtle" />
           </Link>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

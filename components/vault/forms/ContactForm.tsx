@@ -12,14 +12,12 @@ import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
 
@@ -138,20 +136,16 @@ export function ContactForm({
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={100}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.lg },
+      ]}
+      bottomOffset={20}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + spacing.lg },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
         <ContactFormFieldsWithForm
           form={form}
           showReasonField={true}
@@ -220,8 +214,7 @@ export function ContactForm({
             </Pressable>
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

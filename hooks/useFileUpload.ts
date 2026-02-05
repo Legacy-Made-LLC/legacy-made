@@ -49,7 +49,7 @@ interface UseFileUploadReturn {
   /** Upload all pending files to an entry */
   uploadFiles: (
     entryId: string,
-    files: FileAttachment[]
+    files: FileAttachment[],
   ) => Promise<UploadResult[]>;
   /** Current upload state for each file (keyed by uri) */
   uploadStates: Record<string, FileUploadState>;
@@ -80,7 +80,7 @@ function uploadToPresignedUrl(
   blob: Blob,
   mimeType: string,
   onProgress: (progress: number) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -118,7 +118,7 @@ function uploadToPresignedUrl(
 }
 
 export function useFileUpload(
-  options: UseFileUploadOptions = {}
+  options: UseFileUploadOptions = {},
 ): UseFileUploadReturn {
   const { onFileUploaded, onFileError, onAllComplete } = options;
   const { files: filesService } = useApi();
@@ -155,7 +155,7 @@ export function useFileUpload(
         },
       }));
     },
-    []
+    [],
   );
 
   /**
@@ -165,7 +165,7 @@ export function useFileUpload(
     async (
       entryId: string,
       file: FileAttachment,
-      signal: AbortSignal
+      signal: AbortSignal,
     ): Promise<UploadResult> => {
       const uri = file.uri;
 
@@ -193,7 +193,7 @@ export function useFileUpload(
           blob,
           file.mimeType,
           (progress) => updateFileState(uri, { progress }),
-          signal
+          signal,
         );
 
         if (signal.aborted) {
@@ -211,14 +211,18 @@ export function useFileUpload(
         // Check if this is a storage quota error
         if (isStorageQuotaError(error)) {
           const quotaDetails = parseStorageQuotaError(error);
-          const message =
-            quotaDetails
-              ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
-              : "Storage quota exceeded";
+          const message = quotaDetails
+            ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
+            : "Storage quota exceeded";
           updateFileState(uri, { status: "error", error: message });
           onFileError?.(file, message);
           setHasStorageQuotaError(true);
-          return { uri, success: false, error: message, isStorageQuotaError: true };
+          return {
+            uri,
+            success: false,
+            error: message,
+            isStorageQuotaError: true,
+          };
         }
 
         const message =
@@ -228,7 +232,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError]
+    [filesService, updateFileState, onFileUploaded, onFileError],
   );
 
   /**
@@ -239,7 +243,7 @@ export function useFileUpload(
     async (
       entryId: string,
       file: FileAttachment,
-      signal: AbortSignal
+      signal: AbortSignal,
     ): Promise<UploadResult> => {
       const uri = file.uri;
 
@@ -255,7 +259,7 @@ export function useFileUpload(
             creatorId: user?.id,
             title: file.fileName,
           },
-          passthrough: JSON.stringify({ entryId })
+          passthrough: JSON.stringify({ entryId }),
         });
 
         if (signal.aborted) {
@@ -274,7 +278,7 @@ export function useFileUpload(
           blob,
           file.mimeType,
           (progress) => updateFileState(uri, { progress }),
-          signal
+          signal,
         );
 
         // No complete call needed for Mux - webhook handles it
@@ -287,14 +291,18 @@ export function useFileUpload(
         // Check if this is a storage quota error
         if (isStorageQuotaError(error)) {
           const quotaDetails = parseStorageQuotaError(error);
-          const message =
-            quotaDetails
-              ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
-              : "Storage quota exceeded";
+          const message = quotaDetails
+            ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
+            : "Storage quota exceeded";
           updateFileState(uri, { status: "error", error: message });
           onFileError?.(file, message);
           setHasStorageQuotaError(true);
-          return { uri, success: false, error: message, isStorageQuotaError: true };
+          return {
+            uri,
+            success: false,
+            error: message,
+            isStorageQuotaError: true,
+          };
         }
 
         const message =
@@ -304,7 +312,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError, user?.id]
+    [filesService, updateFileState, onFileUploaded, onFileError, user?.id],
   );
 
   /**
@@ -313,14 +321,14 @@ export function useFileUpload(
   const uploadFiles = useCallback(
     async (
       entryId: string,
-      files: FileAttachment[]
+      files: FileAttachment[],
     ): Promise<UploadResult[]> => {
       // Clear any previous storage quota error
       setHasStorageQuotaError(false);
 
       // Filter to only pending files (not already remote)
       const pendingFiles = files.filter(
-        (f) => !f.isRemote && f.uploadStatus !== "complete"
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
       );
 
       if (pendingFiles.length === 0) {
@@ -388,7 +396,7 @@ export function useFileUpload(
       updateFileState,
       queryClient,
       onAllComplete,
-    ]
+    ],
   );
 
   /**

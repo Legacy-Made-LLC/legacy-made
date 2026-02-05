@@ -36,6 +36,8 @@ const pillars = [
     icon: "document-text-outline" as const,
     totalItems: 9, // Placeholder - would be calculated from schema
     route: "/(app)/(tabs)/information",
+    color: colors.featureInformation,
+    tint: colors.featureInformationTint,
   },
   {
     id: "wishes",
@@ -44,6 +46,8 @@ const pillars = [
     icon: "heart-outline" as const,
     totalItems: 11, // Placeholder
     route: "/(app)/(tabs)/wishes",
+    color: colors.featureWishes,
+    tint: colors.featureWishesTint,
   },
   {
     id: "legacy",
@@ -52,6 +56,8 @@ const pillars = [
     icon: "videocam-outline" as const,
     totalItems: 8, // Placeholder
     route: "/(app)/(tabs)/legacy",
+    color: colors.featureLegacy,
+    tint: colors.featureLegacyTint,
   },
   {
     id: "family",
@@ -60,6 +66,8 @@ const pillars = [
     icon: "people-outline" as const,
     totalItems: 5, // Placeholder
     route: "/(app)/(tabs)/family",
+    color: colors.featureFamily,
+    tint: colors.featureFamilyTint,
   },
 ];
 
@@ -77,7 +85,10 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
   const progressPercent = Math.min(currentProgress / pillar.totalItems, 1);
 
   return (
-    <PressableCard onPress={onPress} style={styles.pillarCard}>
+    <PressableCard
+      onPress={onPress}
+      style={[styles.pillarCard, { backgroundColor: pillar.tint }]}
+    >
       <View style={styles.pillarContent}>
         {/* Icon with circular progress */}
         <View style={styles.pillarIconWrapper}>
@@ -85,13 +96,17 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
             progress={progressPercent}
             size={CIRCLE_SIZE}
             strokeWidth={CIRCLE_STROKE_WIDTH}
+            progressColor={pillar.color}
+            trackColor={colors.surface}
+            backgroundColor={pillar.tint}
           >
-            <View style={styles.pillarIconContainer}>
-              <Ionicons
-                name={pillar.icon}
-                size={24}
-                color={colors.textTertiary}
-              />
+            <View
+              style={[
+                styles.pillarIconContainer,
+                { backgroundColor: pillar.tint },
+              ]}
+            >
+              <Ionicons name={pillar.icon} size={24} color={pillar.color} />
             </View>
           </CircularProgress>
         </View>

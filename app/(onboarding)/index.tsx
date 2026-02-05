@@ -128,6 +128,9 @@ export default function IntroScreen() {
             >
               <Text style={styles.primaryButtonText}>Get Started</Text>
             </Pressable>
+            <Text style={styles.buttonHelperText}>
+              This part only takes one minute
+            </Text>
           </Animated.View>
         </Animated.View>
       </View>

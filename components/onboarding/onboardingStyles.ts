@@ -68,6 +68,13 @@ export const onboardingStyles = StyleSheet.create({
     marginTop: spacing.lg,
     width: "100%",
   },
+  buttonHelperText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.md,
+  },
 
   // General Screen Layout
   screenContainer: {

@@ -14,6 +14,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import "react-native-reanimated";
 
 import { DevMenu } from "@/components/dev/DevMenu";
@@ -53,26 +54,28 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <UpgradePromptProvider>
-          <OnboardingProvider>
-            <ClerkProvider tokenCache={tokenCache} publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}>
-              <QueryProvider>
-                <PlanProvider>
-                  <EntitlementsProvider>
-                    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-                      {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
-                    </Stack>
-                    <StatusBar style="dark" />
-                    <DevMenu />
-                  </EntitlementsProvider>
-                </PlanProvider>
-              </QueryProvider>
-            </ClerkProvider>
-          </OnboardingProvider>
-          <GlobalUpgradePrompt />
-        </UpgradePromptProvider>
-      </BottomSheetModalProvider>
+      <KeyboardProvider>
+        <BottomSheetModalProvider>
+          <UpgradePromptProvider>
+            <OnboardingProvider>
+              <ClerkProvider tokenCache={tokenCache} publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+                <QueryProvider>
+                  <PlanProvider>
+                    <EntitlementsProvider>
+                      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+                        {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
+                      </Stack>
+                      <StatusBar style="dark" />
+                      <DevMenu />
+                    </EntitlementsProvider>
+                  </PlanProvider>
+                </QueryProvider>
+              </ClerkProvider>
+            </OnboardingProvider>
+            <GlobalUpgradePrompt />
+          </UpgradePromptProvider>
+        </BottomSheetModalProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
