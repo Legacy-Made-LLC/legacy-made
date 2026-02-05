@@ -344,10 +344,6 @@ export default function WishesTaskScreen() {
     return attachment;
   });
 
-  useEffect(() => {
-    console.log("Attachments with upload state", attachmentsWithUploadState);
-  }, [attachmentsWithUploadState]);
-
   // Keep a ref to current attachments for comparison in handleAttachmentsChange
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
