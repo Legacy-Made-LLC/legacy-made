@@ -8,6 +8,7 @@
  */
 
 import type { Wish, MetadataSchema, FileAttachment } from "@/api/types";
+import type { AnyFormApi } from "@tanstack/form-core";
 import type { ComponentType } from "react";
 
 // ============================================================================
@@ -45,6 +46,24 @@ export interface WishFormGuidance {
   pacingNote?: string;
 }
 
+/**
+ * Common form values interface for wish forms.
+ * Each form may have additional specific fields, but all share these base fields.
+ */
+export interface WishFormValues {
+  [key: string]: unknown;
+}
+
+/**
+ * Data structure for saving a wish
+ */
+export interface WishSaveData {
+  title: string;
+  notes?: string | null;
+  metadata: Record<string, unknown>;
+  metadataSchema: MetadataSchema;
+}
+
 export interface WishFormProps {
   /** The task key for this form */
   taskKey: string;
@@ -52,17 +71,16 @@ export interface WishFormProps {
   wishId?: string;
   /** Initial data for the form (when editing) */
   initialData?: Wish;
-  /** Callback when form is saved */
-  onSave: (data: {
-    title: string;
-    notes?: string | null;
-    metadata: Record<string, unknown>;
-    metadataSchema: MetadataSchema;
-  }) => Promise<void>;
-  /** Callback when form is cancelled */
-  onCancel: () => void;
-  /** Whether save is in progress */
-  isSaving?: boolean;
+  /**
+   * Callback to provide form instance to parent for auto-save integration.
+   * Parent subscribes to form.state.isDirty and form.state.values to trigger saves.
+   */
+  onFormReady?: (form: AnyFormApi) => void;
+  /**
+   * Callback to register the form's getSaveData function with the parent.
+   * Form calls this with its own getSaveData implementation.
+   */
+  registerGetSaveData?: (fn: () => WishSaveData) => void;
   /** Guidance card content */
   guidance?: WishFormGuidance;
   /** File attachments (optional - only used by forms that support file uploads) */

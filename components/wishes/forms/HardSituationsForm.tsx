@@ -3,6 +3,8 @@
  *
  * Captures guidance for handling conflicts and difficult decisions.
  * Task: wishes.values.hardSituations
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
  */
 
 import type { HardSituationsMetadata } from "@/api/types";
@@ -11,68 +13,85 @@ import { Input } from "@/components/ui/Input";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateHardSituationsSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+interface HardSituationsFormValues {
+  decisionMaker: string;
+  disagreements: string;
+  conflictGuidance: string;
+  grace: string;
+  notes: string;
+}
 
 export function HardSituationsForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   const initialMetadata = initialData?.metadata as
     | HardSituationsMetadata
     | undefined;
 
-  const [decisionMaker, setDecisionMaker] = useState(
-    initialMetadata?.decisionMaker ?? "",
+  const defaultValues = useMemo<HardSituationsFormValues>(
+    () => ({
+      decisionMaker: initialMetadata?.decisionMaker ?? "",
+      disagreements: initialMetadata?.disagreements ?? "",
+      conflictGuidance: initialMetadata?.conflictGuidance ?? "",
+      grace: initialMetadata?.grace ?? "",
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [disagreements, setDisagreements] = useState(
-    initialMetadata?.disagreements ?? "",
-  );
-  const [conflictGuidance, setConflictGuidance] = useState(
-    initialMetadata?.conflictGuidance ?? "",
-  );
-  const [grace, setGrace] = useState(initialMetadata?.grace ?? "");
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: HardSituationsMetadata = {
+        decisionMaker: values.decisionMaker.trim() || undefined,
+        disagreements: values.disagreements.trim() || undefined,
+        conflictGuidance: values.conflictGuidance.trim() || undefined,
+        grace: values.grace.trim() || undefined,
+      };
+
+      return {
+        title: "Hard Situations",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateHardSituationsSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Hard Situations" : "Edit Hard Situations",
+      title: "Hard Situations",
     });
-  }, [isNew, navigation]);
-
-  const handleSave = async () => {
-    const metadata: HardSituationsMetadata = {
-      decisionMaker: decisionMaker.trim() || undefined,
-      disagreements: disagreements.trim() || undefined,
-      conflictGuidance: conflictGuidance.trim() || undefined,
-      grace: grace.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: "Hard Situations",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateHardSituationsSchema(),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save";
-      Alert.alert("Error", message);
-    }
-  };
+  }, [navigation]);
 
   return (
     <KeyboardAwareScrollView
@@ -99,78 +118,76 @@ export function HardSituationsForm({
         />
       )}
 
-      <View
-        style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
-      >
-        <Input
-          label="Who should make decisions if people disagree?"
-          value={decisionMaker}
-          onChangeText={setDecisionMaker}
-          placeholder="Name of the person you trust most"
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Why this person?"
-          value={disagreements}
-          onChangeText={setDisagreements}
-          placeholder="What makes them the right choice? This explanation can help others accept their leadership."
-          maxLength={1500}
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="How should disagreements be handled?"
-          value={conflictGuidance}
-          onChangeText={setConflictGuidance}
-          placeholder="Should the designated person have final say? Should there be a family vote? What matters more — consensus or action?"
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Grace to extend"
-          value={grace}
-          onChangeText={setGrace}
-          placeholder="Are there any relationships that need healing? Forgiveness to offer? Permission to let go of old hurts?"
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Additional guidance"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Anything else that might help during difficult moments..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            isSaving && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              isSaving && wishesFormStyles.primaryButtonTextDisabled,
-            ]}
+      <form.Field name="decisionMaker">
+        {(field) => (
+          <View
+            style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
+            <Input
+              label="Who should make decisions if people disagree?"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Name of the person you trust most"
+            />
+          </View>
+        )}
+      </form.Field>
 
+      <form.Field name="disagreements">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Why this person?"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="What makes them the right choice? This explanation can help others accept their leadership."
+              maxLength={1500}
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Field name="conflictGuidance">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="How should disagreements be handled?"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Should the designated person have final say? Should there be a family vote? What matters more — consensus or action?"
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Field name="grace">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Grace to extend"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Are there any relationships that need healing? Forgiveness to offer? Permission to let go of old hurts?"
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Field name="notes">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Additional guidance"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Anything else that might help during difficult moments..."
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }

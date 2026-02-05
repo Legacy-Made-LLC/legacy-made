@@ -3,6 +3,8 @@
  *
  * Captures organ donation preferences and registry status.
  * Task: wishes.endOfLife.organDonation
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
  */
 
 import type { OrganDonationMetadata } from "@/api/types";
@@ -11,12 +13,13 @@ import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateOrganDonationSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
 
@@ -34,56 +37,72 @@ const registryOptions = [
   { value: "unsure", label: "I'm not sure" },
 ];
 
+interface OrganDonationFormValues {
+  decision: string;
+  specificOrgans: string;
+  onRegistry: string;
+  notes: string;
+}
+
 export function OrganDonationForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   const initialMetadata = initialData?.metadata as
     | OrganDonationMetadata
     | undefined;
 
-  const [decision, setDecision] = useState(initialMetadata?.decision ?? "");
-  const [specificOrgans, setSpecificOrgans] = useState(
-    initialMetadata?.specificOrgans ?? "",
+  const defaultValues = useMemo<OrganDonationFormValues>(
+    () => ({
+      decision: initialMetadata?.decision ?? "",
+      specificOrgans: initialMetadata?.specificOrgans ?? "",
+      onRegistry: initialMetadata?.onRegistry ?? "",
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [onRegistry, setOnRegistry] = useState(
-    initialMetadata?.onRegistry ?? "",
-  );
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: OrganDonationMetadata = {
+        decision: values.decision || undefined,
+        specificOrgans: values.specificOrgans.trim() || undefined,
+        onRegistry: values.onRegistry || undefined,
+      };
+
+      return {
+        title: "Organ Donation",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateOrganDonationSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Organ Donation" : "Edit Organ Donation",
+      title: "Organ Donation",
     });
-  }, [isNew, navigation]);
-
-  const handleSave = async () => {
-    const metadata: OrganDonationMetadata = {
-      decision: decision || undefined,
-      specificOrgans: specificOrgans.trim() || undefined,
-      onRegistry: onRegistry || undefined,
-    };
-
-    try {
-      await onSave({
-        title: "Organ Donation",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateOrganDonationSchema(),
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save your preferences";
-      Alert.alert("Error", message);
-    }
-  };
+  }, [navigation]);
 
   return (
     <KeyboardAwareScrollView
@@ -110,80 +129,82 @@ export function OrganDonationForm({
         />
       )}
 
-      <View
-        style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
-      >
-        <Select
-          label="What are your wishes on organ donation?"
-          value={decision}
-          onValueChange={setDecision}
-          options={decisionOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      {decision === "yes-specific" && (
-        <View style={wishesFormStyles.fieldContainer}>
-          <TextArea
-            label="Which organs or tissues?"
-            value={specificOrgans}
-            onChangeText={setSpecificOrgans}
-            placeholder="Heart, kidneys, corneas, etc."
-            maxLength={500}
-          />
-        </View>
-      )}
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <Select
-          label="Are you on your state's donor registry?"
-          value={onRegistry}
-          onValueChange={setOnRegistry}
-          options={registryOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      {onRegistry === "no" && (
-        <View style={wishesFormStyles.infoCard}>
-          <Text style={wishesFormStyles.infoText}>
-            Being on the registry helps, but your family will still be asked.
-            Recording your wishes here ensures they know what you want.
-          </Text>
-        </View>
-      )}
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Additional notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any religious, cultural, or personal considerations..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            isSaving && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              isSaving && wishesFormStyles.primaryButtonTextDisabled,
-            ]}
+      <form.Field name="decision">
+        {(field) => (
+          <View
+            style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
+            <Select
+              label="What are your wishes on organ donation?"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={decisionOptions}
+              placeholder="Select..."
+            />
+          </View>
+        )}
+      </form.Field>
 
+      <form.Subscribe selector={(state) => state.values.decision}>
+        {(decision) =>
+          decision === "yes-specific" ? (
+            <form.Field name="specificOrgans">
+              {(field) => (
+                <View style={wishesFormStyles.fieldContainer}>
+                  <TextArea
+                    label="Which organs or tissues?"
+                    value={field.state.value}
+                    onChangeText={(text) => field.handleChange(text)}
+                    placeholder="Heart, kidneys, corneas, etc."
+                    maxLength={500}
+                  />
+                </View>
+              )}
+            </form.Field>
+          ) : null
+        }
+      </form.Subscribe>
+
+      <form.Field name="onRegistry">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <Select
+              label="Are you on your state's donor registry?"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={registryOptions}
+              placeholder="Select..."
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Subscribe selector={(state) => state.values.onRegistry}>
+        {(onRegistry) =>
+          onRegistry === "no" ? (
+            <View style={wishesFormStyles.infoCard}>
+              <Text style={wishesFormStyles.infoText}>
+                Being on the registry helps, but your family will still be asked.
+                Recording your wishes here ensures they know what you want.
+              </Text>
+            </View>
+          ) : null
+        }
+      </form.Subscribe>
+
+      <form.Field name="notes">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Additional notes"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Any religious, cultural, or personal considerations..."
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }

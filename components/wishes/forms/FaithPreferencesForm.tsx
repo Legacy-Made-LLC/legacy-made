@@ -3,6 +3,8 @@
  *
  * Captures religious/spiritual traditions and related ceremony preferences.
  * Task: wishes.values.faith
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
  */
 
 import type { FaithPreferencesMetadata } from "@/api/types";
@@ -13,72 +15,88 @@ import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { faithTraditions } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateFaithPreferencesSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+interface FaithPreferencesFormValues {
+  tradition: string;
+  congregation: string;
+  leader: string;
+  leaderContact: string;
+  rituals: string;
+  notes: string;
+}
 
 export function FaithPreferencesForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   const initialMetadata = initialData?.metadata as
     | FaithPreferencesMetadata
     | undefined;
 
-  const [tradition, setTradition] = useState(initialMetadata?.tradition ?? "");
-  const [congregation, setCongregation] = useState(
-    initialMetadata?.congregation ?? "",
+  const defaultValues = useMemo<FaithPreferencesFormValues>(
+    () => ({
+      tradition: initialMetadata?.tradition ?? "",
+      congregation: initialMetadata?.congregation ?? "",
+      leader: initialMetadata?.leader ?? "",
+      leaderContact: initialMetadata?.leaderContact ?? "",
+      rituals: initialMetadata?.rituals ?? "",
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [leader, setLeader] = useState(initialMetadata?.leader ?? "");
-  const [leaderContact, setLeaderContact] = useState(
-    initialMetadata?.leaderContact ?? "",
-  );
-  const [rituals, setRituals] = useState(initialMetadata?.rituals ?? "");
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: FaithPreferencesMetadata = {
+        tradition: values.tradition || undefined,
+        congregation: values.congregation.trim() || undefined,
+        leader: values.leader.trim() || undefined,
+        leaderContact: values.leaderContact.trim() || undefined,
+        rituals: values.rituals.trim() || undefined,
+      };
+
+      return {
+        title: "Faith & Spiritual Preferences",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateFaithPreferencesSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Faith & Spiritual Preferences" : "Edit Faith Preferences",
+      title: "Faith & Spiritual Preferences",
     });
-  }, [isNew, navigation]);
-
-  const handleSave = async () => {
-    const metadata: FaithPreferencesMetadata = {
-      tradition: tradition || undefined,
-      congregation: congregation.trim() || undefined,
-      leader: leader.trim() || undefined,
-      leaderContact: leaderContact.trim() || undefined,
-      rituals: rituals.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: "Faith & Spiritual Preferences",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateFaithPreferencesSchema(),
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save your preferences";
-      Alert.alert("Error", message);
-    }
-  };
-
-  const showCongregationFields =
-    tradition && tradition !== "none" && tradition !== "spiritual";
+  }, [navigation]);
 
   return (
     <KeyboardAwareScrollView
@@ -105,91 +123,96 @@ export function FaithPreferencesForm({
         />
       )}
 
-      <View
-        style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
-      >
-        <Select
-          label="What is your faith or spiritual tradition?"
-          value={tradition}
-          onValueChange={setTradition}
-          options={faithTraditions}
-          placeholder="Select..."
-        />
-      </View>
-
-      {showCongregationFields && (
-        <>
-          <View style={wishesFormStyles.fieldContainer}>
-            <Input
-              label="Place of worship"
-              value={congregation}
-              onChangeText={setCongregation}
-              placeholder="Church, synagogue, mosque, temple name..."
-            />
-          </View>
-
-          <View style={wishesFormStyles.fieldContainer}>
-            <Input
-              label="Religious leader name"
-              value={leader}
-              onChangeText={setLeader}
-              placeholder="Pastor, Rabbi, Imam, Priest, etc."
-            />
-          </View>
-
-          <View style={wishesFormStyles.fieldContainer}>
-            <Input
-              label="Leader's contact info"
-              value={leaderContact}
-              onChangeText={setLeaderContact}
-              placeholder="Phone number or email"
-            />
-          </View>
-        </>
-      )}
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Rituals or customs to observe"
-          value={rituals}
-          onChangeText={setRituals}
-          placeholder="Prayers, ceremonies, traditions that are important to you..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Additional notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Anything else about your spiritual preferences..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            isSaving && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              isSaving && wishesFormStyles.primaryButtonTextDisabled,
-            ]}
+      <form.Field name="tradition">
+        {(field) => (
+          <View
+            style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
+            <Select
+              label="What is your faith or spiritual tradition?"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={faithTraditions}
+              placeholder="Select..."
+            />
+          </View>
+        )}
+      </form.Field>
 
+      <form.Subscribe selector={(state) => state.values.tradition}>
+        {(tradition) =>
+          tradition && tradition !== "none" && tradition !== "spiritual" ? (
+            <>
+              <form.Field name="congregation">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Input
+                      label="Place of worship"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Church, synagogue, mosque, temple name..."
+                    />
+                  </View>
+                )}
+              </form.Field>
+
+              <form.Field name="leader">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Input
+                      label="Religious leader name"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Pastor, Rabbi, Imam, Priest, etc."
+                    />
+                  </View>
+                )}
+              </form.Field>
+
+              <form.Field name="leaderContact">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Input
+                      label="Leader's contact info"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Phone number or email"
+                    />
+                  </View>
+                )}
+              </form.Field>
+            </>
+          ) : null
+        }
+      </form.Subscribe>
+
+      <form.Field name="rituals">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Rituals or customs to observe"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Prayers, ceremonies, traditions that are important to you..."
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Field name="notes">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Additional notes"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Anything else about your spiritual preferences..."
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }
-

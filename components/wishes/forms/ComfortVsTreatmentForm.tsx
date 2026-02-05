@@ -3,6 +3,8 @@
  *
  * Dropdown + selects for pain management, alertness, etc.
  * Task: wishes.carePrefs.comfortVsTreatment
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
  */
 
 import type { ComfortVsTreatmentMetadata } from "@/api/types";
@@ -11,12 +13,13 @@ import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateComfortVsTreatmentSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
 
@@ -57,56 +60,72 @@ const alertnessOptions = [
   { value: "not", label: "Not important — comfort is all that matters" },
 ];
 
+interface ComfortVsTreatmentFormValues {
+  preference: string;
+  painManagement: string;
+  alertness: string;
+  notes: string;
+}
+
 export function ComfortVsTreatmentForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   const initialMetadata = initialData?.metadata as
     | ComfortVsTreatmentMetadata
     | undefined;
 
-  const [preference, setPreference] = useState(
-    initialMetadata?.preference ?? "",
+  const defaultValues = useMemo<ComfortVsTreatmentFormValues>(
+    () => ({
+      preference: initialMetadata?.preference ?? "",
+      painManagement: initialMetadata?.painManagement ?? "",
+      alertness: initialMetadata?.alertness ?? "",
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [painManagement, setPainManagement] = useState(
-    initialMetadata?.painManagement ?? "",
-  );
-  const [alertness, setAlertness] = useState(initialMetadata?.alertness ?? "");
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: ComfortVsTreatmentMetadata = {
+        preference: values.preference || undefined,
+        painManagement: values.painManagement || undefined,
+        alertness: values.alertness || undefined,
+      };
+
+      return {
+        title: "Comfort vs Treatment",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateComfortVsTreatmentSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Comfort vs Treatment" : "Edit Comfort vs Treatment",
+      title: "Comfort vs Treatment",
     });
-  }, [isNew, navigation]);
-
-  const handleSave = async () => {
-    const metadata: ComfortVsTreatmentMetadata = {
-      preference: preference || undefined,
-      painManagement: painManagement || undefined,
-      alertness: alertness || undefined,
-    };
-
-    try {
-      await onSave({
-        title: "Comfort vs Treatment",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateComfortVsTreatmentSchema(),
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save your preferences";
-      Alert.alert("Error", message);
-    }
-  };
+  }, [navigation]);
 
   return (
     <KeyboardAwareScrollView
@@ -133,70 +152,63 @@ export function ComfortVsTreatmentForm({
         />
       )}
 
-      <View
-        style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
-      >
-        <Select
-          label="Overall preference"
-          value={preference}
-          onValueChange={setPreference}
-          options={preferenceOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <Select
-          label="Pain management approach"
-          value={painManagement}
-          onValueChange={setPainManagement}
-          options={painManagementOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <Select
-          label="How important is staying alert?"
-          value={alertness}
-          onValueChange={setAlertness}
-          options={alertnessOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Additional notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any other preferences about your care..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            isSaving && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              isSaving && wishesFormStyles.primaryButtonTextDisabled,
-            ]}
+      <form.Field name="preference">
+        {(field) => (
+          <View
+            style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
+            <Select
+              label="Overall preference"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={preferenceOptions}
+              placeholder="Select..."
+            />
+          </View>
+        )}
+      </form.Field>
 
+      <form.Field name="painManagement">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <Select
+              label="Pain management approach"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={painManagementOptions}
+              placeholder="Select..."
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Field name="alertness">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <Select
+              label="How important is staying alert?"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={alertnessOptions}
+              placeholder="Select..."
+            />
+          </View>
+        )}
+      </form.Field>
+
+      <form.Field name="notes">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Additional notes"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Any other preferences about your care..."
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }
-

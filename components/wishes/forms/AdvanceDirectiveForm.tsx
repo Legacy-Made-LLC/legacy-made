@@ -3,6 +3,9 @@
  *
  * Tracks directive documents and healthcare proxy information.
  * Task: wishes.carePrefs.advanceDirective
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
+ * Includes file attachment support for uploading directive documents.
  */
 
 import type { AdvanceDirectiveMetadata } from "@/api/types";
@@ -14,14 +17,15 @@ import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { advanceDirectiveDocTypes } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo } from "react";
+import { Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
-import { wishesFormStyles } from "./formStyles";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateAdvanceDirectiveSchema } from "../schemaGenerators";
+import { wishesFormStyles } from "./formStyles";
 
 const hasDirectiveOptions = [
   { value: "yes", label: "Yes, I have documents" },
@@ -29,11 +33,21 @@ const hasDirectiveOptions = [
   { value: "no", label: "Not yet" },
 ];
 
+interface AdvanceDirectiveFormValues {
+  hasDirective: string;
+  documentTypes: string[];
+  location: string;
+  proxyName: string;
+  proxyPhone: string;
+  proxyRelationship: string;
+  notes: string;
+}
+
 export function AdvanceDirectiveForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
   attachments = [],
   onAttachmentsChange,
@@ -42,64 +56,74 @@ export function AdvanceDirectiveForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   const initialMetadata = initialData?.metadata as
     | AdvanceDirectiveMetadata
     | undefined;
 
-  const [hasDirective, setHasDirective] = useState(
-    initialMetadata?.hasDirective ?? "",
+  const defaultValues = useMemo<AdvanceDirectiveFormValues>(
+    () => ({
+      hasDirective: initialMetadata?.hasDirective ?? "",
+      documentTypes: initialMetadata?.documentTypes ?? [],
+      location: initialMetadata?.location ?? "",
+      proxyName: initialMetadata?.proxyName ?? "",
+      proxyPhone: initialMetadata?.proxyPhone ?? "",
+      proxyRelationship: initialMetadata?.proxyRelationship ?? "",
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [documentTypes, setDocumentTypes] = useState<string[]>(
-    initialMetadata?.documentTypes ?? [],
-  );
-  const [location, setLocation] = useState(initialMetadata?.location ?? "");
-  const [proxyName, setProxyName] = useState(initialMetadata?.proxyName ?? "");
-  const [proxyPhone, setProxyPhone] = useState(
-    initialMetadata?.proxyPhone ?? "",
-  );
-  const [proxyRelationship, setProxyRelationship] = useState(
-    initialMetadata?.proxyRelationship ?? "",
-  );
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: AdvanceDirectiveMetadata = {
+        hasDirective: values.hasDirective || undefined,
+        documentTypes:
+          values.documentTypes.length > 0 ? values.documentTypes : undefined,
+        location: values.location.trim() || undefined,
+        proxyName: values.proxyName.trim() || undefined,
+        proxyPhone: values.proxyPhone.trim() || undefined,
+        proxyRelationship: values.proxyRelationship.trim() || undefined,
+      };
+
+      return {
+        title: "Advance Directive",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateAdvanceDirectiveSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Advance Directive" : "Edit Advance Directive",
+      title: "Advance Directive",
     });
-  }, [isNew, navigation]);
+  }, [navigation]);
 
-  const toggleDocType = (docType: string) => {
-    setDocumentTypes((prev) =>
-      prev.includes(docType)
-        ? prev.filter((t) => t !== docType)
-        : [...prev, docType],
-    );
-  };
-
-  const handleSave = async () => {
-    const metadata: AdvanceDirectiveMetadata = {
-      hasDirective: hasDirective || undefined,
-      documentTypes: documentTypes.length > 0 ? documentTypes : undefined,
-      location: location.trim() || undefined,
-      proxyName: proxyName.trim() || undefined,
-      proxyPhone: proxyPhone.trim() || undefined,
-      proxyRelationship: proxyRelationship.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: "Advance Directive",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateAdvanceDirectiveSchema(),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save";
-      Alert.alert("Error", message);
-    }
-  };
+  const toggleDocType = useCallback(
+    (docType: string) => {
+      const currentTypes = form.getFieldValue("documentTypes");
+      const newTypes = currentTypes.includes(docType)
+        ? currentTypes.filter((t) => t !== docType)
+        : [...currentTypes, docType];
+      form.setFieldValue("documentTypes", newTypes);
+    },
+    [form]
+  );
 
   return (
     <KeyboardAwareScrollView
@@ -126,143 +150,156 @@ export function AdvanceDirectiveForm({
         />
       )}
 
-      <View
-        style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
-      >
-        <Select
-          label="Do you have advance directive documents?"
-          value={hasDirective}
-          onValueChange={setHasDirective}
-          options={hasDirectiveOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      {hasDirective === "yes" && (
-        <>
-          <View style={wishesFormStyles.fieldContainer}>
-            <Text style={wishesFormStyles.label}>What types of documents?</Text>
-            <View style={wishesFormStyles.checkboxGroup}>
-              {advanceDirectiveDocTypes.map((docType) => (
-                <Pressable
-                  key={docType}
-                  style={[
-                    wishesFormStyles.checkboxItem,
-                    documentTypes.includes(docType) &&
-                      wishesFormStyles.checkboxItemSelected,
-                  ]}
-                  onPress={() => toggleDocType(docType)}
-                >
-                  <View
-                    style={[
-                      wishesFormStyles.checkboxBox,
-                      documentTypes.includes(docType) &&
-                        wishesFormStyles.checkboxBoxSelected,
-                    ]}
-                  >
-                    {documentTypes.includes(docType) && (
-                      <Ionicons name="checkmark" size={14} color="#fff" />
-                    )}
-                  </View>
-                  <Text style={wishesFormStyles.checkboxText}>{docType}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          <View style={wishesFormStyles.fieldContainer}>
-            <Input
-              label="Where are these stored?"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="e.g., Filing cabinet, attorney's office, safe"
+      <form.Field name="hasDirective">
+        {(field) => (
+          <View
+            style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
+          >
+            <Select
+              label="Do you have advance directive documents?"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={hasDirectiveOptions}
+              placeholder="Select..."
             />
           </View>
+        )}
+      </form.Field>
 
-          {onAttachmentsChange && (
-            <View style={wishesFormStyles.fieldContainer}>
-              <FilePicker
-                label="Upload Documents"
-                value={attachments}
-                onChange={onAttachmentsChange}
-                mode="document"
-                maxFiles={10}
-                allowCamera={true}
-                disabled={isSaving || isUploading}
-                placeholder="Add directive documents"
-                helpText="Upload copies of your living will, healthcare power of attorney, or other directive documents."
-                onUpgradeRequired={onStorageUpgradeRequired}
-              />
-            </View>
-          )}
-        </>
-      )}
+      <form.Subscribe selector={(state) => state.values.hasDirective}>
+        {(hasDirective) =>
+          hasDirective === "yes" ? (
+            <>
+              <form.Field name="documentTypes">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Text style={wishesFormStyles.label}>
+                      What types of documents?
+                    </Text>
+                    <View style={wishesFormStyles.checkboxGroup}>
+                      {advanceDirectiveDocTypes.map((docType) => (
+                        <Pressable
+                          key={docType}
+                          style={[
+                            wishesFormStyles.checkboxItem,
+                            field.state.value.includes(docType) &&
+                              wishesFormStyles.checkboxItemSelected,
+                          ]}
+                          onPress={() => toggleDocType(docType)}
+                        >
+                          <View
+                            style={[
+                              wishesFormStyles.checkboxBox,
+                              field.state.value.includes(docType) &&
+                                wishesFormStyles.checkboxBoxSelected,
+                            ]}
+                          >
+                            {field.state.value.includes(docType) && (
+                              <Ionicons name="checkmark" size={14} color="#fff" />
+                            )}
+                          </View>
+                          <Text style={wishesFormStyles.checkboxText}>
+                            {docType}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </form.Field>
+
+              <form.Field name="location">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Input
+                      label="Where are these stored?"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="e.g., Filing cabinet, attorney's office, safe"
+                    />
+                  </View>
+                )}
+              </form.Field>
+
+              {onAttachmentsChange && (
+                <View style={wishesFormStyles.fieldContainer}>
+                  <FilePicker
+                    label="Upload Documents"
+                    value={attachments}
+                    onChange={onAttachmentsChange}
+                    mode="document"
+                    maxFiles={10}
+                    allowCamera={true}
+                    disabled={isUploading}
+                    placeholder="Add directive documents"
+                    helpText="Upload copies of your living will, healthcare power of attorney, or other directive documents."
+                    onUpgradeRequired={onStorageUpgradeRequired}
+                  />
+                </View>
+              )}
+            </>
+          ) : null
+        }
+      </form.Subscribe>
 
       <Text style={wishesFormStyles.sectionHeader}>
         Who should make healthcare decisions for you?
       </Text>
 
-      <View style={wishesFormStyles.fieldContainer}>
-        <Input
-          label="Healthcare proxy name"
-          value={proxyName}
-          onChangeText={setProxyName}
-          placeholder="Full name"
-        />
-      </View>
+      <form.Field name="proxyName">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <Input
+              label="Healthcare proxy name"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Full name"
+            />
+          </View>
+        )}
+      </form.Field>
 
       <View style={wishesFormStyles.fieldRow}>
-        <View style={wishesFormStyles.fieldRowItem}>
-          <Input
-            label="Phone"
-            value={proxyPhone}
-            onChangeText={setProxyPhone}
-            placeholder="Best number"
-            keyboardType="phone-pad"
-          />
-        </View>
-        <View style={wishesFormStyles.fieldRowItem}>
-          <Input
-            label="Relationship"
-            value={proxyRelationship}
-            onChangeText={setProxyRelationship}
-            placeholder="e.g., Spouse, Daughter"
-          />
-        </View>
+        <form.Field name="proxyPhone">
+          {(field) => (
+            <View style={wishesFormStyles.fieldRowItem}>
+              <Input
+                label="Phone"
+                value={field.state.value}
+                onChangeText={(text) => field.handleChange(text)}
+                placeholder="Best number"
+                keyboardType="phone-pad"
+              />
+            </View>
+          )}
+        </form.Field>
+        <form.Field name="proxyRelationship">
+          {(field) => (
+            <View style={wishesFormStyles.fieldRowItem}>
+              <Input
+                label="Relationship"
+                value={field.state.value}
+                onChangeText={(text) => field.handleChange(text)}
+                placeholder="e.g., Spouse, Daughter"
+              />
+            </View>
+          )}
+        </form.Field>
       </View>
 
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Additional notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Anything else about your directive documents..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            isSaving && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              isSaving && wishesFormStyles.primaryButtonTextDisabled,
-            ]}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
-
+      <form.Field name="notes">
+        {(field) => (
+          <View style={wishesFormStyles.fieldContainer}>
+            <TextArea
+              label="Additional notes"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Anything else about your directive documents..."
+              maxLength={2000}
+            />
+          </View>
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }
-

@@ -1,5 +1,8 @@
 /**
  * Files API Service - Upload and manage file attachments
+ *
+ * Supports file uploads for both entries (vault) and wishes.
+ * Use the appropriate target type when initializing uploads.
  */
 
 import type { ApiClient } from "./client";
@@ -14,6 +17,24 @@ import type {
 } from "./types";
 
 /**
+ * Target for file uploads - either an entry or a wish
+ * At least one ID must be provided
+ */
+export type FileUploadTarget =
+  | { entryId: string; wishId?: never }
+  | { wishId: string; entryId?: never };
+
+/**
+ * Get the base path for file operations based on target type
+ */
+function getUploadBasePath(target: FileUploadTarget): string {
+  if (target.entryId) {
+    return `/entries/${target.entryId}/files`;
+  }
+  return `/wishes/${target.wishId}/files`;
+}
+
+/**
  * Create files service bound to an API client
  */
 export function createFilesService(client: ApiClient) {
@@ -21,28 +42,33 @@ export function createFilesService(client: ApiClient) {
     /**
      * Initialize a standard file upload (images, documents, audio)
      * Returns a presigned URL to upload the file directly to R2
+     *
+     * @param target - Either { entryId } or { wishId }
+     * @param data - Upload request data (filename, mimeType, sizeBytes)
      */
     initUpload: async (
-      entryId: string,
+      target: FileUploadTarget,
       data: InitUploadRequest
     ): Promise<InitUploadResponse> => {
-      return client.post<InitUploadResponse>(
-        `/entries/${entryId}/files/upload/init`,
-        data
-      );
+      const basePath = getUploadBasePath(target);
+      return client.post<InitUploadResponse>(`${basePath}/upload/init`, data);
     },
 
     /**
      * Initialize a video upload (Mux)
      * Returns a Mux direct upload URL
      * Supports optional metadata for tracking in Mux dashboard
+     *
+     * @param target - Either { entryId } or { wishId }
+     * @param data - Video upload request data
      */
     initVideoUpload: async (
-      entryId: string,
+      target: FileUploadTarget,
       data: InitVideoUploadRequest
     ): Promise<InitVideoUploadResponse> => {
+      const basePath = getUploadBasePath(target);
       return client.post<InitVideoUploadResponse>(
-        `/entries/${entryId}/files/video/init`,
+        `${basePath}/video/init`,
         data
       );
     },
@@ -64,8 +90,15 @@ export function createFilesService(client: ApiClient) {
     /**
      * List all files for an entry
      */
-    list: async (entryId: string): Promise<ApiFile[]> => {
+    listByEntry: async (entryId: string): Promise<ApiFile[]> => {
       return client.get<ApiFile[]>(`/entries/${entryId}/files`);
+    },
+
+    /**
+     * List all files for a wish
+     */
+    listByWish: async (wishId: string): Promise<ApiFile[]> => {
+      return client.get<ApiFile[]>(`/wishes/${wishId}/files`);
     },
 
     /**

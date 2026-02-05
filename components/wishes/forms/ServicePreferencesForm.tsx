@@ -3,6 +3,8 @@
  *
  * Captures memorial service preferences including type, tone, and special requests.
  * Task: wishes.endOfLife.service
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
  */
 
 import type { ServicePreferencesMetadata } from "@/api/types";
@@ -12,14 +14,15 @@ import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
-import { wishesFormStyles } from "./formStyles";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateServicePreferencesSchema } from "../schemaGenerators";
+import { wishesFormStyles } from "./formStyles";
 
 const serviceTypeOptions = [
   { value: "traditional-funeral", label: "Traditional funeral service" },
@@ -39,66 +42,84 @@ const toneOptions = [
   { value: "mixed", label: "Mix of mourning and celebration" },
 ];
 
+interface ServicePreferencesFormValues {
+  serviceType: string;
+  tone: string;
+  location: string;
+  music: string;
+  readings: string;
+  speakers: string;
+  avoidances: string;
+  notes: string;
+}
+
 export function ServicePreferencesForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   const initialMetadata = initialData?.metadata as
     | ServicePreferencesMetadata
     | undefined;
 
-  const [serviceType, setServiceType] = useState(
-    initialMetadata?.serviceType ?? "",
+  const defaultValues = useMemo<ServicePreferencesFormValues>(
+    () => ({
+      serviceType: initialMetadata?.serviceType ?? "",
+      tone: initialMetadata?.tone ?? "",
+      location: initialMetadata?.location ?? "",
+      music: initialMetadata?.music ?? "",
+      readings: initialMetadata?.readings ?? "",
+      speakers: initialMetadata?.speakers ?? "",
+      avoidances: initialMetadata?.avoidances ?? "",
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [tone, setTone] = useState(initialMetadata?.tone ?? "");
-  const [location, setLocation] = useState(initialMetadata?.location ?? "");
-  const [music, setMusic] = useState(initialMetadata?.music ?? "");
-  const [readings, setReadings] = useState(initialMetadata?.readings ?? "");
-  const [speakers, setSpeakers] = useState(initialMetadata?.speakers ?? "");
-  const [avoidances, setAvoidances] = useState(
-    initialMetadata?.avoidances ?? "",
-  );
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: ServicePreferencesMetadata = {
+        serviceType: values.serviceType || undefined,
+        tone: values.tone || undefined,
+        location: values.location.trim() || undefined,
+        music: values.music.trim() || undefined,
+        readings: values.readings.trim() || undefined,
+        speakers: values.speakers.trim() || undefined,
+        avoidances: values.avoidances.trim() || undefined,
+      };
+
+      return {
+        title: "Service or Remembrance",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateServicePreferencesSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Service Preferences" : "Edit Service Preferences",
+      title: "Service Preferences",
     });
-  }, [isNew, navigation]);
-
-  const handleSave = async () => {
-    const metadata: ServicePreferencesMetadata = {
-      serviceType: serviceType || undefined,
-      tone: tone || undefined,
-      location: location.trim() || undefined,
-      music: music.trim() || undefined,
-      readings: readings.trim() || undefined,
-      speakers: speakers.trim() || undefined,
-      avoidances: avoidances.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: "Service or Remembrance",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateServicePreferencesSchema(),
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save your preferences";
-      Alert.alert("Error", message);
-    }
-  };
-
-  const showServiceDetails = serviceType && serviceType !== "none";
+  }, [navigation]);
 
   return (
     <KeyboardAwareScrollView
@@ -125,115 +146,128 @@ export function ServicePreferencesForm({
         />
       )}
 
-      <View
-        style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
-      >
-        <Select
-          label="What type of service would you want?"
-          value={serviceType}
-          onValueChange={setServiceType}
-          options={serviceTypeOptions}
-          placeholder="Select..."
-        />
-      </View>
-
-      {showServiceDetails && (
-        <>
-          <View style={wishesFormStyles.fieldContainer}>
+      <form.Field name="serviceType">
+        {(field) => (
+          <View
+            style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
+          >
             <Select
-              label="What tone feels right?"
-              value={tone}
-              onValueChange={setTone}
-              options={toneOptions}
+              label="What type of service would you want?"
+              value={field.state.value}
+              onValueChange={(val) => field.handleChange(val)}
+              options={serviceTypeOptions}
               placeholder="Select..."
             />
           </View>
+        )}
+      </form.Field>
 
-          <View style={wishesFormStyles.fieldContainer}>
-            <Input
-              label="Where should it be held?"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Church, funeral home, park, favorite restaurant..."
-            />
-          </View>
+      <form.Subscribe selector={(state) => state.values.serviceType}>
+        {(serviceType) =>
+          serviceType && serviceType !== "none" ? (
+            <>
+              <form.Field name="tone">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Select
+                      label="What tone feels right?"
+                      value={field.state.value}
+                      onValueChange={(val) => field.handleChange(val)}
+                      options={toneOptions}
+                      placeholder="Select..."
+                    />
+                  </View>
+                )}
+              </form.Field>
 
-          <Text style={wishesFormStyles.sectionHeader}>Personal touches</Text>
+              <form.Field name="location">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <Input
+                      label="Where should it be held?"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Church, funeral home, park, favorite restaurant..."
+                    />
+                  </View>
+                )}
+              </form.Field>
 
+              <Text style={wishesFormStyles.sectionHeader}>Personal touches</Text>
+
+              <form.Field name="music">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <TextArea
+                      label="Music or songs"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Any songs that should be played? Music to avoid?"
+                      maxLength={1000}
+                    />
+                  </View>
+                )}
+              </form.Field>
+
+              <form.Field name="readings">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <TextArea
+                      label="Readings or poems"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Scripture, poems, or passages that matter to you"
+                      maxLength={1000}
+                    />
+                  </View>
+                )}
+              </form.Field>
+
+              <form.Field name="speakers">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <TextArea
+                      label="Who should speak?"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Anyone you'd want to give a eulogy or share memories?"
+                      maxLength={1000}
+                    />
+                  </View>
+                )}
+              </form.Field>
+
+              <form.Field name="avoidances">
+                {(field) => (
+                  <View style={wishesFormStyles.fieldContainer}>
+                    <TextArea
+                      label="Anything to avoid?"
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      placeholder="Open casket? Certain songs? Anything that would feel wrong?"
+                      maxLength={1000}
+                    />
+                  </View>
+                )}
+              </form.Field>
+            </>
+          ) : null
+        }
+      </form.Subscribe>
+
+      <form.Field name="notes">
+        {(field) => (
           <View style={wishesFormStyles.fieldContainer}>
             <TextArea
-              label="Music or songs"
-              value={music}
-              onChangeText={setMusic}
-              placeholder="Any songs that should be played? Music to avoid?"
-              maxLength={1000}
+              label="Additional notes"
+              value={field.state.value}
+              onChangeText={(text) => field.handleChange(text)}
+              placeholder="Any other wishes for how you want to be remembered..."
+              maxLength={2000}
             />
           </View>
-
-          <View style={wishesFormStyles.fieldContainer}>
-            <TextArea
-              label="Readings or poems"
-              value={readings}
-              onChangeText={setReadings}
-              placeholder="Scripture, poems, or passages that matter to you"
-              maxLength={1000}
-            />
-          </View>
-
-          <View style={wishesFormStyles.fieldContainer}>
-            <TextArea
-              label="Who should speak?"
-              value={speakers}
-              onChangeText={setSpeakers}
-              placeholder="Anyone you'd want to give a eulogy or share memories?"
-              maxLength={1000}
-            />
-          </View>
-
-          <View style={wishesFormStyles.fieldContainer}>
-            <TextArea
-              label="Anything to avoid?"
-              value={avoidances}
-              onChangeText={setAvoidances}
-              placeholder="Open casket? Certain songs? Anything that would feel wrong?"
-              maxLength={1000}
-            />
-          </View>
-        </>
-      )}
-
-      <View style={wishesFormStyles.fieldContainer}>
-        <TextArea
-          label="Additional notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any other wishes for how you want to be remembered..."
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            isSaving && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              isSaving && wishesFormStyles.primaryButtonTextDisabled,
-            ]}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
-
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }
-

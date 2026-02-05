@@ -347,7 +347,7 @@ export default function EntryScreen() {
           };
 
           try {
-            const uploadResults = await uploadFiles(savedEntryId, attachments);
+            const uploadResults = await uploadFiles({ entryId: savedEntryId }, attachments);
 
             // Invalidate entry cache after uploads so it includes the new files
             await queryClient.invalidateQueries({

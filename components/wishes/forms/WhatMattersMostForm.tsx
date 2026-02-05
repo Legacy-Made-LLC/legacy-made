@@ -3,6 +3,8 @@
  *
  * Uses ReflectionChoices for values selection + free text for additional thoughts.
  * Task: wishes.carePrefs.whatMatters
+ *
+ * Auto-save enabled - changes are saved automatically after 600ms of inactivity.
  */
 
 import type { WhatMattersMostMetadata } from "@/api/types";
@@ -11,12 +13,12 @@ import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
 import { whatMattersMostValues } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
+import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { WishFormProps } from "../registry";
+import type { WishFormProps, WishSaveData } from "../registry";
 import { generateWhatMattersMostSchema } from "../schemaGenerators";
 import {
   ReflectionChoices,
@@ -24,59 +26,78 @@ import {
 } from "../shared/ReflectionChoices";
 import { wishesFormStyles } from "./formStyles";
 
+interface WhatMattersMostFormValues {
+  selectedValues: string[];
+  notes: string;
+}
+
 export function WhatMattersMostForm({
   wishId,
   initialData,
-  onSave,
-  isSaving,
+  onFormReady,
+  registerGetSaveData,
   guidance,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const isNew = !wishId;
 
   // Extract initial values from initialData
   const initialMetadata = initialData?.metadata as
     | WhatMattersMostMetadata
     | undefined;
 
-  const [selectedValues, setSelectedValues] = useState<string[]>(
-    initialMetadata?.values ?? [],
+  const defaultValues = useMemo<WhatMattersMostFormValues>(
+    () => ({
+      selectedValues: initialMetadata?.values ?? [],
+      notes: initialData?.notes ?? "",
+    }),
+    [initialMetadata, initialData?.notes]
   );
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  // Register form with parent for auto-save
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
+
+  // Register getSaveData function with parent
+  useEffect(() => {
+    const getSaveData = (): WishSaveData => {
+      const values = form.state.values;
+      const metadata: WhatMattersMostMetadata = {
+        values: values.selectedValues,
+      };
+
+      return {
+        title: "What Matters Most",
+        notes: values.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: generateWhatMattersMostSchema(),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "What Matters Most" : "Edit What Matters Most",
+      title: "What Matters Most",
     });
-  }, [isNew, navigation]);
+  }, [navigation]);
 
-  const handleToggle = useCallback((id: string) => {
-    setSelectedValues((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
-    );
-  }, []);
-
-  const handleSave = async () => {
-    const metadata: WhatMattersMostMetadata = {
-      values: selectedValues,
-    };
-
-    try {
-      await onSave({
-        title: "What Matters Most",
-        notes: notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: generateWhatMattersMostSchema(),
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save your preferences";
-      Alert.alert("Error", message);
-    }
-  };
-
-  const canSave = selectedValues.length > 0 || notes.trim();
+  const handleToggle = useCallback(
+    (id: string) => {
+      const currentValues = form.getFieldValue("selectedValues");
+      const newValues = currentValues.includes(id)
+        ? currentValues.filter((v) => v !== id)
+        : [...currentValues, id];
+      form.setFieldValue("selectedValues", newValues);
+    },
+    [form]
+  );
 
   return (
     <KeyboardAwareScrollView
@@ -108,45 +129,28 @@ export function WhatMattersMostForm({
         context="You can choose as many or as few as feel right."
       />
 
-      <ReflectionChoices
-        choices={whatMattersMostValues}
-        selected={selectedValues}
-        onToggle={handleToggle}
-      />
+      <form.Field name="selectedValues">
+        {(field) => (
+          <ReflectionChoices
+            choices={whatMattersMostValues}
+            selected={field.state.value}
+            onToggle={handleToggle}
+          />
+        )}
+      </form.Field>
 
-      <View style={wishesFormStyles.notesSection}>
-        <TextArea
-          label="Anything else you'd want your family to understand?"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="In your own words, what does a meaningful life look like to you?"
-          maxLength={2000}
-        />
-      </View>
-
-      <View style={wishesFormStyles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            wishesFormStyles.primaryButton,
-            pressed && wishesFormStyles.primaryButtonPressed,
-            (isSaving || !canSave) && wishesFormStyles.primaryButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaving || !canSave}
-        >
-          <Text
-            style={[
-              wishesFormStyles.primaryButtonText,
-              (isSaving || !canSave) &&
-                wishesFormStyles.primaryButtonTextDisabled,
-            ]}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
-
+      <form.Field name="notes">
+        {(field) => (
+          <TextArea
+            label="Anything else you'd want your family to understand?"
+            value={field.state.value}
+            onChangeText={(text) => field.handleChange(text)}
+            placeholder="In your own words, what does a meaningful life look like to you?"
+            maxLength={2000}
+            containerStyle={wishesFormStyles.notesSection}
+          />
+        )}
+      </form.Field>
     </KeyboardAwareScrollView>
   );
 }
-

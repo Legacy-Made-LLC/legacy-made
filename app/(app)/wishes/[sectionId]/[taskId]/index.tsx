@@ -1,23 +1,31 @@
 /**
- * Wishes Task Screen - Single Wish Form
+ * Wishes Task Screen - Single Wish Form with Auto-Save
  *
  * Each task has exactly one wish. This screen directly shows the form:
  * - If a wish exists for this task, pre-populate the form for editing
  * - If no wish exists yet, show an empty form for creation
  *
+ * Auto-save behavior:
+ * - Changes are automatically saved after 600ms of inactivity
+ * - A floating indicator shows save status (saving/saved/error)
+ * - Navigation protection ensures pending saves complete before leaving
+ *
  * There's no delete functionality since every task always has one wish
  * (either created or not yet created).
  */
 
+import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "@/api";
-import type { MetadataSchema, FileAttachment } from "@/api/types";
+import type { FileAttachment } from "@/api/types";
 import { apiFileToAttachment } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
+import { SavedIndicator } from "@/components/ui/SavedIndicator";
 import {
   getWishesFormComponent,
   type WishFormGuidance,
+  type WishSaveData,
 } from "@/components/wishes/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import {
@@ -26,19 +34,12 @@ import {
   getWishesTask,
 } from "@/constants/wishes";
 import { usePlan } from "@/data/PlanProvider";
-import {
-  useCreateWish,
-  useUpdateWish,
-  useWishesQuery,
-  WishQuotaExceededError,
-} from "@/hooks/queries";
+import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
+import { useAutoSave } from "@/hooks/useAutoSave";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import {
-  isQuotaExceededError,
-  isStorageQuotaError,
-} from "@/lib/entitlementHelpers";
+import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -47,20 +48,13 @@ import React, {
   useRef,
   useState,
 } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
 export default function WishesTaskScreen() {
   const { sectionId, taskId } = useLocalSearchParams<{
     sectionId: string;
     taskId: string;
   }>();
-  const router = useRouter();
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { planId } = usePlan();
@@ -94,7 +88,6 @@ export default function WishesTaskScreen() {
 
   // Get the existing wish if any
   const existingWish = wishes[0];
-  const isNew = !existingWish;
 
   // API for file operations
   const { files: filesService } = useApi();
@@ -116,27 +109,165 @@ export default function WishesTaskScreen() {
   const createMutation = useCreateWish(task?.taskKey);
   const updateMutation = useUpdateWish(task?.taskKey);
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  // Track if a file deletion is in progress
-  const [isDeletingFile, setIsDeletingFile] = useState(false);
-
   // Track if files were deleted during this session (to invalidate cache on unmount)
   const filesDeletedRef = useRef(false);
 
   // File attachments state - initialized from wish.files when available
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
 
-  // Track if we're currently saving to prevent wish refetch from overwriting local attachments
-  const isSavingRef = useRef(false);
+  // Form reference for auto-save integration
+  const formRef = useRef<AnyFormApi | null>(null);
 
-  // Initialize attachments when wish data loads (but not during save/upload)
+  // Function to get current save data from form - set by child form
+  const getSaveDataRef = useRef<(() => WishSaveData) | null>(null);
+
+  // ============================================================================
+  // Auto-Save Integration
+  // ============================================================================
+
+  const autoSave = useAutoSave<WishSaveData>({
+    debounceMs: 600,
+    savedDurationMs: 1500,
+    initialId: existingWish?.id,
+    onCreate: async (data) => {
+      const createdWish = await createMutation.mutateAsync(data);
+      return createdWish.id;
+    },
+    onUpdate: async (id, data) => {
+      await updateMutation.mutateAsync({ wishId: id, data });
+    },
+    onSaveComplete: async (wishId) => {
+      // Upload any pending files after save completes
+      const pendingFiles = attachments.filter(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      if (pendingFiles.length > 0 && planId && task) {
+        try {
+          const uploadResults = await uploadFiles({ wishId }, attachments);
+
+          // Invalidate wish cache after uploads so it includes the new files
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.wishes.byTaskKey(planId, task.taskKey),
+          });
+
+          // Check for upload failures
+          const failedUploads = uploadResults.filter(
+            (r) => !r.success && !r.isStorageQuotaError,
+          );
+          if (failedUploads.length > 0) {
+            Alert.alert(
+              "Upload Failed",
+              `${failedUploads.length} file${failedUploads.length > 1 ? "s" : ""} failed to upload. Try adding them again.`,
+            );
+          }
+        } catch (uploadError) {
+          if (isStorageQuotaError(uploadError)) {
+            setShowStorageUpgradePrompt(true);
+          } else {
+            Alert.alert(
+              "Upload Error",
+              "An error occurred during file upload.",
+            );
+          }
+        }
+      }
+    },
+  });
+
+  // Update autoSave when existingWish changes (e.g., after initial load)
   useEffect(() => {
-    // Don't overwrite local attachments during save - the mutation invalidates the query
-    // which would cause us to lose pending file uploads
-    if (isSavingRef.current) {
-      return;
+    if (existingWish?.id && autoSave.recordId !== existingWish.id) {
+      autoSave.reset(existingWish.id);
     }
+  }, [existingWish?.id, autoSave]);
+
+  // Handle form ready callback from child form
+  const handleFormReady = useCallback((form: AnyFormApi) => {
+    formRef.current = form;
+  }, []);
+
+  // Set up form value subscription for auto-save
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+
+    // Subscribe to form state changes
+    const unsubscribe = form.store.subscribe(() => {
+      const state = form.store.state;
+      const getSaveData = getSaveDataRef.current;
+
+      if (state.isDirty && getSaveData) {
+        const saveData = getSaveData();
+        autoSave.triggerSave(saveData, state.isDirty);
+      }
+    });
+
+    return unsubscribe;
+  }, [autoSave]);
+
+  // Navigation protection - ensure pending saves complete before leaving
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      const form = formRef.current;
+      const hasPendingSave =
+        autoSave.status === "pending" || autoSave.status === "saving";
+      const isDirty = form?.state.isDirty ?? false;
+
+      // Allow navigation if nothing to save
+      if (!hasPendingSave && !isDirty) {
+        return;
+      }
+
+      // Prevent default navigation
+      e.preventDefault();
+
+      // Flush pending save, then allow navigation
+      autoSave
+        .flushSave()
+        .then(() => {
+          navigation.dispatch(e.data.action);
+        })
+        .catch(() => {
+          Alert.alert(
+            "Could Not Save",
+            "Your changes could not be saved. Discard them?",
+            [
+              { text: "Stay", style: "cancel" },
+              {
+                text: "Discard",
+                style: "destructive",
+                onPress: () => navigation.dispatch(e.data.action),
+              },
+            ],
+          );
+        });
+    });
+
+    return unsubscribe;
+  }, [navigation, autoSave]);
+
+  // Handle auto-save errors
+  useEffect(() => {
+    if (autoSave.status === "error") {
+      // Check for quota errors
+      const error = autoSave.errorMessage;
+      if (error?.includes("quota") || error?.includes("limit")) {
+        if (error.toLowerCase().includes("storage")) {
+          setShowStorageUpgradePrompt(true);
+        } else {
+          setShowUpgradePrompt(true);
+        }
+        autoSave.dismissError();
+      }
+    }
+  }, [autoSave]);
+
+  // ============================================================================
+  // File Attachments
+  // ============================================================================
+
+  // Initialize attachments when wish data loads
+  useEffect(() => {
     if (existingWish?.files) {
       setAttachments(existingWish.files.map(apiFileToAttachment));
     }
@@ -153,7 +284,10 @@ export default function WishesTaskScreen() {
     return () => {
       if (filesDeletedRef.current && planIdRef.current && taskKeyRef.current) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.wishes.byTaskKey(planIdRef.current, taskKeyRef.current),
+          queryKey: queryKeys.wishes.byTaskKey(
+            planIdRef.current,
+            taskKeyRef.current,
+          ),
         });
       }
     };
@@ -210,16 +344,21 @@ export default function WishesTaskScreen() {
     return attachment;
   });
 
+  useEffect(() => {
+    console.log("Attachments with upload state", attachmentsWithUploadState);
+  }, [attachmentsWithUploadState]);
+
   // Keep a ref to current attachments for comparison in handleAttachmentsChange
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
 
   /**
    * Handle attachment changes from the form.
-   * Detects when a remote file is being removed and shows confirmation.
+   * For new files: If no wishId exists yet, flush save to create one first, then upload.
+   * For removed files: Shows confirmation before deleting remote files.
    */
   const handleAttachmentsChange = useCallback(
-    (newAttachments: FileAttachment[]) => {
+    async (newAttachments: FileAttachment[]) => {
       const currentAttachments = attachmentsRef.current;
 
       // Helper to get unique identifier for a file (id for remote, uri for local)
@@ -236,169 +375,96 @@ export default function WishesTaskScreen() {
           ),
       );
 
-      // If no remote files were removed, just update state
-      if (removedRemoteFiles.length === 0) {
-        setAttachments(newAttachments);
+      // Find any new local files that were added
+      const addedLocalFiles = newAttachments.filter(
+        (newFile) =>
+          !newFile.isRemote &&
+          !currentAttachments.some(
+            (current) =>
+              getFileIdentifier(current) === getFileIdentifier(newFile),
+          ),
+      );
+
+      // Handle remote file deletion with confirmation
+      if (removedRemoteFiles.length > 0) {
+        const fileToDelete = removedRemoteFiles[0];
+        Alert.alert(
+          "Delete Attachment",
+          `Are you sure you want to permanently delete "${fileToDelete.fileName}"? This cannot be undone.`,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: async () => {
+                if (!fileToDelete.id) return;
+
+                try {
+                  await filesService.delete(fileToDelete.id);
+                  filesDeletedRef.current = true;
+                  setAttachments((prev) =>
+                    prev.filter(
+                      (a) => getFileIdentifier(a) !== fileToDelete.id,
+                    ),
+                  );
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.entitlements.current(),
+                  });
+                } catch (error) {
+                  const message =
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to delete file";
+                  Alert.alert("Error", message);
+                }
+              },
+            },
+          ],
+        );
         return;
       }
 
-      // Show confirmation for remote file deletion
-      const fileToDelete = removedRemoteFiles[0];
-      Alert.alert(
-        "Delete Attachment",
-        `Are you sure you want to permanently delete "${fileToDelete.fileName}"? This cannot be undone.`,
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-            // Don't update state - keep the file
-          },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              if (!fileToDelete.id) return;
+      // Update attachments state
+      setAttachments(newAttachments);
 
-              setIsDeletingFile(true);
-              try {
-                await filesService.delete(fileToDelete.id);
-                // Mark that files were deleted (for cache invalidation on unmount)
-                filesDeletedRef.current = true;
-                // Remove from state after successful deletion (use id for remote files)
-                setAttachments((prev) =>
-                  prev.filter((a) => getFileIdentifier(a) !== fileToDelete.id),
-                );
-                // Invalidate entitlements to refresh storage quota after deletion
-                queryClient.invalidateQueries({
-                  queryKey: queryKeys.entitlements.current(),
-                });
-              } catch (error) {
-                const message =
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to delete file";
-                Alert.alert("Error", message);
-              } finally {
-                setIsDeletingFile(false);
-              }
-            },
-          },
-        ],
-      );
-    },
-    [filesService, queryClient],
-  );
+      // If new local files were added, trigger upload after ensuring wish exists
+      if (addedLocalFiles.length > 0) {
+        let wishId = autoSave.recordId;
 
-  // Handle save
-  const handleSave = useCallback(
-    async (data: {
-      title: string;
-      notes?: string | null;
-      metadata: Record<string, unknown>;
-      metadataSchema: MetadataSchema;
-    }) => {
-      if (!task || !planId) return;
-
-      try {
-        // Prevent wish refetch from overwriting local attachments during save
-        isSavingRef.current = true;
-
-        let savedWishId: string;
-
-        if (isNew) {
-          const createdWish = await createMutation.mutateAsync(data);
-          savedWishId = createdWish.id;
-        } else {
-          await updateMutation.mutateAsync({ wishId: existingWish.id, data });
-          savedWishId = existingWish.id;
-        }
-
-        // Upload any pending files
-        const pendingFiles = attachments.filter(
-          (f) => !f.isRemote && f.uploadStatus !== "complete",
-        );
-        if (pendingFiles.length > 0) {
-          // Helper to handle upload failures - stays on page and shows error
-          const handleUploadFailure = (errorMessage: string) => {
-            Alert.alert(
-              "Upload Failed",
-              `${errorMessage} Your wish has been saved. Try adding the files again.`,
-            );
-          };
-
-          try {
-            const uploadResults = await uploadFiles(savedWishId, attachments);
-
-            // Invalidate wish cache after uploads so it includes the new files
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.wishes.byTaskKey(planId, task.taskKey),
-            });
-
-            // Check for upload failures (excluding storage quota errors which show their own prompt)
-            const failedUploads = uploadResults.filter(
-              (r) => !r.success && !r.isStorageQuotaError,
-            );
-
-            if (failedUploads.length > 0) {
-              const failedCount = failedUploads.length;
-              handleUploadFailure(
-                `${failedCount} file${failedCount > 1 ? "s" : ""} failed to upload.`,
+        // If no wish exists yet, flush save to create one
+        if (!wishId) {
+          const getSaveData = getSaveDataRef.current;
+          if (getSaveData) {
+            const saveData = getSaveData();
+            autoSave.triggerSave(saveData, true);
+            try {
+              await autoSave.flushSave();
+              wishId = autoSave.recordId;
+            } catch {
+              Alert.alert(
+                "Error",
+                "Could not save your wish before uploading files. Please try again.",
               );
-              // Don't navigate away - stay on page to show error state
               return;
             }
-          } catch (uploadError) {
-            // Check if it's a storage quota error thrown by uploadFiles
-            if (isStorageQuotaError(uploadError)) {
-              setShowStorageUpgradePrompt(true);
-              return;
-            }
-
-            // Handle any other thrown errors from uploadFiles
-            handleUploadFailure("An error occurred during file upload.");
-            return;
           }
         }
 
-        router.back();
-      } catch (error) {
-        // Check for storage quota exceeded error
-        if (isStorageQuotaError(error)) {
-          setShowStorageUpgradePrompt(true);
-          return;
+        // Upload the new files
+        if (wishId) {
+          uploadFiles({ wishId }, newAttachments);
         }
-        // Check for general quota exceeded error (wishes, etc.)
-        if (
-          error instanceof WishQuotaExceededError ||
-          isQuotaExceededError(error)
-        ) {
-          setShowUpgradePrompt(true);
-          return;
-        }
-        // Re-throw other errors to be handled by error boundaries
-        throw error;
-      } finally {
-        isSavingRef.current = false;
       }
     },
-    [
-      task,
-      planId,
-      isNew,
-      existingWish,
-      createMutation,
-      updateMutation,
-      attachments,
-      uploadFiles,
-      queryClient,
-      router,
-    ],
+    [filesService, queryClient, autoSave, uploadFiles],
   );
 
-  // Handle cancel
-  const handleCancel = useCallback(() => {
-    router.back();
-  }, [router]);
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   // Section or task not found
   if (!section || !task) {
@@ -433,16 +499,25 @@ export default function WishesTaskScreen() {
     <>
       <FormComponent
         taskKey={task.taskKey}
-        wishId={isNew ? undefined : existingWish.id}
+        wishId={
+          autoSave.recordId ?? (existingWish ? existingWish.id : undefined)
+        }
         initialData={existingWish}
-        onSave={handleSave}
-        onCancel={handleCancel}
-        isSaving={isSaving || isDeletingFile}
+        onFormReady={handleFormReady}
+        registerGetSaveData={(fn: () => WishSaveData) => {
+          getSaveDataRef.current = fn;
+        }}
         guidance={guidance}
         attachments={attachmentsWithUploadState}
         onAttachmentsChange={handleAttachmentsChange}
         isUploading={isUploading}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
+      />
+      <SavedIndicator
+        status={autoSave.status}
+        errorMessage={autoSave.errorMessage}
+        onDismissError={autoSave.dismissError}
+        accentColor={colors.featureWishes}
       />
       <UpgradePrompt
         visible={showUpgradePrompt}

@@ -22,7 +22,9 @@ export const queryKeys = {
   },
   files: {
     // Files for a specific entry
-    byEntry: (entryId: string) => ['files', entryId] as const,
+    byEntry: (entryId: string) => ['files', 'entry', entryId] as const,
+    // Files for a specific wish
+    byWish: (wishId: string) => ['files', 'wish', wishId] as const,
     // Single file detail
     single: (fileId: string) => ['files', 'detail', fileId] as const,
   },

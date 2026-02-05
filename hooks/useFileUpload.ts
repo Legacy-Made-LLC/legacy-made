@@ -1,11 +1,12 @@
 /**
  * useFileUpload Hook
  *
- * Orchestrates file uploads for an entry. Handles both standard uploads (R2)
+ * Orchestrates file uploads for entries or wishes. Handles both standard uploads (R2)
  * and video uploads (Mux) with progress tracking.
  */
 
 import { useApi } from "@/api";
+import type { FileUploadTarget } from "@/api/files";
 import type { FileAttachment, FileUploadStatus } from "@/api/types";
 import {
   formatStorageMB,
@@ -46,10 +47,10 @@ interface UseFileUploadOptions {
 }
 
 interface UseFileUploadReturn {
-  /** Upload all pending files to an entry */
+  /** Upload all pending files to an entry or wish */
   uploadFiles: (
-    entryId: string,
-    files: FileAttachment[],
+    target: FileUploadTarget,
+    files: FileAttachment[]
   ) => Promise<UploadResult[]>;
   /** Current upload state for each file (keyed by uri) */
   uploadStates: Record<string, FileUploadState>;
@@ -80,7 +81,7 @@ function uploadToPresignedUrl(
   blob: Blob,
   mimeType: string,
   onProgress: (progress: number) => void,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -117,8 +118,15 @@ function uploadToPresignedUrl(
   });
 }
 
+/**
+ * Get the ID from a target for logging/tracking purposes
+ */
+function getTargetId(target: FileUploadTarget): string {
+  return target.entryId ?? target.wishId ?? "";
+}
+
 export function useFileUpload(
-  options: UseFileUploadOptions = {},
+  options: UseFileUploadOptions = {}
 ): UseFileUploadReturn {
   const { onFileUploaded, onFileError, onAllComplete } = options;
   const { files: filesService } = useApi();
@@ -155,7 +163,7 @@ export function useFileUpload(
         },
       }));
     },
-    [],
+    []
   );
 
   /**
@@ -163,15 +171,15 @@ export function useFileUpload(
    */
   const uploadStandardFile = useCallback(
     async (
-      entryId: string,
+      target: FileUploadTarget,
       file: FileAttachment,
-      signal: AbortSignal,
+      signal: AbortSignal
     ): Promise<UploadResult> => {
       const uri = file.uri;
 
       try {
         // 1. Initialize upload - get presigned URL
-        const initResponse = await filesService.initUpload(entryId, {
+        const initResponse = await filesService.initUpload(target, {
           filename: file.fileName,
           mimeType: file.mimeType,
           sizeBytes: file.fileSize,
@@ -193,7 +201,7 @@ export function useFileUpload(
           blob,
           file.mimeType,
           (progress) => updateFileState(uri, { progress }),
-          signal,
+          signal
         );
 
         if (signal.aborted) {
@@ -232,7 +240,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError],
+    [filesService, updateFileState, onFileUploaded, onFileError]
   );
 
   /**
@@ -241,25 +249,28 @@ export function useFileUpload(
    */
   const uploadVideoFile = useCallback(
     async (
-      entryId: string,
+      target: FileUploadTarget,
       file: FileAttachment,
-      signal: AbortSignal,
+      signal: AbortSignal
     ): Promise<UploadResult> => {
       const uri = file.uri;
+      const targetId = getTargetId(target);
 
       try {
         // 1. Initialize video upload - get Mux direct upload URL
         // Include metadata for easier tracking in Mux dashboard
-        const initResponse = await filesService.initVideoUpload(entryId, {
+        const initResponse = await filesService.initVideoUpload(target, {
           filename: file.fileName,
           mimeType: file.mimeType,
           sizeBytes: file.fileSize,
           meta: {
-            externalId: `${entryId}-${Date.now()}`,
+            externalId: `${targetId}-${Date.now()}`,
             creatorId: user?.id,
             title: file.fileName,
           },
-          passthrough: JSON.stringify({ entryId }),
+          passthrough: JSON.stringify(
+            target.entryId ? { entryId: target.entryId } : { wishId: target.wishId }
+          ),
         });
 
         if (signal.aborted) {
@@ -278,7 +289,7 @@ export function useFileUpload(
           blob,
           file.mimeType,
           (progress) => updateFileState(uri, { progress }),
-          signal,
+          signal
         );
 
         // No complete call needed for Mux - webhook handles it
@@ -312,23 +323,23 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError, user?.id],
+    [filesService, updateFileState, onFileUploaded, onFileError, user?.id]
   );
 
   /**
-   * Upload all pending files to an entry
+   * Upload all pending files to an entry or wish
    */
   const uploadFiles = useCallback(
     async (
-      entryId: string,
-      files: FileAttachment[],
+      target: FileUploadTarget,
+      files: FileAttachment[]
     ): Promise<UploadResult[]> => {
       // Clear any previous storage quota error
       setHasStorageQuotaError(false);
 
       // Filter to only pending files (not already remote)
       const pendingFiles = files.filter(
-        (f) => !f.isRemote && f.uploadStatus !== "complete",
+        (f) => !f.isRemote && f.uploadStatus !== "complete"
       );
 
       if (pendingFiles.length === 0) {
@@ -355,8 +366,8 @@ export function useFileUpload(
 
         const isVideo = file.mimeType.startsWith("video/");
         const result = isVideo
-          ? await uploadVideoFile(entryId, file, signal)
-          : await uploadStandardFile(entryId, file, signal);
+          ? await uploadVideoFile(target, file, signal)
+          : await uploadStandardFile(target, file, signal);
 
         results.push(result);
       }
@@ -364,22 +375,40 @@ export function useFileUpload(
       setIsUploading(false);
       abortControllerRef.current = null;
 
-      // Invalidate queries to refresh the entry with new files
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.files.byEntry(entryId),
-      });
+      // Invalidate queries based on target type
+      if (target.entryId) {
+        // Invalidate entry-related queries
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.files.byEntry(target.entryId),
+        });
 
-      // Also invalidate entry queries since files are included in entry responses
-      // Use predicate to match any entry query containing this entryId
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey;
-          return (
-            key[0] === "entries" &&
-            (key.includes(entryId) || key.includes("detail"))
-          );
-        },
-      });
+        // Also invalidate entry queries since files are included in entry responses
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey;
+            return (
+              key[0] === "entries" &&
+              (key.includes(target.entryId) || key.includes("detail"))
+            );
+          },
+        });
+      } else if (target.wishId) {
+        // Invalidate wish-related queries
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.files.byWish(target.wishId),
+        });
+
+        // Also invalidate wish queries since files are included in wish responses
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey;
+            return (
+              key[0] === "wishes" &&
+              (key.includes(target.wishId) || key.includes("detail"))
+            );
+          },
+        });
+      }
 
       // Invalidate entitlements to refresh storage quota after uploads
       queryClient.invalidateQueries({
@@ -396,7 +425,7 @@ export function useFileUpload(
       updateFileState,
       queryClient,
       onAllComplete,
-    ],
+    ]
   );
 
   /**
@@ -416,3 +445,6 @@ export function useFileUpload(
     clearStorageQuotaError,
   };
 }
+
+// Re-export FileUploadTarget type for consumers
+export type { FileUploadTarget };
