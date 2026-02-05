@@ -11,7 +11,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "@/api";
-import { apiFileToAttachment, type FileAttachment } from "@/api/types";
+import {
+  apiFileToAttachment,
+  MetadataSchema,
+  type FileAttachment,
+} from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
 import { getFormComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -302,6 +306,7 @@ export default function EntryScreen() {
       title: string;
       notes?: string | null;
       metadata: Record<string, unknown>;
+      metadataSchema: MetadataSchema;
     }) => {
       if (!task || !planId) return;
 

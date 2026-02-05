@@ -326,6 +326,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   notes?: string | null;
   sortOrder?: number;
   metadata: T;
+  metadataSchema: MetadataSchema;
 }
 
 /**
@@ -336,6 +337,7 @@ export interface UpdateEntryRequest<T = Record<string, unknown>> {
   notes?: string | null;
   sortOrder?: number;
   metadata?: Partial<T>;
+  metadataSchema?: MetadataSchema;
 }
 
 /**

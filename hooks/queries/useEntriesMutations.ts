@@ -12,6 +12,7 @@ import type {
   CreateEntryRequest,
   EntitlementInfo,
   Entry,
+  MetadataSchema,
   UpdateEntryRequest,
 } from "@/api/types";
 import { useEntitlements } from "@/data/EntitlementsProvider";
@@ -40,12 +41,14 @@ interface CreateEntryData<T = Record<string, unknown>> {
   title?: string;
   notes?: string | null;
   metadata: T;
+  metadataSchema: MetadataSchema;
 }
 
 interface UpdateEntryData<T = Record<string, unknown>> {
   title?: string;
   notes?: string | null;
   metadata?: Partial<T>;
+  metadataSchema?: MetadataSchema;
 }
 
 /**
@@ -98,6 +101,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
         title: data.title,
         notes: data.notes,
         metadata: data.metadata,
+        metadataSchema: data.metadataSchema,
       };
 
       return entries.create<T>(request);
@@ -214,6 +218,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
         title: data.title,
         notes: data.notes,
         metadata: data.metadata,
+        metadataSchema: data.metadataSchema,
       };
 
       return entries.update<T>(planId, entryId, request);
