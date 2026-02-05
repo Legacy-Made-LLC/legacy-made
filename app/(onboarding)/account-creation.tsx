@@ -87,7 +87,7 @@ export default function AccountCreationScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton />
+      <OnboardingHeader showBackButton currentStep={3} />
 
       <KeyboardAwareScrollView
         style={styles.formScrollView}
@@ -96,138 +96,138 @@ export default function AccountCreationScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-          <Text style={styles.formTitle}>Tell us about you</Text>
-          <Text style={styles.formSubtitle}>
-            This helps us personalize your experience and keep your information
-            secure.
-          </Text>
+        <Text style={styles.formTitle}>Tell us about you</Text>
+        <Text style={styles.formSubtitle}>
+          This helps us personalize your experience and keep your information
+          secure.
+        </Text>
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.nameRow}>
-            <View style={styles.nameField}>
-              <form.Field
-                name="firstName"
-                listeners={{
-                  onChange: ({ value }) => setFirstName(value),
-                }}
-              >
-                {(field) => (
-                  <FormInput
-                    field={field}
-                    label="First Name"
-                    placeholder="First"
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    textContentType="givenName"
-                  />
-                )}
-              </form.Field>
-            </View>
-            <View style={styles.nameField}>
-              <form.Field
-                name="lastName"
-                listeners={{
-                  onChange: ({ value }) => setLastName(value),
-                }}
-              >
-                {(field) => (
-                  <FormInput
-                    field={field}
-                    label="Last Name"
-                    placeholder="Last"
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    textContentType="familyName"
-                  />
-                )}
-              </form.Field>
-            </View>
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
+        ) : null}
 
-          <form.Field
-            name="email"
-            listeners={{
-              onChange: ({ value }) => setUserEmail(value),
-            }}
-          >
-            {(field) => (
-              <FormInput
-                field={field}
-                label="Email"
-                placeholder="your@email.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="emailAddress"
-              />
-            )}
-          </form.Field>
-
-          <View style={styles.formButtonContainer}>
-            <Text style={styles.verificationExplanation}>
-              We&apos;ll send a code to your email to verify it&apos;s you.
-            </Text>
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
+        <View style={styles.nameRow}>
+          <View style={styles.nameField}>
+            <form.Field
+              name="firstName"
+              listeners={{
+                onChange: ({ value }) => setFirstName(value),
+              }}
             >
-              {([canSubmit, isSubmitting]) => (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    pressed && styles.primaryButtonPressed,
-                    (!canSubmit || isLoading || isSubmitting) &&
-                      styles.primaryButtonDisabled,
-                  ]}
-                  onPress={() => form.handleSubmit()}
-                  disabled={!canSubmit || isLoading || isSubmitting}
-                >
-                  {isLoading || isSubmitting ? (
-                    <ActivityIndicator color={colors.surface} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.primaryButtonText,
-                        !canSubmit && styles.primaryButtonTextDisabled,
-                      ]}
-                    >
-                      Send verification code
-                    </Text>
-                  )}
-                </Pressable>
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="First Name"
+                  placeholder="First"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  textContentType="givenName"
+                />
               )}
-            </form.Subscribe>
-            <Text style={styles.termsText}>
-              By continuing, you agree to our{" "}
-              <Text
-                style={styles.termsLink}
-                onPress={() => Linking.openURL(EXTERNAL_LINKS.termsOfService)}
-              >
-                Terms of Service
-              </Text>{" "}
-              and{" "}
-              <Text
-                style={styles.termsLink}
-                onPress={() => Linking.openURL(EXTERNAL_LINKS.privacyPolicy)}
-              >
-                Privacy Policy
-              </Text>
-              .
-            </Text>
+            </form.Field>
           </View>
+          <View style={styles.nameField}>
+            <form.Field
+              name="lastName"
+              listeners={{
+                onChange: ({ value }) => setLastName(value),
+              }}
+            >
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="Last Name"
+                  placeholder="Last"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  textContentType="familyName"
+                />
+              )}
+            </form.Field>
+          </View>
+        </View>
 
-          <View style={styles.signInContainer}>
-            <Text style={styles.signInText}>
-              Already have an account?{" "}
-              <Text style={styles.signInLink} onPress={handleSignIn}>
-                Sign In
-              </Text>
+        <form.Field
+          name="email"
+          listeners={{
+            onChange: ({ value }) => setUserEmail(value),
+          }}
+        >
+          {(field) => (
+            <FormInput
+              field={field}
+              label="Email"
+              placeholder="your@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+            />
+          )}
+        </form.Field>
+
+        <View style={styles.formButtonContainer}>
+          <Text style={styles.verificationExplanation}>
+            We&apos;ll send a code to your email to verify it&apos;s you.
+          </Text>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+          >
+            {([canSubmit, isSubmitting]) => (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.primaryButtonPressed,
+                  (!canSubmit || isLoading || isSubmitting) &&
+                    styles.primaryButtonDisabled,
+                ]}
+                onPress={() => form.handleSubmit()}
+                disabled={!canSubmit || isLoading || isSubmitting}
+              >
+                {isLoading || isSubmitting ? (
+                  <ActivityIndicator color={colors.surface} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.primaryButtonText,
+                      !canSubmit && styles.primaryButtonTextDisabled,
+                    ]}
+                  >
+                    Send verification code
+                  </Text>
+                )}
+              </Pressable>
+            )}
+          </form.Subscribe>
+          <Text style={styles.termsText}>
+            By continuing, you agree to our{" "}
+            <Text
+              style={styles.termsLink}
+              onPress={() => Linking.openURL(EXTERNAL_LINKS.termsOfService)}
+            >
+              Terms of Service
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.termsLink}
+              onPress={() => Linking.openURL(EXTERNAL_LINKS.privacyPolicy)}
+            >
+              Privacy Policy
             </Text>
-          </View>
+            .
+          </Text>
+        </View>
+
+        <View style={styles.signInContainer}>
+          <Text style={styles.signInText}>
+            Already have an account?{" "}
+            <Text style={styles.signInLink} onPress={handleSignIn}>
+              Sign In
+            </Text>
+          </Text>
+        </View>
       </KeyboardAwareScrollView>
     </View>
   );

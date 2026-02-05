@@ -8,10 +8,14 @@ import { onboardingStyles as styles } from "./onboardingStyles";
 
 interface OnboardingHeaderProps {
   showBackButton?: boolean;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 export function OnboardingHeader({
   showBackButton = false,
+  currentStep,
+  totalSteps = 4,
 }: OnboardingHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -33,7 +37,11 @@ export function OnboardingHeader({
               ]}
               hitSlop={12}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={colors.textPrimary}
+              />
             </Pressable>
           )}
         </View>
@@ -44,6 +52,20 @@ export function OnboardingHeader({
         />
         <View style={styles.headerRight} />
       </View>
+      {currentStep !== undefined && (
+        <View style={styles.progressContainer}>
+          {Array.from({ length: totalSteps }, (_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressDot,
+                index < currentStep && styles.progressDotCompleted,
+                index === currentStep - 1 && styles.progressDotActive,
+              ]}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }

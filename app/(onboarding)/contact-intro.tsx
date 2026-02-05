@@ -1,8 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
 import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
@@ -24,7 +24,7 @@ export default function ContactIntroScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton />
+      <OnboardingHeader showBackButton currentStep={0} />
 
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>

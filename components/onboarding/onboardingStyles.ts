@@ -32,6 +32,25 @@ export const onboardingStyles = StyleSheet.create({
     right: spacing.lg,
     width: 24,
   },
+  progressContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  progressDotActive: {
+    backgroundColor: colors.primary,
+  },
+  progressDotCompleted: {
+    backgroundColor: colors.primary,
+  },
   backButton: {
     padding: spacing.xs,
     borderRadius: 8,
