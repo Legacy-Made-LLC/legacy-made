@@ -39,7 +39,11 @@ interface FileUploadState {
 
 interface UseFileUploadOptions {
   /** Callback when a single file upload completes */
-  onFileUploaded?: (file: FileAttachment, fileId: string) => void;
+  onFileUploaded?: (
+    file: FileAttachment,
+    fileId: string,
+    downloadUrl: string | null
+  ) => void;
   /** Callback when a file upload fails */
   onFileError?: (file: FileAttachment, error: string) => void;
   /** Callback when all uploads complete */
@@ -208,11 +212,11 @@ export function useFileUpload(
           return { uri, success: false, error: "Cancelled" };
         }
 
-        // 3. Complete upload
-        await filesService.completeUpload(initResponse.fileId);
+        // 3. Complete upload - response includes the download URL
+        const completedFile = await filesService.completeUpload(initResponse.fileId);
 
         updateFileState(uri, { status: "complete", progress: 1 });
-        onFileUploaded?.(file, initResponse.fileId);
+        onFileUploaded?.(file, initResponse.fileId, completedFile.downloadUrl);
 
         return { uri, success: true, fileId: initResponse.fileId };
       } catch (error) {
@@ -294,8 +298,9 @@ export function useFileUpload(
 
         // No complete call needed for Mux - webhook handles it
         // Mark as complete locally (backend will update status via webhook)
+        // Videos don't have a download URL until processed, pass null
         updateFileState(uri, { status: "complete", progress: 1 });
-        onFileUploaded?.(file, initResponse.fileId);
+        onFileUploaded?.(file, initResponse.fileId, null);
 
         return { uri, success: true, fileId: initResponse.fileId };
       } catch (error) {

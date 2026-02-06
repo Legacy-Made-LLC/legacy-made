@@ -2,10 +2,9 @@
  * FilePreviewModal - Wrapper that shows the appropriate viewer based on file type
  */
 
-import { FileAttachment } from '@/api/types';
-import React from 'react';
-import { ImageViewer } from './ImageViewer';
-import { VideoPlayer } from './VideoPlayer';
+import { FileAttachment } from "@/api/types";
+import React from "react";
+import { VideoPlayer } from "./VideoPlayer";
 
 interface FilePreviewModalProps {
   /** The file to preview, or null if no preview is active */
@@ -21,20 +20,8 @@ interface FilePreviewModalProps {
 export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
   if (!file) return null;
 
-  // For images, use the ImageViewer
-  if (file.type === 'image') {
-    return (
-      <ImageViewer
-        visible
-        uri={file.uri}
-        fileName={file.fileName}
-        onClose={onClose}
-      />
-    );
-  }
-
   // For videos, use the VideoPlayer
-  if (file.type === 'video') {
+  if (file.type === "video") {
     return (
       <VideoPlayer
         visible
