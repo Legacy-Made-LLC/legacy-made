@@ -55,12 +55,15 @@ export interface WishFormValues {
 }
 
 /**
- * Data structure for saving a wish
+ * Data structure for saving a wish.
+ * Generic type parameter allows forms to specify their exact metadata type
+ * while WishSaveData<> (without type arg) defaults to Record<string, unknown>
+ * for consumers that don't need the specific type.
  */
-export interface WishSaveData {
+export interface WishSaveData<T = Record<string, unknown>> {
   title: string;
   notes?: string | null;
-  metadata: Record<string, unknown>;
+  metadata: T;
   metadataSchema: MetadataSchema;
 }
 
@@ -89,6 +92,8 @@ export interface WishFormProps {
   onAttachmentsChange?: (files: FileAttachment[]) => void;
   /** Whether a file upload is in progress */
   isUploading?: boolean;
+  /** Set of file IDs currently being deleted */
+  deletingFileIds?: Set<string>;
   /** Callback when storage upgrade is needed */
   onStorageUpgradeRequired?: () => void;
 }

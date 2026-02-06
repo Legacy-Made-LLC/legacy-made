@@ -52,6 +52,7 @@ export function AdvanceDirectiveForm({
   attachments = [],
   onAttachmentsChange,
   isUploading,
+  deletingFileIds,
   onStorageUpgradeRequired,
 }: WishFormProps) {
   const navigation = useNavigation();
@@ -100,7 +101,8 @@ export function AdvanceDirectiveForm({
       return {
         title: "Advance Directive",
         notes: values.notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
+        // Spread into plain object to satisfy Record<string, unknown> type
+        metadata: { ...metadata },
         metadataSchema: generateAdvanceDirectiveSchema(),
       };
     };
@@ -234,6 +236,8 @@ export function AdvanceDirectiveForm({
                     placeholder="Add directive documents"
                     helpText="Upload copies of your living will, healthcare power of attorney, or other directive documents."
                     onUpgradeRequired={onStorageUpgradeRequired}
+                    deletingIds={deletingFileIds}
+                    accentColor={colors.featureWishes}
                   />
                 </View>
               )}

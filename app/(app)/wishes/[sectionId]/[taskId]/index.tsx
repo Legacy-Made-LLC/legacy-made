@@ -17,7 +17,6 @@
 import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { useApi } from "@/api";
 import type { FileAttachment } from "@/api/types";
 import { apiFileToAttachment } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
@@ -36,6 +35,7 @@ import {
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
@@ -89,9 +89,6 @@ export default function WishesTaskScreen() {
   // Get the existing wish if any
   const existingWish = wishes[0];
 
-  // API for file operations
-  const { files: filesService } = useApi();
-
   // Build guidance props for the form
   const guidance: WishFormGuidance | undefined = useMemo(() => {
     if (!task?.triggerText || !task?.guidance) return undefined;
@@ -109,11 +106,16 @@ export default function WishesTaskScreen() {
   const createMutation = useCreateWish(task?.taskKey);
   const updateMutation = useUpdateWish(task?.taskKey);
 
-  // Track if files were deleted during this session (to invalidate cache on unmount)
-  const filesDeletedRef = useRef(false);
+  // Track if files were changed during this session (to invalidate cache on unmount)
+  const filesChangedRef = useRef(false);
 
-  // File attachments state - initialized from wish.files when available
-  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+  // File attachments management (shared hook for deletion logic)
+  const {
+    attachments,
+    setAttachments,
+    deletingFileIds,
+    handleRemoteFileDeletions,
+  } = useFileAttachments();
 
   // Form reference for auto-save integration
   const formRef = useRef<AnyFormApi | null>(null);
@@ -145,10 +147,19 @@ export default function WishesTaskScreen() {
         try {
           const uploadResults = await uploadFiles({ wishId }, attachments);
 
-          // Invalidate wish cache after uploads so it includes the new files
-          await queryClient.invalidateQueries({
-            queryKey: queryKeys.wishes.byTaskKey(planId, task.taskKey),
-          });
+          // Invalidate all wish caches after uploads so they include the new files
+          // Must invalidate all related caches to prevent stale data from being re-seeded
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.wishes.byTaskKey(planId, task.taskKey),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.wishes.all(planId),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.wishes.counts(planId),
+            }),
+          ]);
 
           // Check for upload failures
           const failedUploads = uploadResults.filter(
@@ -271,7 +282,7 @@ export default function WishesTaskScreen() {
     if (existingWish?.files) {
       setAttachments(existingWish.files.map(apiFileToAttachment));
     }
-  }, [existingWish?.files]);
+  }, [existingWish?.files, setAttachments]);
 
   // Refs to capture current values for unmount cleanup
   const planIdRef = useRef(planId);
@@ -279,15 +290,23 @@ export default function WishesTaskScreen() {
   planIdRef.current = planId;
   taskKeyRef.current = task?.taskKey;
 
-  // Invalidate wish cache on unmount if files were deleted during this session
+  // Invalidate wish caches on unmount if files were changed during this session
+  // This ensures fresh data is fetched when navigating back
   useEffect(() => {
     return () => {
-      if (filesDeletedRef.current && planIdRef.current && taskKeyRef.current) {
+      if (filesChangedRef.current && planIdRef.current && taskKeyRef.current) {
+        // Invalidate all related caches to prevent stale data
         queryClient.invalidateQueries({
           queryKey: queryKeys.wishes.byTaskKey(
             planIdRef.current,
             taskKeyRef.current,
           ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.wishes.all(planIdRef.current),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.wishes.counts(planIdRef.current),
         });
       }
     };
@@ -301,12 +320,22 @@ export default function WishesTaskScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    onFileUploaded: (file, fileId) => {
-      // Update attachment with backend ID and mark as remote
+    onFileUploaded: (file, fileId, downloadUrl) => {
+      // Mark that files changed (for cache invalidation on unmount)
+      filesChangedRef.current = true;
+      // Update attachment with backend ID, download URL, and mark as remote
       setAttachments((prev) =>
         prev.map((a) =>
           a.uri === file.uri
-            ? { ...a, id: fileId, uploadStatus: "complete", isRemote: true }
+            ? {
+                ...a,
+                id: fileId,
+                // Use the download URL if available (for documents/images)
+                // Videos don't have a download URL until processed
+                uri: downloadUrl || a.uri,
+                uploadStatus: "complete",
+                isRemote: true,
+              }
             : a,
         ),
       );
@@ -344,84 +373,39 @@ export default function WishesTaskScreen() {
     return attachment;
   });
 
-  // Keep a ref to current attachments for comparison in handleAttachmentsChange
-  const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
-
   /**
    * Handle attachment changes from the form.
    * For new files: If no wishId exists yet, flush save to create one first, then upload.
-   * For removed files: Shows confirmation before deleting remote files.
+   * For removed files: Deletes remote files from the server (confirmation is handled by FilePicker).
    */
   const handleAttachmentsChange = useCallback(
     async (newAttachments: FileAttachment[]) => {
-      const currentAttachments = attachmentsRef.current;
-
       // Helper to get unique identifier for a file (id for remote, uri for local)
       const getFileIdentifier = (file: FileAttachment) => file.id || file.uri;
 
-      // Find any remote files that were removed
-      const removedRemoteFiles = currentAttachments.filter(
-        (current) =>
-          current.isRemote &&
-          current.id &&
-          !newAttachments.some(
-            (newFile) =>
-              getFileIdentifier(newFile) === getFileIdentifier(current),
-          ),
-      );
+      // Handle remote file deletions using the shared hook
+      const { hadRemoteDeletions, hadSuccessfulDeletions } =
+        await handleRemoteFileDeletions(newAttachments);
+
+      // Track if files were changed for cache invalidation on unmount
+      if (hadSuccessfulDeletions) {
+        filesChangedRef.current = true;
+      }
+
+      // If remote files were deleted, the hook already updated state
+      if (hadRemoteDeletions) {
+        return;
+      }
 
       // Find any new local files that were added
       const addedLocalFiles = newAttachments.filter(
         (newFile) =>
           !newFile.isRemote &&
-          !currentAttachments.some(
+          !attachments.some(
             (current) =>
-              getFileIdentifier(current) === getFileIdentifier(newFile),
-          ),
+              getFileIdentifier(current) === getFileIdentifier(newFile)
+          )
       );
-
-      // Handle remote file deletion with confirmation
-      if (removedRemoteFiles.length > 0) {
-        const fileToDelete = removedRemoteFiles[0];
-        Alert.alert(
-          "Delete Attachment",
-          `Are you sure you want to permanently delete "${fileToDelete.fileName}"? This cannot be undone.`,
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: async () => {
-                if (!fileToDelete.id) return;
-
-                try {
-                  await filesService.delete(fileToDelete.id);
-                  filesDeletedRef.current = true;
-                  setAttachments((prev) =>
-                    prev.filter(
-                      (a) => getFileIdentifier(a) !== fileToDelete.id,
-                    ),
-                  );
-                  queryClient.invalidateQueries({
-                    queryKey: queryKeys.entitlements.current(),
-                  });
-                } catch (error) {
-                  const message =
-                    error instanceof Error
-                      ? error.message
-                      : "Failed to delete file";
-                  Alert.alert("Error", message);
-                }
-              },
-            },
-          ],
-        );
-        return;
-      }
 
       // Update attachments state
       setAttachments(newAttachments);
@@ -442,7 +426,7 @@ export default function WishesTaskScreen() {
             } catch {
               Alert.alert(
                 "Error",
-                "Could not save your wish before uploading files. Please try again.",
+                "Could not save your wish before uploading files. Please try again."
               );
               return;
             }
@@ -455,7 +439,7 @@ export default function WishesTaskScreen() {
         }
       }
     },
-    [filesService, queryClient, autoSave, uploadFiles],
+    [attachments, handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles]
   );
 
   // ============================================================================
@@ -507,6 +491,7 @@ export default function WishesTaskScreen() {
         attachments={attachmentsWithUploadState}
         onAttachmentsChange={handleAttachmentsChange}
         isUploading={isUploading}
+        deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
       />
       <SavedIndicator

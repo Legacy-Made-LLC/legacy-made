@@ -79,6 +79,8 @@ export interface EntryFormProps {
   onAttachmentsChange?: (files: FileAttachment[]) => void;
   /** Whether file uploads are in progress */
   isUploading?: boolean;
+  /** Set of file IDs currently being deleted */
+  deletingFileIds?: Set<string>;
   /** Callback when user needs to upgrade for storage */
   onStorageUpgradeRequired?: () => void;
 }
