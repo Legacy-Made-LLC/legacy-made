@@ -2,15 +2,18 @@
  * DigitalList - Displays a list of digital access entries
  */
 
+import type { Entry } from "@/api/types";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
+import { SortControl } from "@/components/ui/SortControl";
 import { spacing } from "@/constants/theme";
 import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
+import { useSortedEntries } from "@/hooks/useSortedEntries";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useCallback } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryListProps } from "../registry";
@@ -79,6 +82,17 @@ export function DigitalList({
   const section = getSectionByTaskKey(taskKey);
   const labels = getLabels(taskKey);
 
+  const getDisplayTitle = useCallback(
+    (entry: Entry) => entry.title || "",
+    [],
+  );
+
+  const { sortedEntries, sortMode, setSortMode } = useSortedEntries(
+    entries,
+    getDisplayTitle,
+    taskKey,
+  );
+
   const renderGuidanceCard = () => {
     if (!task?.guidance || !task?.triggerText) return null;
     return (
@@ -142,11 +156,21 @@ export function DigitalList({
     >
       {renderGuidanceCard()}
 
-      {entries.map((entry, index) => {
+      {entries.length >= 2 && (
+        <View style={listStyles.sortRow}>
+          <SortControl sortMode={sortMode} onSortModeChange={setSortMode} />
+        </View>
+      )}
+
+      {sortedEntries.map((entry, index) => {
         const metadata = entry.metadata as DigitalMetadata;
-        const subtitle = [metadata.service, metadata.username]
-          .filter(Boolean)
-          .join(" · ");
+        const isSocial = taskKey === "digital.social";
+        // For social accounts, title already IS the service — just show username
+        const subtitle = isSocial
+          ? metadata.username || ""
+          : [metadata.service, metadata.username]
+              .filter(Boolean)
+              .join(" · ");
 
         return (
           <AnimatedListItem key={entry.id} index={index}>
@@ -154,7 +178,10 @@ export function DigitalList({
               onPress={() => onEntryPress(entry.id)}
               style={[
                 listStyles.card,
-                { marginTop: index === 0 ? spacing.sm : 0 },
+                {
+                  marginTop:
+                    index === 0 && entries.length < 2 ? spacing.sm : 0,
+                },
               ]}
             >
               <View style={listStyles.cardContent}>
@@ -171,7 +198,7 @@ export function DigitalList({
         );
       })}
 
-      <AnimatedListItem index={entries.length}>
+      <AnimatedListItem index={sortedEntries.length}>
         <PressableCard onPress={onAddPress} style={listStyles.addCard}>
           <Text style={listStyles.addText}>+ {labels.addButton}</Text>
         </PressableCard>

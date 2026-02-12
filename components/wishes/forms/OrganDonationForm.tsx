@@ -65,7 +65,7 @@ export function OrganDonationForm({
       onRegistry: initialMetadata?.onRegistry ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -140,6 +140,7 @@ export function OrganDonationForm({
               onValueChange={(val) => field.handleChange(val)}
               options={decisionOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -174,6 +175,7 @@ export function OrganDonationForm({
               onValueChange={(val) => field.handleChange(val)}
               options={registryOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -184,8 +186,9 @@ export function OrganDonationForm({
           onRegistry === "no" ? (
             <View style={wishesFormStyles.infoCard}>
               <Text style={wishesFormStyles.infoText}>
-                Being on the registry helps, but your family will still be asked.
-                Recording your wishes here ensures they know what you want.
+                Being on the registry helps, but your family will still be
+                asked. Recording your wishes here ensures they know what you
+                want.
               </Text>
             </View>
           ) : null

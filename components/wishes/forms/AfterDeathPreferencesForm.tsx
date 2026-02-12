@@ -68,7 +68,7 @@ export function AfterDeathPreferencesForm({
       prearrangedDetails: initialMetadata?.prearrangedDetails ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -144,6 +144,7 @@ export function AfterDeathPreferencesForm({
               onValueChange={(val) => field.handleChange(val)}
               options={dispositionOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -180,6 +181,7 @@ export function AfterDeathPreferencesForm({
               onValueChange={(val) => field.handleChange(val)}
               options={prearrangedOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}

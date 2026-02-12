@@ -61,7 +61,7 @@ export function EndOfLifeSettingForm({
       music: initialMetadata?.music ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -137,6 +137,7 @@ export function EndOfLifeSettingForm({
               onValueChange={(val) => field.handleChange(val)}
               options={settingOptions}
               placeholder="Select a preference..."
+              clearable
             />
           </View>
         )}

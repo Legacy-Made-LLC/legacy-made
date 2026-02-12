@@ -57,7 +57,7 @@ export function FaithPreferencesForm({
       rituals: initialMetadata?.rituals ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -134,6 +134,7 @@ export function FaithPreferencesForm({
               onValueChange={(val) => field.handleChange(val)}
               options={faithTraditions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}

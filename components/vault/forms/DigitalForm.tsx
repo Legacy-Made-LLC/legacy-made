@@ -7,6 +7,7 @@ import {
   FormInput,
   FormTextArea,
   digitalSchema,
+  digitalSocialSchema,
   FilePicker,
 } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
@@ -113,6 +114,7 @@ export function DigitalForm({
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const isSocial = taskKey === "digital.social";
   const labels = getLabels(taskKey);
 
   const initialMetadata = initialData?.metadata as DigitalMetadata | undefined;
@@ -132,7 +134,7 @@ export function DigitalForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
-      onDynamic: digitalSchema,
+      onDynamic: isSocial ? digitalSocialSchema : digitalSchema,
     },
     onSubmit: async ({ value }) => {
       const metadata: DigitalMetadata = {
@@ -142,9 +144,14 @@ export function DigitalForm({
         notes: value.accessNotes.trim() || null,
       };
 
+      // For social accounts, use the service/platform as the title
+      const title = isSocial
+        ? value.service.trim()
+        : value.accountName.trim();
+
       try {
         await onSave({
-          title: value.accountName.trim(),
+          title,
           notes: value.accessNotes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: DIGITAL_METADATA_SCHEMA,
@@ -166,10 +173,12 @@ export function DigitalForm({
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const accountName = form.getFieldValue("accountName");
+    const displayName = isSocial
+      ? form.getFieldValue("service")
+      : form.getFieldValue("accountName");
     Alert.alert(
       labels.deleteTitle,
-      `Are you sure you want to delete ${accountName || "this item"}?`,
+      `Are you sure you want to delete ${displayName || "this item"}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -200,15 +209,17 @@ export function DigitalForm({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-        <form.Field name="accountName">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Name"
-              placeholder={labels.namePlaceholder}
-            />
-          )}
-        </form.Field>
+        {!isSocial && (
+          <form.Field name="accountName">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Name"
+                placeholder={labels.namePlaceholder}
+              />
+            )}
+          </form.Field>
+        )}
 
         <form.Field name="service">
           {(field) => (

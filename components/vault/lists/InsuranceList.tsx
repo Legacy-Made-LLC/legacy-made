@@ -2,15 +2,18 @@
  * InsuranceList - Displays a list of insurance policy entries
  */
 
+import type { Entry } from "@/api/types";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
+import { SortControl } from "@/components/ui/SortControl";
 import { spacing } from "@/constants/theme";
 import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
+import { useSortedEntries } from "@/hooks/useSortedEntries";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useCallback } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryListProps } from "../registry";
@@ -33,6 +36,20 @@ export function InsuranceList({
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
   const section = getSectionByTaskKey(taskKey);
+
+  const getDisplayTitle = useCallback((entry: Entry) => {
+    const metadata = entry.metadata as InsuranceMetadata;
+    return (
+      entry.title ||
+      [metadata.provider, metadata.policyType].filter(Boolean).join(" ")
+    );
+  }, []);
+
+  const { sortedEntries, sortMode, setSortMode } = useSortedEntries(
+    entries,
+    getDisplayTitle,
+    taskKey,
+  );
 
   const renderGuidanceCard = () => {
     if (!task?.guidance || !task?.triggerText) return null;
@@ -97,14 +114,17 @@ export function InsuranceList({
     >
       {renderGuidanceCard()}
 
-      {entries.map((entry, index) => {
+      {entries.length >= 2 && (
+        <View style={listStyles.sortRow}>
+          <SortControl sortMode={sortMode} onSortModeChange={setSortMode} />
+        </View>
+      )}
+
+      {sortedEntries.map((entry, index) => {
         const metadata = entry.metadata as InsuranceMetadata;
 
         // Title is generated from provider + policy type, so just show coverage in subtitle
-        const displayTitle =
-          entry.title ||
-          [metadata.provider, metadata.policyType].filter(Boolean).join(" ");
-
+        const displayTitle = getDisplayTitle(entry);
         const subtitle = metadata.coverageDetails || null;
 
         return (
@@ -113,7 +133,10 @@ export function InsuranceList({
               onPress={() => onEntryPress(entry.id)}
               style={[
                 listStyles.card,
-                { marginTop: index === 0 ? spacing.sm : 0 },
+                {
+                  marginTop:
+                    index === 0 && entries.length < 2 ? spacing.sm : 0,
+                },
               ]}
             >
               <View style={listStyles.cardContent}>
@@ -130,7 +153,7 @@ export function InsuranceList({
         );
       })}
 
-      <AnimatedListItem index={entries.length}>
+      <AnimatedListItem index={sortedEntries.length}>
         <PressableCard onPress={onAddPress} style={listStyles.addCard}>
           <Text style={listStyles.addText}>+ Add Policy</Text>
         </PressableCard>

@@ -166,6 +166,16 @@ export const digitalSchema = z.object({
 });
 export type DigitalFormValues = z.infer<typeof digitalSchema>;
 
+/** Digital social account form — no separate name field (service IS the name) */
+export const digitalSocialSchema = z.object({
+  accountName: optionalString,
+  service: requiredString("Service/Platform"),
+  username: optionalString,
+  importance: optionalString,
+  accessNotes: optionalString,
+});
+export type DigitalSocialFormValues = z.infer<typeof digitalSocialSchema>;
+
 /** Pet form */
 export const petSchema = z.object({
   name: requiredString("Pet name"),

@@ -54,4 +54,7 @@ export const listStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.background,
   },
+  sortRow: {
+    marginTop: spacing.xs,
+  },
 });

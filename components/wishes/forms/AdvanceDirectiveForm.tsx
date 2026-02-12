@@ -72,7 +72,7 @@ export function AdvanceDirectiveForm({
       proxyRelationship: initialMetadata?.proxyRelationship ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -124,7 +124,7 @@ export function AdvanceDirectiveForm({
         : [...currentTypes, docType];
       form.setFieldValue("documentTypes", newTypes);
     },
-    [form]
+    [form],
   );
 
   return (
@@ -163,6 +163,7 @@ export function AdvanceDirectiveForm({
               onValueChange={(val) => field.handleChange(val)}
               options={hasDirectiveOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -197,7 +198,11 @@ export function AdvanceDirectiveForm({
                             ]}
                           >
                             {field.state.value.includes(docType) && (
-                              <Ionicons name="checkmark" size={14} color="#fff" />
+                              <Ionicons
+                                name="checkmark"
+                                size={14}
+                                color="#fff"
+                              />
                             )}
                           </View>
                           <Text style={wishesFormStyles.checkboxText}>

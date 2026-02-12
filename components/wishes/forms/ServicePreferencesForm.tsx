@@ -78,7 +78,7 @@ export function ServicePreferencesForm({
       avoidances: initialMetadata?.avoidances ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -157,6 +157,7 @@ export function ServicePreferencesForm({
               onValueChange={(val) => field.handleChange(val)}
               options={serviceTypeOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -175,6 +176,7 @@ export function ServicePreferencesForm({
                       onValueChange={(val) => field.handleChange(val)}
                       options={toneOptions}
                       placeholder="Select..."
+                      clearable
                     />
                   </View>
                 )}
@@ -193,7 +195,9 @@ export function ServicePreferencesForm({
                 )}
               </form.Field>
 
-              <Text style={wishesFormStyles.sectionHeader}>Personal touches</Text>
+              <Text style={wishesFormStyles.sectionHeader}>
+                Personal touches
+              </Text>
 
               <form.Field name="music">
                 {(field) => (

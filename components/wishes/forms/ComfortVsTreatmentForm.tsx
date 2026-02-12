@@ -88,7 +88,7 @@ export function ComfortVsTreatmentForm({
       alertness: initialMetadata?.alertness ?? "",
       notes: initialData?.notes ?? "",
     }),
-    [initialMetadata, initialData?.notes]
+    [initialMetadata, initialData?.notes],
   );
 
   const form = useForm({
@@ -163,6 +163,7 @@ export function ComfortVsTreatmentForm({
               onValueChange={(val) => field.handleChange(val)}
               options={preferenceOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -177,6 +178,7 @@ export function ComfortVsTreatmentForm({
               onValueChange={(val) => field.handleChange(val)}
               options={painManagementOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}
@@ -191,6 +193,7 @@ export function ComfortVsTreatmentForm({
               onValueChange={(val) => field.handleChange(val)}
               options={alertnessOptions}
               placeholder="Select..."
+              clearable
             />
           </View>
         )}

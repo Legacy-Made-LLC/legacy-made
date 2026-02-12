@@ -43,6 +43,8 @@ interface SelectProps {
   onValueChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
+  /** Show a clear button when a value is selected */
+  clearable?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
@@ -52,6 +54,7 @@ export function Select({
   onValueChange,
   options,
   placeholder = "Select...",
+  clearable = false,
   containerStyle,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -82,6 +85,13 @@ export function Select({
     [onValueChange, handleClose],
   );
 
+  const handleClear = useCallback(() => {
+    onValueChange("");
+    handleClose();
+  }, [onValueChange, handleClose]);
+
+  const showClear = clearable && !!value;
+
   return (
     <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
@@ -94,7 +104,25 @@ export function Select({
         >
           {displayText}
         </Text>
-        <Ionicons name="chevron-down" size={20} color={colors.textTertiary} />
+        {showClear ? (
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onValueChange("");
+              borderColor.value = withTiming(colors.border, { duration: 200 });
+            }}
+            hitSlop={8}
+            style={styles.clearButton}
+          >
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color={colors.textTertiary}
+            />
+          </Pressable>
+        ) : (
+          <Ionicons name="chevron-down" size={20} color={colors.textTertiary} />
+        )}
       </AnimatedPressable>
 
       <Modal
@@ -122,6 +150,16 @@ export function Select({
               style={styles.optionsList}
               showsVerticalScrollIndicator={false}
             >
+              {showClear && (
+                <Pressable style={styles.clearOption} onPress={handleClear}>
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={18}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={styles.clearOptionText}>Clear selection</Text>
+                </Pressable>
+              )}
               {options.map((option) => (
                 <Pressable
                   key={option.value}
@@ -240,5 +278,24 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     fontFamily: typography.fontFamily.medium,
     color: colors.primary,
+  },
+  clearButton: {
+    padding: spacing.xs,
+    marginRight: -spacing.xs,
+  },
+  clearOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  clearOptionText: {
+    fontSize: typography.sizes.body,
+    color: colors.textTertiary,
   },
 });
