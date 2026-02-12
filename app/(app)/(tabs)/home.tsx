@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import type { TaskProgressData } from "@/api/types";
 import { PressableCard } from "@/components/ui/Card";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import {
@@ -20,12 +21,22 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
-import { useEntryCountsQuery, useWishCountsQuery } from "@/hooks/queries";
+import { vaultSections } from "@/constants/vault";
+import { wishesSections } from "@/constants/wishes";
+import { useAllProgressQuery } from "@/hooks/queries";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = spacing.md;
 const HORIZONTAL_PADDING = spacing.lg;
 const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
+
+// Compute total task counts from section definitions
+const informationTaskKeys = vaultSections.flatMap((s) =>
+  s.tasks.map((t) => t.taskKey),
+);
+const wishesTaskKeys = wishesSections.flatMap((s) =>
+  s.tasks.map((t) => t.taskKey),
+);
 
 // Pillar definitions for the home screen
 const pillars = [
@@ -34,7 +45,8 @@ const pillars = [
     title: "Information",
     description: "Accounts, documents, and key contacts — all in one place.",
     icon: "document-text-outline" as const,
-    totalItems: 9, // Placeholder - would be calculated from schema
+    totalItems: informationTaskKeys.length,
+    taskKeys: informationTaskKeys,
     route: "/(app)/(tabs)/information",
     color: colors.featureInformation,
     tint: colors.featureInformationTint,
@@ -44,7 +56,8 @@ const pillars = [
     title: "Wishes",
     description: "Your healthcare values and end-of-life preferences.",
     icon: "heart-outline" as const,
-    totalItems: 11, // Placeholder
+    totalItems: wishesTaskKeys.length,
+    taskKeys: wishesTaskKeys,
     route: "/(app)/(tabs)/wishes",
     color: colors.featureWishes,
     tint: colors.featureWishesTint,
@@ -54,7 +67,8 @@ const pillars = [
     title: "Legacy",
     description: "Letters, videos, and memories for the people you love.",
     icon: "videocam-outline" as const,
-    totalItems: 8, // Placeholder
+    totalItems: 0,
+    taskKeys: [] as string[],
     route: "/(app)/(tabs)/legacy",
     color: colors.featureLegacy,
     tint: colors.featureLegacyTint,
@@ -64,7 +78,8 @@ const pillars = [
     title: "Family",
     description: "Share access and keep loved ones in the loop.",
     icon: "people-outline" as const,
-    totalItems: 5, // Placeholder
+    totalItems: 0,
+    taskKeys: [] as string[],
     route: "/(app)/(tabs)/family",
     color: colors.featureFamily,
     tint: colors.featureFamilyTint,
@@ -126,37 +141,22 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
   );
 }
 
+/** Count completed tasks for a pillar based on progress records */
+function countCompleted(
+  taskKeys: string[],
+  progress: Record<string, TaskProgressData>,
+): number {
+  return taskKeys.filter((k) => progress[k]?.status === "complete").length;
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { data: entryCounts = {} } = useEntryCountsQuery();
-  const { data: wishCounts = {} } = useWishCountsQuery();
+  const { data: progress = {} } = useAllProgressQuery();
 
-  // Calculate Information pillar progress (sum of all categories)
-  const informationCount = Object.values(entryCounts).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
-
-  const wishesCount = Object.values(wishCounts).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
-
-  // Get progress for each pillar
-  const getPillarProgress = (pillarId: string) => {
-    switch (pillarId) {
-      case "information":
-        return informationCount;
-      case "wishes":
-        return wishesCount;
-      case "legacy":
-        return 0; // TODO: Connect to legacy data
-      case "family":
-        return 0; // TODO: Connect to family data
-      default:
-        return 0;
-    }
+  // Get completed task count for each pillar
+  const getPillarProgress = (pillar: (typeof pillars)[number]) => {
+    return countCompleted(pillar.taskKeys, progress);
   };
 
   return (
@@ -220,7 +220,7 @@ export default function HomeScreen() {
           <PillarCard
             key={pillar.id}
             pillar={pillar}
-            currentProgress={getPillarProgress(pillar.id)}
+            currentProgress={getPillarProgress(pillar)}
             onPress={() => router.push(pillar.route as any)}
           />
         ))}

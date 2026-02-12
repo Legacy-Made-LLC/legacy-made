@@ -12,6 +12,7 @@
  * - family: Warm blush/peach
  */
 
+import type { TaskProgressData } from "@/api/types";
 import { PressableCard } from "@/components/ui/Card";
 import { colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,8 +35,8 @@ export interface PillarSection {
 interface PillarSectionCardProps {
   /** The section to display */
   section: PillarSection;
-  /** Counts by taskKey for progress calculation */
-  counts: Record<string, number>;
+  /** Progress by taskKey for completion calculation */
+  progress: Record<string, TaskProgressData>;
   /** Which pillar this card belongs to (determines colors and route) */
   pillar: PillarType;
 }
@@ -80,7 +81,7 @@ const pillarRoutes: Record<PillarType, string> = {
 
 export function PillarSectionCard({
   section,
-  counts,
+  progress,
   pillar,
 }: PillarSectionCardProps) {
   const router = useRouter();
@@ -94,21 +95,21 @@ export function PillarSectionCard({
   };
 
   // Calculate completion for this section
-  // Goal: at least 1 entry per task
+  // A task is complete when the user explicitly marks it so
   const completedTasks = section.tasks.filter(
-    (task) => (counts[task.taskKey] || 0) > 0
+    (task) => progress[task.taskKey]?.status === "complete",
   ).length;
   const goalCount = section.tasks.length;
-  const progress = goalCount > 0 ? completedTasks / goalCount : 0;
+  const progressRatio = goalCount > 0 ? completedTasks / goalCount : 0;
 
   // Animate progress bar when progress changes
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: progress,
+      toValue: progressRatio,
       duration: PROGRESS_ANIMATION_DURATION,
       useNativeDriver: false, // width animation can't use native driver
     }).start();
-  }, [progress, progressAnim]);
+  }, [progressRatio, progressAnim]);
 
   return (
     <PressableCard onPress={handlePress} style={styles.card}>

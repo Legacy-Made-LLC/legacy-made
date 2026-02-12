@@ -5,7 +5,9 @@
  * Primary Contacts and Backup Contacts)
  */
 
+import type { TaskProgressData } from "@/api/types";
 import { PressableCard } from "@/components/ui/Card";
+import { TaskStatusIndicator } from "@/components/ui/TaskStatusIndicator";
 import { colors, spacing, typography } from "@/constants/theme";
 import type { VaultSection } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,9 +18,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface TaskPickerProps {
   section: VaultSection;
+  /** Progress by taskKey for showing completion status */
+  progress?: Record<string, TaskProgressData>;
 }
 
-export function TaskPicker({ section }: TaskPickerProps) {
+export function TaskPicker({ section, progress = {} }: TaskPickerProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -40,28 +44,31 @@ export function TaskPicker({ section }: TaskPickerProps) {
         <Text style={styles.description}>{section.description}</Text>
       </View> */}
 
-      {section.tasks.map((task, index) => (
-        <PressableCard
-          key={task.id}
-          onPress={() => handleTaskPress(task.id)}
-          style={styles.card}
-        >
-          <View style={styles.cardContent}>
-            <View style={styles.cardIcon}>
-              <Text style={styles.taskNumber}>{index + 1}</Text>
+      {section.tasks.map((task) => {
+        return (
+          <PressableCard
+            key={task.id}
+            onPress={() => handleTaskPress(task.id)}
+            style={styles.card}
+          >
+            <View style={styles.cardContent}>
+              <TaskStatusIndicator
+                progress={progress[task.taskKey]}
+                pillarColor={colors.featureInformation}
+              />
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{task.title}</Text>
+                <Text style={styles.cardDescription}>{task.description}</Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.textTertiary}
+              />
             </View>
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{task.title}</Text>
-              <Text style={styles.cardDescription}>{task.description}</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.textTertiary}
-            />
-          </View>
-        </PressableCard>
-      ))}
+          </PressableCard>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -90,20 +97,6 @@ const styles = StyleSheet.create({
   cardContent: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  cardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  taskNumber: {
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
-    color: colors.surface,
   },
   cardText: {
     flex: 1,

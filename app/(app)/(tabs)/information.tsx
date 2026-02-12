@@ -5,11 +5,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { vaultSections } from "@/constants/vault";
-import { useEntryCountsQuery } from "@/hooks/queries";
+import { useAllProgressQuery } from "@/hooks/queries";
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
-  const { data: counts = {} } = useEntryCountsQuery();
+  const { data: progress = {} } = useAllProgressQuery();
 
   return (
     <ScrollView
@@ -32,7 +32,7 @@ export default function InformationScreen() {
           <PillarSectionCard
             key={section.id}
             section={section}
-            counts={counts}
+            progress={progress}
             pillar="information"
           />
         ))}

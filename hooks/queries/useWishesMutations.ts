@@ -19,6 +19,7 @@ import type {
 } from "@/api/types";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
+import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -101,6 +102,7 @@ export function useCreateWish<T = Record<string, unknown>>(
   const { planId } = usePlan();
   const { wishes } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
+  const { setIfNew } = useSetProgressIfNew();
 
   return useMutation({
     mutationFn: (data: CreateWishData<T>) => {
@@ -226,13 +228,18 @@ export function useCreateWish<T = Record<string, unknown>>(
         ];
       });
     },
-    onSettled: () => {
+    onSettled: (_data, error) => {
       if (!planId || !taskKey) return;
 
       // Background refresh to ensure everything is in sync
       queryClient.invalidateQueries({
         queryKey: queryKeys.entitlements.current(),
       });
+
+      // Auto-set progress to "in_progress" on first wish creation (fire-and-forget)
+      if (!error) {
+        setIfNew(taskKey);
+      }
     },
   });
 }

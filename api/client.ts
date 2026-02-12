@@ -2,13 +2,16 @@
  * API Client - Base HTTP client with Clerk authentication
  */
 
-import type { ApiError } from './types';
+import Constants from "expo-constants";
+import type { ApiError } from "./types";
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:3000";
 
 // API configuration
 const API_CONFIG = {
   // Default to localhost for development
   // This should be configured via environment variables in production
-  baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+  baseUrl: API_URL,
   timeout: 30000,
 };
 
@@ -21,7 +24,7 @@ export class ApiClientError extends Error {
 
   constructor(message: string, statusCode: number, originalError?: ApiError) {
     super(message);
-    this.name = 'ApiClientError';
+    this.name = "ApiClientError";
     this.statusCode = statusCode;
     this.originalError = originalError;
   }
@@ -36,7 +39,7 @@ export type GetTokenFn = () => Promise<string | null>;
  * Request options for the API client
  */
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
   params?: Record<string, string | undefined>;
@@ -45,7 +48,10 @@ interface RequestOptions {
 /**
  * Build URL with query parameters
  */
-function buildUrl(path: string, params?: Record<string, string | undefined>): string {
+function buildUrl(
+  path: string,
+  params?: Record<string, string | undefined>,
+): string {
   const url = new URL(path, API_CONFIG.baseUrl);
 
   if (params) {
@@ -65,21 +71,21 @@ function buildUrl(path: string, params?: Record<string, string | undefined>): st
 async function request<T>(
   path: string,
   getToken: GetTokenFn,
-  options: RequestOptions = {}
+  options: RequestOptions = {},
 ): Promise<T> {
-  const { method = 'GET', body, headers = {}, params } = options;
+  const { method = "GET", body, headers = {}, params } = options;
 
   // Get the JWT token from Clerk
   const token = await getToken();
 
   if (!token) {
-    throw new ApiClientError('Not authenticated', 401);
+    throw new ApiClientError("Not authenticated", 401);
   }
 
   const url = buildUrl(path, params);
 
   const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
     ...headers,
   };
@@ -105,7 +111,7 @@ async function request<T>(
       throw new ApiClientError(
         apiError.message || `Request failed with status ${response.status}`,
         response.status,
-        apiError
+        apiError,
       );
     }
 
@@ -118,13 +124,13 @@ async function request<T>(
     }
 
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new ApiClientError('Request timeout', 408);
+      if (error.name === "AbortError") {
+        throw new ApiClientError("Request timeout", 408);
       }
       throw new ApiClientError(error.message, 0);
     }
 
-    throw new ApiClientError('Unknown error occurred', 0);
+    throw new ApiClientError("Unknown error occurred", 0);
   }
 }
 
@@ -134,19 +140,19 @@ async function request<T>(
 export function createApiClient(getToken: GetTokenFn) {
   return {
     get: <T>(path: string, params?: Record<string, string | undefined>) =>
-      request<T>(path, getToken, { method: 'GET', params }),
+      request<T>(path, getToken, { method: "GET", params }),
 
     post: <T>(path: string, body: unknown) =>
-      request<T>(path, getToken, { method: 'POST', body }),
+      request<T>(path, getToken, { method: "POST", body }),
 
     patch: <T>(path: string, body: unknown) =>
-      request<T>(path, getToken, { method: 'PATCH', body }),
+      request<T>(path, getToken, { method: "PATCH", body }),
 
     put: <T>(path: string, body: unknown) =>
-      request<T>(path, getToken, { method: 'PUT', body }),
+      request<T>(path, getToken, { method: "PUT", body }),
 
     delete: <T>(path: string) =>
-      request<T>(path, getToken, { method: 'DELETE' }),
+      request<T>(path, getToken, { method: "DELETE" }),
   };
 }
 

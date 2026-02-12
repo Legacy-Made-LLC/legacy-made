@@ -17,6 +17,7 @@ import type {
 } from "@/api/types";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
+import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -82,6 +83,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
   const { planId } = usePlan();
   const { entries } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
+  const { setIfNew } = useSetProgressIfNew();
 
   return useMutation({
     mutationFn: (data: CreateEntryData<T>) => {
@@ -171,7 +173,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
         );
       }
     },
-    onSettled: () => {
+    onSettled: (_data, error) => {
       if (!planId || !taskKey) return;
 
       // Invalidate to get the real server data with correct ID
@@ -188,6 +190,11 @@ export function useCreateEntry<T = Record<string, unknown>>(
       queryClient.invalidateQueries({
         queryKey: queryKeys.entitlements.current(),
       });
+
+      // Auto-set progress to "in_progress" on first entry creation (fire-and-forget)
+      if (!error) {
+        setIfNew(taskKey);
+      }
     },
   });
 }

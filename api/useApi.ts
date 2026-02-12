@@ -9,6 +9,7 @@ import { createEntriesService } from './entries';
 import { createEntitlementsService } from './entitlements';
 import { createFilesService } from './files';
 import { createPlansService } from './plans';
+import { createProgressService } from './progress';
 import { createWishesService } from './wishes';
 
 /**
@@ -62,6 +63,10 @@ export function useApi() {
     return createWishesService(client);
   }, [client]);
 
+  const progress = useMemo(() => {
+    return createProgressService(client);
+  }, [client]);
+
   return {
     /** The base API client for custom requests */
     client,
@@ -75,6 +80,8 @@ export function useApi() {
     entitlements,
     /** Wishes service with CRUD operations (Wishes pillar) */
     wishes,
+    /** Progress service for task completion tracking */
+    progress,
     /** Whether the user is signed in */
     isSignedIn,
     /** Whether Clerk has finished loading */

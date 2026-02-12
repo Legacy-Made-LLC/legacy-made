@@ -1,4 +1,3 @@
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import {
@@ -8,7 +7,13 @@ import {
   DMSans_700Bold,
   useFonts,
 } from "@expo-google-fonts/dm-sans";
-import { LibreBaskerville_400Regular, LibreBaskerville_500Medium, LibreBaskerville_600SemiBold, LibreBaskerville_700Bold } from "@expo-google-fonts/libre-baskerville";
+import {
+  LibreBaskerville_400Regular,
+  LibreBaskerville_500Medium,
+  LibreBaskerville_600SemiBold,
+  LibreBaskerville_700Bold,
+} from "@expo-google-fonts/libre-baskerville";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -25,8 +30,11 @@ import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
 import { UpgradePromptProvider } from "@/data/UpgradePromptContext";
 import { QueryProvider } from "@/providers/QueryProvider";
+import Constants from "expo-constants";
 
 SplashScreen.preventAutoHideAsync();
+
+const CLERK_PUBLISHABLE_KEY = Constants.expoConfig?.extra?.clerkPublishableKey;
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -47,9 +55,7 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
-    return (
-      <Loader />
-    );
+    return <Loader />;
   }
 
   return (
@@ -58,11 +64,19 @@ export default function RootLayout() {
         <BottomSheetModalProvider>
           <UpgradePromptProvider>
             <OnboardingProvider>
-              <ClerkProvider tokenCache={tokenCache} publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+              <ClerkProvider
+                tokenCache={tokenCache}
+                publishableKey={CLERK_PUBLISHABLE_KEY}
+              >
                 <QueryProvider>
                   <PlanProvider>
                     <EntitlementsProvider>
-                      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+                      <Stack
+                        screenOptions={{
+                          headerShown: false,
+                          animation: "fade",
+                        }}
+                      >
                         {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
                       </Stack>
                       <StatusBar style="dark" />

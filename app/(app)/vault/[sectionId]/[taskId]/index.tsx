@@ -5,12 +5,14 @@
  * list component for that task type.
  */
 
+import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import { getListComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import { getSection, getTask } from "@/constants/vault";
 import { useEntriesQuery } from "@/hooks/queries";
+import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useLayoutEffect } from "react";
+import React, { useEffect, useLayoutEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function TaskScreen() {
@@ -39,6 +41,15 @@ export default function TaskScreen() {
 
   // Fetch entries for this task
   const { data: entries = [], isLoading } = useEntriesQuery(task?.taskKey);
+
+  // Backwards compatibility: auto-set progress to "in_progress" when entries
+  // exist but no progress record has been created yet (pre-progress-feature data)
+  const { setIfNew } = useSetProgressIfNew();
+  useEffect(() => {
+    if (!isLoading && entries.length > 0 && task?.taskKey) {
+      setIfNew(task.taskKey);
+    }
+  }, [isLoading, entries.length, task?.taskKey, setIfNew]);
 
   // Handle navigation
   const handleEntryPress = (entryId: string) => {
@@ -70,17 +81,36 @@ export default function TaskScreen() {
   }
 
   return (
-    <ListComponent
-      taskKey={task.taskKey}
-      entries={entries}
-      isLoading={isLoading}
-      onEntryPress={handleEntryPress}
-      onAddPress={handleAddPress}
-    />
+    <View style={styles.wrapper}>
+      <View style={styles.listContainer}>
+        <ListComponent
+          taskKey={task.taskKey}
+          entries={entries}
+          isLoading={isLoading}
+          onEntryPress={handleEntryPress}
+          onAddPress={handleAddPress}
+        />
+      </View>
+      {entries.length > 0 && (
+        <TaskCompletionFooter
+          taskKey={task.taskKey}
+          pillarColor={colors.featureInformation}
+          pillarTint={colors.featureInformationTint}
+          onComeBackLater={() => router.back()}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  listContainer: {
+    flex: 1,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: "center",

@@ -21,6 +21,7 @@ import type { FileAttachment } from "@/api/types";
 import { apiFileToAttachment } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
 import { SavedIndicator } from "@/components/ui/SavedIndicator";
+import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import {
   getWishesFormComponent,
   type WishFormGuidance,
@@ -34,12 +35,13 @@ import {
 } from "@/constants/wishes";
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
+import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -56,6 +58,7 @@ export default function WishesTaskScreen() {
     taskId: string;
   }>();
   const navigation = useNavigation();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -88,6 +91,15 @@ export default function WishesTaskScreen() {
 
   // Get the existing wish if any
   const existingWish = wishes[0];
+
+  // Backwards compatibility: auto-set progress to "in_progress" when a wish
+  // exists but no progress record has been created yet (pre-progress-feature data)
+  const { setIfNew } = useSetProgressIfNew();
+  useEffect(() => {
+    if (isFetched && existingWish && task?.taskKey) {
+      setIfNew(task.taskKey);
+    }
+  }, [isFetched, existingWish, task?.taskKey, setIfNew]);
 
   // Build guidance props for the form
   const guidance: WishFormGuidance | undefined = useMemo(() => {
@@ -494,6 +506,14 @@ export default function WishesTaskScreen() {
         deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
       />
+      {(existingWish || autoSave.recordId) && task && (
+        <TaskCompletionFooter
+          taskKey={task.taskKey}
+          pillarColor={colors.featureWishes}
+          pillarTint={colors.featureWishesTint}
+          onComeBackLater={() => router.back()}
+        />
+      )}
       <SavedIndicator
         status={autoSave.status}
         errorMessage={autoSave.errorMessage}
