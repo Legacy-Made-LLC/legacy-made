@@ -17,6 +17,9 @@ export type {
   ApiError,
   DeleteResponse,
   Plan,
+  // Metadata schema types (shared by Entry and Wish)
+  FieldSchema,
+  MetadataSchema,
   // File types
   ApiFile,
   ApiFileStorageType,
@@ -37,6 +40,23 @@ export type {
   EntitlementInfo,
   EntitlementErrorCode,
   EntitlementError,
+  // Wishes types
+  Wish,
+  CreateWishRequest,
+  UpdateWishRequest,
+  WishesListResponse,
+  WishesQuota,
+  WhatMattersMostMetadata,
+  QualityOfLifeMetadata,
+  ComfortVsTreatmentMetadata,
+  AdvanceDirectiveMetadata,
+  EndOfLifeSettingMetadata,
+  AfterDeathMetadata,
+  ServicePreferencesMetadata,
+  OrganDonationMetadata,
+  LovedOnesKnowMetadata,
+  FaithPreferencesMetadata,
+  HardSituationsMetadata,
 } from './types';
 
 // File utilities
@@ -58,6 +78,9 @@ export type { FilesService } from './files';
 
 export { createEntitlementsService } from './entitlements';
 export type { EntitlementsService } from './entitlements';
+
+export { createWishesService } from './wishes';
+export type { WishesService } from './wishes';
 
 // Mappers
 export {

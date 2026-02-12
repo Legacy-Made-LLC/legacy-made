@@ -2,6 +2,7 @@
  * DocumentForm - Form for creating/editing legal document entries
  */
 
+import type { MetadataSchema } from "@/api/types";
 import {
   FormInput,
   FormTextArea,
@@ -38,6 +39,26 @@ const otherDocumentTypes = [
   "Social Security Card",
   "Other",
 ] as const;
+
+/** Display schema for document metadata */
+const DOCUMENT_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    documentType: {
+      label: "Document Type",
+      order: 1,
+      valueLabels: Object.fromEntries([
+        ...legalDocumentTypes.map((t) => [t, t]),
+        ...otherDocumentTypes.map((t) => [t, t]),
+      ]),
+    },
+    location: { label: "Location", order: 2 },
+    holder: { label: "Who Has a Copy?", order: 3 },
+    preparer: { label: "Attorney/Preparer", order: 4 },
+    preparerPhone: { label: "Phone", order: 5 },
+    notes: { label: "Notes", order: 6 },
+  },
+};
 
 type LegalDocumentType = (typeof legalDocumentTypes)[number];
 type OtherDocumentType = (typeof otherDocumentTypes)[number];
@@ -112,6 +133,7 @@ export function DocumentForm({
           title,
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: DOCUMENT_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =

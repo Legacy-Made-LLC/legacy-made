@@ -2,6 +2,7 @@
  * InsuranceForm - Form for creating/editing insurance policy entries
  */
 
+import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, insuranceSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
@@ -27,6 +28,24 @@ const policyTypes = [
   "Disability",
   "Other",
 ] as const;
+
+/** Display schema for insurance policy metadata */
+const INSURANCE_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    provider: { label: "Insurance Provider", order: 1 },
+    policyType: {
+      label: "Policy Type",
+      order: 2,
+      valueLabels: Object.fromEntries(policyTypes.map((t) => [t, t])),
+    },
+    policyNumber: { label: "Policy #", order: 3 },
+    coverageDetails: { label: "Coverage", order: 4 },
+    beneficiaries: { label: "Beneficiaries", order: 5 },
+    agentName: { label: "Agent Name", order: 6 },
+    agentPhone: { label: "Agent Phone", order: 7 },
+  },
+};
 
 type PolicyType = (typeof policyTypes)[number];
 
@@ -99,6 +118,7 @@ export function InsuranceForm({
           title,
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: INSURANCE_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =

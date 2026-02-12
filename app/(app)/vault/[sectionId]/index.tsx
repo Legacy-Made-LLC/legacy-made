@@ -8,8 +8,9 @@
 import { TaskPicker } from '@/components/vault/TaskPicker';
 import { colors, spacing, typography } from '@/constants/theme';
 import { getSection } from '@/constants/vault';
+import { usePrefetchEntriesByTaskKeys } from '@/hooks/queries';
 import { Redirect, useLocalSearchParams, useNavigation } from 'expo-router';
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function SectionScreen() {
@@ -17,6 +18,13 @@ export default function SectionScreen() {
   const navigation = useNavigation();
 
   const section = getSection(sectionId);
+
+  // Prefetch entries for all tasks in this section
+  const taskKeys = useMemo(
+    () => section?.tasks.map((t) => t.taskKey) ?? [],
+    [section],
+  );
+  usePrefetchEntriesByTaskKeys(taskKeys);
 
   // Set the header title before first render
   useLayoutEffect(() => {

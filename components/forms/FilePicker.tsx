@@ -1,20 +1,24 @@
-import React, { useState, useCallback } from 'react';
+import { FileAttachment } from "@/api/types";
+import { StorageIndicator } from "@/components/entitlements/StorageIndicator";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { PickerMode, useFilePicker } from "@/hooks/useFilePicker";
+import { Ionicons } from "@expo/vector-icons";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Modal,
   ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '@/constants/theme';
-import { FileAttachment } from '@/api/types';
-import { StorageIndicator } from '@/components/entitlements/StorageIndicator';
-import { useEntitlements } from '@/data/EntitlementsProvider';
-import { useFilePicker, PickerMode } from '@/hooks/useFilePicker';
-import { FilePreviewList } from './FilePreview';
-import { FilePreviewModal } from './FilePreviewModal';
+  Alert,
+  Animated,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { FilePreviewGrid } from "./FilePreview";
+import { FilePreviewModal } from "./FilePreviewModal";
 
 interface FilePickerProps {
   /** Label displayed above the picker */
@@ -39,6 +43,10 @@ interface FilePickerProps {
   showStorageIndicator?: boolean;
   /** Callback when user tries to add files but is blocked due to quota */
   onUpgradeRequired?: () => void;
+  /** Set of file IDs currently being deleted */
+  deletingIds?: Set<string>;
+  /** Accent color for selection indicators (defaults to primary) */
+  accentColor?: string;
 }
 
 interface PickerOption {
@@ -56,17 +64,22 @@ export function FilePicker({
   label,
   value,
   onChange,
-  mode = 'all',
+  mode = "all",
   maxFiles = 10,
   allowCamera = true,
   disabled = false,
-  placeholder = 'Tap to add files',
+  placeholder = "Tap to add files",
   helpText,
   showStorageIndicator = false,
   onUpgradeRequired,
+  deletingIds,
+  accentColor = colors.primary,
 }: FilePickerProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sharingIds, setSharingIds] = useState<Set<string>>(new Set());
   const { isLoading, pickFromLibrary, pickFromCamera, pickDocument } =
     useFilePicker({ mode });
 
@@ -86,19 +99,148 @@ export function FilePicker({
         onChange([...value, file]);
       }
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   /**
-   * Remove a file from selection
+   * Share a single file
    * @param identifier - file.id for remote files, file.uri for local files
    */
-  const handleRemoveFile = useCallback(
-    (identifier: string) => {
-      onChange(value.filter((f) => (f.id || f.uri) !== identifier));
+  const handleShareFile = useCallback(
+    async (identifier: string) => {
+      const file = value.find((f) => (f.id || f.uri) === identifier);
+      if (!file || !file.uri) return;
+
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert(
+          "Sharing Not Available",
+          "Sharing is not available on this device.",
+        );
+        return;
+      }
+
+      setSharingIds((prev) => new Set(prev).add(identifier));
+
+      try {
+        let fileUri = file.uri;
+
+        // If it's a remote URL, download it first
+        if (!file.uri.startsWith("file://")) {
+          const extension = file.mimeType.includes("png")
+            ? "png"
+            : file.mimeType.includes("pdf")
+              ? "pdf"
+              : "jpg";
+          const uniqueFileName = `share_${Date.now()}_${file.fileName || `file.${extension}`}`;
+          const destination = new File(Paths.cache, uniqueFileName);
+
+          const downloadedFile = await File.downloadFileAsync(
+            file.uri,
+            destination,
+          );
+
+          if (!downloadedFile.exists) {
+            throw new Error(`Failed to download ${file.fileName}`);
+          }
+
+          fileUri = downloadedFile.uri;
+        }
+
+        await Sharing.shareAsync(fileUri, {
+          mimeType: file.mimeType,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        Alert.alert("Share Failed", `Could not share file: ${message}`);
+      } finally {
+        setSharingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(identifier);
+          return next;
+        });
+      }
     },
-    [value, onChange]
+    [value],
   );
+
+  /**
+   * Delete a single file with confirmation
+   * @param identifier - file.id for remote files, file.uri for local files
+   */
+  const handleDeleteFile = useCallback(
+    (identifier: string) => {
+      const file = value.find((f) => (f.id || f.uri) === identifier);
+      if (!file) return;
+
+      Alert.alert(
+        "Delete File?",
+        `Are you sure you want to delete "${file.fileName}"?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              onChange(value.filter((f) => (f.id || f.uri) !== identifier));
+            },
+          },
+        ],
+      );
+    },
+    [value, onChange],
+  );
+
+  /**
+   * Toggle selection mode
+   */
+  const toggleSelectMode = useCallback(() => {
+    if (selectMode) {
+      // Exiting select mode - clear selection
+      setSelectedIds(new Set());
+    }
+    setSelectMode(!selectMode);
+  }, [selectMode]);
+
+  /**
+   * Get the selected files
+   */
+  const getSelectedFiles = useCallback(() => {
+    return value.filter((f) => selectedIds.has(f.id || f.uri));
+  }, [value, selectedIds]);
+
+  /**
+   * Delete selected files
+   */
+  const handleDeleteSelected = useCallback(() => {
+    const selectedFiles = getSelectedFiles();
+    if (selectedFiles.length === 0) return;
+
+    const fileNames = selectedFiles.map((f) => f.fileName).join(", ");
+    const count = selectedFiles.length;
+
+    Alert.alert(
+      `Delete ${count} ${count === 1 ? "File" : "Files"}?`,
+      `Are you sure you want to delete ${count === 1 ? fileNames : `these ${count} files`}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            // Remove selected files from the list
+            const selectedIdSet = selectedIds;
+            onChange(value.filter((f) => !selectedIdSet.has(f.id || f.uri)));
+            // Exit select mode
+            setSelectMode(false);
+            setSelectedIds(new Set());
+          },
+        },
+      ],
+    );
+  }, [getSelectedFiles, selectedIds, onChange, value]);
 
   /**
    * Get available picker options based on mode
@@ -107,31 +249,36 @@ export function FilePicker({
     const options: PickerOption[] = [];
 
     // Photo library option (for images, videos, or media modes)
-    if (mode !== 'document') {
+    if (mode !== "document") {
       options.push({
-        id: 'library',
-        label: mode === 'video' ? 'Choose Video' : mode === 'image' ? 'Choose Photo' : 'Choose from Library',
-        icon: 'images-outline',
+        id: "library",
+        label:
+          mode === "video"
+            ? "Choose Video"
+            : mode === "image"
+              ? "Choose Photo"
+              : "Choose from Library",
+        icon: "images-outline",
         action: pickFromLibrary,
       });
     }
 
     // Camera option (for images or media modes, when allowed)
-    if (allowCamera && mode !== 'document' && mode !== 'video') {
+    if (allowCamera && mode !== "document" && mode !== "video") {
       options.push({
-        id: 'camera',
-        label: 'Take Photo',
-        icon: 'camera-outline',
+        id: "camera",
+        label: "Take Photo",
+        icon: "camera-outline",
         action: pickFromCamera,
       });
     }
 
     // Document option (for document or all modes)
-    if (mode === 'document' || mode === 'all') {
+    if (mode === "document" || mode === "all") {
       options.push({
-        id: 'document',
-        label: 'Choose Document',
-        icon: 'document-outline',
+        id: "document",
+        label: "Choose Document",
+        icon: "document-outline",
         action: pickDocument,
       });
     }
@@ -162,20 +309,116 @@ export function FilePicker({
       // Multiple options - show menu
       setShowOptions(true);
     }
-  }, [disabled, canUploadFiles, storageFull, value.length, maxFiles, pickerOptions, handleFilePicked, onUpgradeRequired]);
+  }, [
+    disabled,
+    canUploadFiles,
+    storageFull,
+    value.length,
+    maxFiles,
+    pickerOptions,
+    handleFilePicked,
+    onUpgradeRequired,
+  ]);
+
+  const selectedCount = selectedIds.size;
+
+  // Animation for bulk action bar
+  const bulkActionAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(bulkActionAnimation, {
+      toValue: selectMode ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false, // Can't use native driver for height animations
+    }).start();
+  }, [selectMode, bulkActionAnimation]);
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {/* Header with label and Select button */}
+      <View style={styles.headerRow}>
+        {label && <Text style={styles.label}>{label}</Text>}
+        {value.length > 1 && !disabled && (
+          <Pressable onPress={toggleSelectMode} hitSlop={8}>
+            <Text style={[styles.selectButton, { color: accentColor }]}>
+              {selectMode ? "Cancel" : "Select"}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Bulk action bar when items are selected */}
+      {selectMode && (
+        <Animated.View
+          style={[
+            styles.bulkActionBar,
+            {
+              opacity: bulkActionAnimation,
+              transform: [
+                {
+                  scale: bulkActionAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.95, 1],
+                  }),
+                },
+              ],
+              maxHeight: bulkActionAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 50],
+              }),
+              marginBottom: bulkActionAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, spacing.sm],
+              }),
+            },
+          ]}
+        >
+          <Text style={styles.selectionCount}>
+            {selectedCount} {selectedCount === 1 ? "item" : "items"} selected
+          </Text>
+          <View style={styles.bulkActions}>
+            <Pressable
+              onPress={handleDeleteSelected}
+              style={[
+                styles.bulkActionButton,
+                selectedCount === 0 && styles.bulkActionButtonDisabled,
+              ]}
+              disabled={selectedCount === 0}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={22}
+                color={selectedCount === 0 ? colors.textTertiary : colors.error}
+              />
+              <Text
+                style={[
+                  styles.bulkActionText,
+                  selectedCount === 0
+                    ? styles.bulkActionTextDisabled
+                    : styles.deleteActionText,
+                ]}
+              >
+                Delete
+              </Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
 
       {/* Selected files preview */}
       {value.length > 0 && (
         <View style={styles.previewContainer}>
-          <FilePreviewList
+          <FilePreviewGrid
             files={value}
-            onRemove={handleRemoveFile}
-            removable={!disabled}
+            onShare={!disabled && !selectMode ? handleShareFile : undefined}
+            onDelete={!disabled && !selectMode ? handleDeleteFile : undefined}
+            sharingIds={sharingIds}
             onFilePress={setPreviewFile}
+            deletingIds={deletingIds}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            accentColor={accentColor}
           />
         </View>
       )}
@@ -192,27 +435,34 @@ export function FilePicker({
           ]}
         >
           {isLoading ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={accentColor} />
           ) : (
             <>
               <Ionicons
-                name={!canUploadFiles ? "lock-closed-outline" : "add-circle-outline"}
+                name={
+                  !canUploadFiles ? "lock-closed-outline" : "add-circle-outline"
+                }
                 size={24}
-                color={disabled || !canUploadFiles ? colors.textTertiary : colors.primary}
+                color={
+                  disabled || !canUploadFiles
+                    ? colors.textTertiary
+                    : accentColor
+                }
               />
               <Text
                 style={[
                   styles.addButtonText,
+                  { color: accentColor },
                   (disabled || !canUploadFiles) && styles.addButtonTextDisabled,
                 ]}
               >
                 {!canUploadFiles
-                  ? 'Upgrade to Add Files'
+                  ? "Upgrade to Add Files"
                   : storageFull
-                    ? 'Storage Full'
+                    ? "Storage Full"
                     : value.length === 0
                       ? placeholder
-                      : 'Add Another'}
+                      : "Add Another"}
               </Text>
             </>
           )}
@@ -289,25 +539,75 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
   label: {
     fontSize: typography.sizes.label,
     fontWeight: typography.weights.medium,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: spacing.sm,
+  },
+  selectButton: {
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.medium,
+    color: colors.primary,
+  },
+  bulkActionBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    overflow: "hidden",
+  },
+  selectionCount: {
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: typography.weights.medium,
+    color: colors.textPrimary,
+  },
+  bulkActions: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  bulkActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  bulkActionText: {
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: typography.weights.medium,
+    color: colors.primary,
+  },
+  bulkActionTextDisabled: {
+    color: colors.textTertiary,
+  },
+  bulkActionButtonDisabled: {
+    opacity: 0.5,
+  },
+  deleteActionText: {
+    color: colors.error,
   },
   previewContainer: {
     marginBottom: spacing.sm,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: colors.border,
     borderRadius: borderRadius.md,
     backgroundColor: colors.surface,
@@ -330,13 +630,14 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: spacing.sm,
   },
   helpText: {
     fontSize: typography.sizes.caption,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+    textAlign: "center",
   },
   storageContainer: {
     marginTop: spacing.sm,
@@ -345,8 +646,8 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   optionsContainer: {
     backgroundColor: colors.surface,
@@ -360,12 +661,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.titleMedium,
     fontWeight: typography.weights.semibold,
     color: colors.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.lg,
   },
   optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
@@ -380,13 +681,13 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: spacing.sm,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
   cancelLabel: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: componentStyles.card.borderRadius,
     padding: componentStyles.card.padding,
-    ...shadows.card,
+    ...shadows.raised,
   },
 });

@@ -13,10 +13,10 @@ const iconSize = 26;
  * Mapping from tab names to pillars
  */
 const TAB_TO_PILLAR: Record<string, Pillar> = {
-  information: 'important_info',
-  wishes: 'wishes',
-  legacy: 'messages',
-  family: 'family_access',
+  information: "important_info",
+  wishes: "wishes",
+  legacy: "messages",
+  family: "family_access",
 };
 
 /**
@@ -55,7 +55,7 @@ function HomeTabIcon({ focused }: { focused: boolean }) {
   }
   return (
     <Image
-      source={require("@/assets/images/muted-green-logo-rounded-rectangle-outline.png")}
+      source={require("@/assets/images/gray-logo-rounded-rectangle-outline.png")}
       style={styles.homeIcon}
     />
   );
@@ -117,7 +117,13 @@ export default function TabsLayout() {
                 <Ionicons
                   name={focused ? "heart" : "heart-outline"}
                   size={iconSize}
-                  color={isWishesLocked ? colors.textTertiary : (focused ? colors.featureWishes : colors.textTertiary)}
+                  color={
+                    isWishesLocked
+                      ? colors.textTertiary
+                      : focused
+                        ? colors.featureWishes
+                        : colors.textTertiary
+                  }
                 />
               }
             />
@@ -143,7 +149,13 @@ export default function TabsLayout() {
                 <Ionicons
                   name={focused ? "videocam" : "videocam-outline"}
                   size={iconSize}
-                  color={isLegacyLocked ? colors.textTertiary : (focused ? colors.featureLegacy : colors.textTertiary)}
+                  color={
+                    isLegacyLocked
+                      ? colors.textTertiary
+                      : focused
+                        ? colors.featureLegacy
+                        : colors.textTertiary
+                  }
                 />
               }
             />
@@ -162,7 +174,13 @@ export default function TabsLayout() {
                 <Ionicons
                   name={focused ? "people" : "people-outline"}
                   size={iconSize}
-                  color={isFamilyLocked ? colors.textTertiary : (focused ? colors.featureFamily : colors.textTertiary)}
+                  color={
+                    isFamilyLocked
+                      ? colors.textTertiary
+                      : focused
+                        ? colors.featureFamily
+                        : colors.textTertiary
+                  }
                 />
               }
             />
@@ -177,9 +195,6 @@ const styles = StyleSheet.create({
   homeIcon: {
     width: iconSize + 5,
     height: iconSize + 5,
-  },
-  homeIconFocused: {
-    opacity: 0.8,
   },
   lockedIconContainer: {
     position: "relative",

@@ -15,7 +15,6 @@ export const formStyles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
   },
   fieldContainer: {
     marginBottom: spacing.md,

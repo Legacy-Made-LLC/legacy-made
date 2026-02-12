@@ -259,6 +259,33 @@ export interface DownloadUrlResponse {
 }
 
 // ============================================================================
+// Metadata Schema Types (shared by Entry and Wish)
+// ============================================================================
+
+/**
+ * Schema for a single field in the metadata display schema
+ */
+export interface FieldSchema {
+  /** Human-readable display name */
+  label: string;
+  /** Display order (lower numbers first) */
+  order: number;
+  /** Optional: maps stored IDs to display labels (for selection fields) */
+  valueLabels?: Record<string, string>;
+}
+
+/**
+ * Display schema for metadata - describes how to render the data without frontend code
+ * Used by both Entry and Wish models
+ */
+export interface MetadataSchema {
+  /** Schema version for tracking changes */
+  version: number;
+  /** Map of field names to their display info */
+  fields: Record<string, FieldSchema>;
+}
+
+// ============================================================================
 // Entry Types
 // ============================================================================
 
@@ -276,6 +303,8 @@ export interface Entry<T = Record<string, unknown>> {
   notes: string | null;
   sortOrder: number;
   metadata: T;
+  /** Display schema for rendering metadata (optional for backwards compatibility) */
+  metadataSchema?: MetadataSchema;
   /** Files attached to this entry (returned by backend) */
   files?: ApiFile[];
   createdAt: string;
@@ -297,6 +326,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   notes?: string | null;
   sortOrder?: number;
   metadata: T;
+  metadataSchema: MetadataSchema;
 }
 
 /**
@@ -307,6 +337,7 @@ export interface UpdateEntryRequest<T = Record<string, unknown>> {
   notes?: string | null;
   sortOrder?: number;
   metadata?: Partial<T>;
+  metadataSchema?: MetadataSchema;
 }
 
 /**
@@ -463,4 +494,215 @@ export interface StorageQuotaError {
     /** Suggested tier to upgrade to */
     suggestedTier?: SubscriptionTier;
   };
+}
+
+// ============================================================================
+// Wishes Metadata Types
+// ============================================================================
+
+/** What Matters Most - Care Preferences */
+export interface WhatMattersMostMetadata {
+  /** Selected value IDs from the reflection choices */
+  values: string[];
+}
+
+/** Quality of Life - Care Preferences */
+export interface QualityOfLifeMetadata {
+  /** Selected condition IDs where user would not want aggressive treatment */
+  conditions: string[];
+}
+
+/** Comfort vs Treatment - Care Preferences */
+export interface ComfortVsTreatmentMetadata {
+  /** Overall preference: 'comfort-first' | 'balanced' | 'treatment-first' | 'trust-team' */
+  preference?: string;
+  /** Pain management approach: 'full-relief' | 'balanced-relief' | 'minimal-meds' */
+  painManagement?: string;
+  /** Alertness importance: 'very' | 'somewhat' | 'not' */
+  alertness?: string;
+}
+
+/** Advance Directive - Care Preferences */
+export interface AdvanceDirectiveMetadata {
+  /** Whether user has directive: 'yes' | 'in-progress' | 'no' */
+  hasDirective?: string;
+  /** Types of documents user has */
+  documentTypes?: string[];
+  /** Where documents are stored */
+  location?: string;
+  /** Healthcare proxy name */
+  proxyName?: string;
+  /** Healthcare proxy phone */
+  proxyPhone?: string;
+  /** Healthcare proxy relationship */
+  proxyRelationship?: string;
+}
+
+/** End-of-Life Setting */
+export interface EndOfLifeSettingMetadata {
+  /** Preferred setting: 'home' | 'family-home' | 'hospice' | 'hospital' | 'flexible' */
+  preferredSetting?: string;
+  /** Notes about the preference */
+  settingNotes?: string;
+  /** Who should be present */
+  visitors?: string;
+  /** Music, readings, or atmosphere preferences */
+  music?: string;
+}
+
+/** After-Death Preferences */
+export interface AfterDeathMetadata {
+  /** Body disposition: 'burial' | 'cremation' | 'green-burial' | 'donation' | 'flexible' | 'other' */
+  disposition?: string;
+  /** Specific wishes for disposition */
+  specificWishes?: string;
+  /** Pre-arrangement status: 'yes' | 'partial' | 'no' */
+  prearranged?: string;
+  /** Details of pre-arrangements */
+  prearrangedDetails?: string;
+}
+
+/** Service Preferences - Memorial/Funeral */
+export interface ServicePreferencesMetadata {
+  /** Type of service: 'traditional-funeral' | 'celebration-of-life' | 'memorial' | 'graveside' | 'private' | 'none' | 'flexible' */
+  serviceType?: string;
+  /** Tone: 'solemn' | 'warm' | 'celebratory' | 'religious' | 'mixed' */
+  tone?: string;
+  /** Preferred location */
+  location?: string;
+  /** Music or song preferences */
+  music?: string;
+  /** Readings or poems */
+  readings?: string;
+  /** Who should speak */
+  speakers?: string;
+  /** Flower preferences */
+  flowers?: string;
+  /** Donation preferences in lieu of flowers */
+  donations?: string;
+  /** Things to avoid (open casket, certain songs, etc.) */
+  avoidances?: string;
+}
+
+/** Organ Donation */
+export interface OrganDonationMetadata {
+  /** Decision: 'yes-all' | 'yes-specific' | 'research-only' | 'no' | 'undecided' */
+  decision?: string;
+  /** Specific organs if decision is 'yes-specific' */
+  specificOrgans?: string;
+  /** Registry status: 'yes' | 'no' | 'unsure' */
+  onRegistry?: string;
+}
+
+/** What Loved Ones Should Know */
+export interface LovedOnesKnowMetadata {
+  /** Gratitude expressions */
+  gratitude?: string;
+  /** Regrets or apologies */
+  regrets?: string;
+  /** Wisdom to share */
+  wisdom?: string;
+  /** Favorite memories */
+  memories?: string;
+}
+
+/** Faith & Spiritual Preferences */
+export interface FaithPreferencesMetadata {
+  /** Faith tradition: 'christian' | 'catholic' | 'jewish' | 'muslim' | 'buddhist' | 'hindu' | 'spiritual' | 'none' | 'other' */
+  tradition?: string;
+  /** Place of worship */
+  congregation?: string;
+  /** Religious leader name */
+  leader?: string;
+  /** Leader contact info */
+  leaderContact?: string;
+  /** Important rituals or customs */
+  rituals?: string;
+}
+
+/** Hard Situations - Guidance for Conflict */
+export interface HardSituationsMetadata {
+  /** Guidance for disagreements */
+  disagreements?: string;
+  /** Primary decision-maker */
+  decisionMaker?: string;
+  /** Guidance for grief */
+  conflictGuidance?: string;
+  /** Grace or forgiveness to extend */
+  grace?: string;
+  /** What matters more than being "right" */
+  priorities?: string;
+}
+
+// ============================================================================
+// Wish Model (Same shape as Entry, but for wishes pillar)
+// ============================================================================
+
+/**
+ * Wish type from API - same structure as Entry but for the Wishes pillar
+ * Generic parameter T allows specifying the expected metadata type
+ */
+export interface Wish<T = Record<string, unknown>> {
+  id: string;
+  planId: string;
+  /** Task key for the wishes structure (e.g., "wishes.carePrefs.whatMatters") */
+  taskKey: string;
+  /** Optional title */
+  title: string | null;
+  /** Free-form notes */
+  notes: string | null;
+  /** Sort order for manual ordering */
+  sortOrder: number;
+  /** Type-specific metadata */
+  metadata: T;
+  /** Display schema for rendering metadata without frontend code */
+  metadataSchema: MetadataSchema;
+  /** Files attached to this wish */
+  files?: ApiFile[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Request type for creating wishes
+ */
+export interface CreateWishRequest<T = Record<string, unknown>> {
+  planId: string;
+  taskKey: string;
+  title?: string;
+  notes?: string | null;
+  sortOrder?: number;
+  metadata: T;
+  /** Display schema for rendering metadata */
+  metadataSchema: MetadataSchema;
+}
+
+/**
+ * Request type for updating wishes
+ */
+export interface UpdateWishRequest<T = Record<string, unknown>> {
+  title?: string;
+  notes?: string | null;
+  sortOrder?: number;
+  metadata?: Partial<T>;
+  /** Full replacement of display schema (if provided) */
+  metadataSchema?: MetadataSchema;
+}
+
+/**
+ * Quota information for wishes (same as entries)
+ */
+export interface WishesQuota {
+  limit: number;
+  current: number;
+  remaining: number | null;
+  unlimited: boolean;
+}
+
+/**
+ * Response shape for listing wishes
+ */
+export interface WishesListResponse<T = Record<string, unknown>> {
+  data: Wish<T>[];
+  quota: WishesQuota;
 }

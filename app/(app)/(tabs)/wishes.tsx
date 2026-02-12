@@ -1,15 +1,25 @@
-import { Ionicons } from "@expo/vector-icons";
+/**
+ * Wishes Tab - Main wishes & guidance screen
+ *
+ * Displays section cards for Care Preferences, End-of-Life, and Values.
+ * Uses lavender color theme (featureWishes).
+ */
+
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LockedFeatureOverlay, ViewOnlyBadge } from "@/components/entitlements";
+import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
+import { wishesSections } from "@/constants/wishes";
 import { useEntitlements } from "@/data/EntitlementsProvider";
+import { useWishCountsQuery } from "@/hooks/queries";
 
 export default function WishesScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+  const { data: counts = {} } = useWishCountsQuery();
 
   const isLocked = isLockedPillar("wishes");
   const isViewOnly = isViewOnlyPillar("wishes");
@@ -25,29 +35,38 @@ export default function WishesScreen() {
   }
 
   return (
-    <View
-      style={[styles.container, { paddingBottom: insets.bottom + spacing.lg }]}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.lg + 80 }, // Extra padding for tab bar
+      ]}
+      showsVerticalScrollIndicator={false}
     >
       {isViewOnly && (
         <View style={styles.viewOnlyHeader}>
           <ViewOnlyBadge />
         </View>
       )}
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name="heart-outline"
-            size={40}
-            color={colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.title}>Wishes & Guidance</Text>
-        <Text style={styles.subtitle}>
-          Share your personal wishes, values, and guidance for your loved ones.
+
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Wishes & Guidance</Text>
+        <Text style={styles.description}>
+          Your values, preferences, and words{"\n"}for those who matter most
         </Text>
-        <Text style={styles.comingSoon}>Coming Soon</Text>
       </View>
-    </View>
+
+      <View style={styles.sections}>
+        {wishesSections.map((section) => (
+          <PillarSectionCard
+            key={section.id}
+            section={section}
+            counts={counts}
+            pillar="wishes"
+          />
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -55,48 +74,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.lg,
+  },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   viewOnlyHeader: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
     alignItems: "center",
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
+  header: {
+    marginBottom: spacing.xl,
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.surfaceSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  title: {
-    fontFamily: typography.fontFamily.serif,
-    fontSize: typography.sizes.displayMedium,
+  pageTitle: {
+    fontFamily: typography.fontFamily.serifBold,
+    fontSize: 24,
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
     textAlign: "center",
-    marginBottom: spacing.sm,
   },
-  subtitle: {
-    fontFamily: typography.fontFamily.regular,
+  description: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     textAlign: "center",
-    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
-    marginBottom: spacing.lg,
+    lineHeight: typography.sizes.body * typography.lineHeights.normal,
   },
-  comingSoon: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.caption,
-    color: colors.textTertiary,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  sections: {
+    gap: spacing.xs,
   },
 });

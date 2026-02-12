@@ -9,6 +9,7 @@ import { createEntriesService } from './entries';
 import { createEntitlementsService } from './entitlements';
 import { createFilesService } from './files';
 import { createPlansService } from './plans';
+import { createWishesService } from './wishes';
 
 /**
  * Hook that provides access to API services with authentication
@@ -57,6 +58,10 @@ export function useApi() {
     return createEntitlementsService(client);
   }, [client]);
 
+  const wishes = useMemo(() => {
+    return createWishesService(client);
+  }, [client]);
+
   return {
     /** The base API client for custom requests */
     client,
@@ -68,6 +73,8 @@ export function useApi() {
     plans,
     /** Entitlements service */
     entitlements,
+    /** Wishes service with CRUD operations (Wishes pillar) */
+    wishes,
     /** Whether the user is signed in */
     isSignedIn,
     /** Whether Clerk has finished loading */

@@ -10,8 +10,11 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { useApi } from "@/api";
-import { apiFileToAttachment, type FileAttachment } from "@/api/types";
+import {
+  apiFileToAttachment,
+  MetadataSchema,
+  type FileAttachment,
+} from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
 import { getFormComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -24,6 +27,7 @@ import {
   useEntryQuery,
   useUpdateEntry,
 } from "@/hooks/queries";
+import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import {
   isQuotaExceededError,
@@ -53,11 +57,11 @@ export default function EntryScreen() {
   // Get the form component for this task
   const FormComponent = task ? getFormComponent(task.taskKey) : undefined;
 
-  // Fetch entry data if editing
-  const { data: entry, isLoading } = useEntryQuery(isNew ? undefined : entryId);
-
-  // API for file operations
-  const { files: filesService } = useApi();
+  // Fetch entry data if editing (pass taskKey to enable initialData from list cache)
+  const { data: entry, isLoading } = useEntryQuery(
+    isNew ? undefined : entryId,
+    task?.taskKey,
+  );
 
   // Mutations
   const createMutation = useCreateEntry(task?.taskKey);
@@ -66,17 +70,19 @@ export default function EntryScreen() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  // Track if a file deletion is in progress
-  const [isDeletingFile, setIsDeletingFile] = useState(false);
-
-  // Track if files were deleted during this session (to invalidate cache on unmount)
-  const filesDeletedRef = useRef(false);
-
-  // File attachments state - initialized from entry.files when available
-  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+  // File attachments management (shared hook for deletion logic)
+  const {
+    attachments,
+    setAttachments,
+    deletingFileIds,
+    handleRemoteFileDeletions,
+  } = useFileAttachments();
 
   // Track if we're currently saving to prevent entry refetch from overwriting local attachments
   const isSavingRef = useRef(false);
+
+  // Track if files were deleted during this session (for cache invalidation on unmount)
+  const filesDeletedRef = useRef(false);
 
   // Initialize attachments when entry data loads (but not during save/upload)
   useEffect(() => {
@@ -88,7 +94,7 @@ export default function EntryScreen() {
     if (entry?.files) {
       setAttachments(entry.files.map(apiFileToAttachment));
     }
-  }, [entry?.files]);
+  }, [entry?.files, setAttachments]);
 
   // Refs to capture current values for unmount cleanup
   const planIdRef = useRef(planId);
@@ -171,12 +177,20 @@ export default function EntryScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    onFileUploaded: (file, fileId) => {
-      // Update attachment with backend ID and mark as remote
+    onFileUploaded: (file, fileId, downloadUrl) => {
+      // Update attachment with backend ID, download URL, and mark as remote
       setAttachments((prev) =>
         prev.map((a) =>
           a.uri === file.uri
-            ? { ...a, id: fileId, uploadStatus: "complete", isRemote: true }
+            ? {
+                ...a,
+                id: fileId,
+                // Use the download URL if available (for documents/images)
+                // Videos don't have a download URL until processed
+                uri: downloadUrl || a.uri,
+                uploadStatus: "complete",
+                isRemote: true,
+              }
             : a,
         ),
       );
@@ -214,83 +228,26 @@ export default function EntryScreen() {
     return attachment;
   });
 
-  // Keep a ref to current attachments for comparison in handleAttachmentsChange
-  const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
-
   /**
    * Handle attachment changes from the form.
-   * Detects when a remote file is being removed and shows confirmation.
+   * For removed files: Deletes remote files from the server (confirmation is handled by FilePicker).
    */
   const handleAttachmentsChange = useCallback(
-    (newAttachments: FileAttachment[]) => {
-      const currentAttachments = attachmentsRef.current;
+    async (newAttachments: FileAttachment[]) => {
+      const { hadRemoteDeletions, hadSuccessfulDeletions } =
+        await handleRemoteFileDeletions(newAttachments);
 
-      // Helper to get unique identifier for a file (id for remote, uri for local)
-      const getFileIdentifier = (file: FileAttachment) => file.id || file.uri;
-
-      // Find any remote files that were removed
-      const removedRemoteFiles = currentAttachments.filter(
-        (current) =>
-          current.isRemote &&
-          current.id &&
-          !newAttachments.some(
-            (newFile) =>
-              getFileIdentifier(newFile) === getFileIdentifier(current),
-          ),
-      );
-
-      // If no remote files were removed, just update state
-      if (removedRemoteFiles.length === 0) {
-        setAttachments(newAttachments);
-        return;
+      // Track if files were deleted for cache invalidation on unmount
+      if (hadSuccessfulDeletions) {
+        filesDeletedRef.current = true;
       }
 
-      // Show confirmation for remote file deletion
-      const fileToDelete = removedRemoteFiles[0];
-      Alert.alert(
-        "Delete Attachment",
-        `Are you sure you want to permanently delete "${fileToDelete.fileName}"? This cannot be undone.`,
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-            // Don't update state - keep the file
-          },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              if (!fileToDelete.id) return;
-
-              setIsDeletingFile(true);
-              try {
-                await filesService.delete(fileToDelete.id);
-                // Mark that files were deleted (for cache invalidation on unmount)
-                filesDeletedRef.current = true;
-                // Remove from state after successful deletion (use id for remote files)
-                setAttachments((prev) =>
-                  prev.filter((a) => getFileIdentifier(a) !== fileToDelete.id),
-                );
-                // Invalidate entitlements to refresh storage quota after deletion
-                queryClient.invalidateQueries({
-                  queryKey: queryKeys.entitlements.current(),
-                });
-              } catch (error) {
-                const message =
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to delete file";
-                Alert.alert("Error", message);
-              } finally {
-                setIsDeletingFile(false);
-              }
-            },
-          },
-        ],
-      );
+      // If no remote files were removed, just update state
+      if (!hadRemoteDeletions) {
+        setAttachments(newAttachments);
+      }
     },
-    [filesService, queryClient],
+    [handleRemoteFileDeletions, setAttachments]
   );
 
   // Handle save
@@ -299,6 +256,7 @@ export default function EntryScreen() {
       title: string;
       notes?: string | null;
       metadata: Record<string, unknown>;
+      metadataSchema: MetadataSchema;
     }) => {
       if (!task || !planId) return;
 
@@ -339,7 +297,7 @@ export default function EntryScreen() {
           };
 
           try {
-            const uploadResults = await uploadFiles(savedEntryId, attachments);
+            const uploadResults = await uploadFiles({ entryId: savedEntryId }, attachments);
 
             // Invalidate entry cache after uploads so it includes the new files
             await queryClient.invalidateQueries({
@@ -465,10 +423,11 @@ export default function EntryScreen() {
         onSave={handleSave}
         onDelete={isNew ? undefined : handleDelete}
         onCancel={handleCancel}
-        isSaving={isSaving || isDeletingFile}
+        isSaving={isSaving || deletingFileIds.size > 0}
         attachments={attachmentsWithUploadState}
         onAttachmentsChange={handleAttachmentsChange}
         isUploading={isUploading}
+        deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
       />
       <UpgradePrompt

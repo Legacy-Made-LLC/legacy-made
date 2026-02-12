@@ -2,6 +2,7 @@
  * PetForm - Form for creating/editing pet entries
  */
 
+import type { MetadataSchema } from "@/api/types";
 import {
   formatPhoneNumber,
   FormInput,
@@ -26,6 +27,23 @@ import type { EntryFormProps } from "../registry";
 import { formStyles } from "./formStyles";
 
 const speciesTypes = ["Dog", "Cat", "Bird", "Fish", "Other"] as const;
+
+/** Display schema for pet metadata */
+const PET_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    species: {
+      label: "Species",
+      order: 1,
+      valueLabels: Object.fromEntries(speciesTypes.map((t) => [t, t])),
+    },
+    breed: { label: "Breed/Description", order: 2 },
+    veterinarian: { label: "Veterinarian", order: 3 },
+    vetPhone: { label: "Vet Phone", order: 4 },
+    designatedCaretaker: { label: "Who Will Care for Them?", order: 5 },
+    careInstructions: { label: "Care Instructions", order: 6 },
+  },
+};
 
 type SpeciesType = (typeof speciesTypes)[number];
 
@@ -90,6 +108,7 @@ export function PetForm({
           title: value.name.trim(),
           notes: value.careInstructions.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: PET_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =

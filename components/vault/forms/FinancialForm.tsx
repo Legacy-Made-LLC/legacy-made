@@ -2,6 +2,7 @@
  * FinancialForm - Form for creating/editing financial account entries
  */
 
+import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, financialSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
@@ -28,6 +29,22 @@ const accountTypes = [
   "Loan",
   "Other",
 ] as const;
+
+/** Display schema for financial account metadata */
+const FINANCIAL_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    institution: { label: "Bank/Institution", order: 1 },
+    accountType: {
+      label: "Account Type",
+      order: 2,
+      valueLabels: Object.fromEntries(accountTypes.map((t) => [t, t])),
+    },
+    accountOwners: { label: "Account Owner(s)", order: 3 },
+    accountNumber: { label: "Last 4 Digits", order: 4 },
+    notes: { label: "Notes", order: 5 },
+  },
+};
 
 type AccountType = (typeof accountTypes)[number];
 
@@ -96,6 +113,7 @@ export function FinancialForm({
           title,
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: FINANCIAL_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =

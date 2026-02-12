@@ -2,7 +2,7 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { SectionCard } from "@/components/vault/SectionCard";
+import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { vaultSections } from "@/constants/vault";
 import { useEntryCountsQuery } from "@/hooks/queries";
@@ -29,7 +29,12 @@ export default function InformationScreen() {
 
       <View style={styles.categories}>
         {vaultSections.map((section) => (
-          <SectionCard key={section.id} section={section} counts={counts} />
+          <PillarSectionCard
+            key={section.id}
+            section={section}
+            counts={counts}
+            pillar="information"
+          />
         ))}
       </View>
     </ScrollView>

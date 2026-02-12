@@ -2,6 +2,7 @@
  * DigitalForm - Form for creating/editing digital access entries
  */
 
+import type { MetadataSchema } from "@/api/types";
 import {
   FormInput,
   FormTextArea,
@@ -25,6 +26,21 @@ import type { EntryFormProps } from "../registry";
 import { formStyles } from "./formStyles";
 
 const importanceLevels = ["Critical", "High", "Medium", "Low"] as const;
+
+/** Display schema for digital account metadata */
+const DIGITAL_METADATA_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    service: { label: "Service/Platform", order: 1 },
+    username: { label: "Username/Email", order: 2 },
+    importance: {
+      label: "Importance",
+      order: 3,
+      valueLabels: Object.fromEntries(importanceLevels.map((l) => [l, l])),
+    },
+    notes: { label: "How to Access", order: 4 },
+  },
+};
 
 type ImportanceLevel = (typeof importanceLevels)[number];
 
@@ -131,6 +147,7 @@ export function DigitalForm({
           title: value.accountName.trim(),
           notes: value.accessNotes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
+          metadataSchema: DIGITAL_METADATA_SCHEMA,
         });
       } catch (err) {
         const message =

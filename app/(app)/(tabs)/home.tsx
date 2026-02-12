@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -20,10 +20,10 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
-import { useEntryCountsQuery } from "@/hooks/queries";
+import { useEntryCountsQuery, useWishCountsQuery } from "@/hooks/queries";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_GAP = spacing.sm;
+const CARD_GAP = spacing.md;
 const HORIZONTAL_PADDING = spacing.lg;
 const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
@@ -129,10 +129,16 @@ function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { data: counts = {} } = useEntryCountsQuery();
+  const { data: entryCounts = {} } = useEntryCountsQuery();
+  const { data: wishCounts = {} } = useWishCountsQuery();
 
   // Calculate Information pillar progress (sum of all categories)
-  const informationCount = Object.values(counts).reduce(
+  const informationCount = Object.values(entryCounts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+
+  const wishesCount = Object.values(wishCounts).reduce(
     (sum, count) => sum + count,
     0,
   );
@@ -143,7 +149,7 @@ export default function HomeScreen() {
       case "information":
         return informationCount;
       case "wishes":
-        return 0; // TODO: Connect to wishes data
+        return wishesCount;
       case "legacy":
         return 0; // TODO: Connect to legacy data
       case "family":

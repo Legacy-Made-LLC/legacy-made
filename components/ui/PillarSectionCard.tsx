@@ -1,40 +1,102 @@
 /**
- * SectionCard - Dashboard card for a vault section
+ * PillarSectionCard - Shared dashboard card for pillar sections
  *
- * Displays section information with entry count and progress.
- * Handles navigation based on whether the section has one or multiple tasks.
+ * A reusable card component for displaying section information with
+ * completion count and progress. Used by both Information Vault and
+ * Wishes & Guidance (and future pillars).
+ *
+ * Each pillar has its own color theme:
+ * - information: Sage green
+ * - wishes: Soft lavender
+ * - legacy: Soft blue
+ * - family: Warm blush/peach
  */
 
 import { PressableCard } from "@/components/ui/Card";
 import { colors, spacing, typography } from "@/constants/theme";
-import type { VaultSection } from "@/constants/vault";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 
-interface SectionCardProps {
-  section: VaultSection;
-  /** Entry counts by taskKey */
+/** Pillar types for color theming */
+export type PillarType = "information" | "wishes" | "legacy" | "family";
+
+/** Common section interface that all pillar sections share */
+export interface PillarSection {
+  id: string;
+  title: string;
+  description: string;
+  ionIcon: string;
+  tasks: { taskKey: string }[];
+}
+
+interface PillarSectionCardProps {
+  /** The section to display */
+  section: PillarSection;
+  /** Counts by taskKey for progress calculation */
   counts: Record<string, number>;
+  /** Which pillar this card belongs to (determines colors and route) */
+  pillar: PillarType;
 }
 
 // Animation configuration
 const PROGRESS_ANIMATION_DURATION = 400;
 
-export function SectionCard({ section, counts }: SectionCardProps) {
+// Color mappings for each pillar
+const pillarColors: Record<
+  PillarType,
+  { accent: string; tint: string; icon: string }
+> = {
+  information: {
+    accent: colors.featureInformation,
+    tint: colors.featureInformationTint,
+    icon: colors.textTertiary,
+  },
+  wishes: {
+    accent: colors.featureWishes,
+    tint: colors.featureWishesTint,
+    icon: colors.featureWishes,
+  },
+  legacy: {
+    accent: colors.featureLegacy,
+    tint: colors.featureLegacyTint,
+    icon: colors.featureLegacy,
+  },
+  family: {
+    accent: colors.featureFamily,
+    tint: colors.featureFamilyTint,
+    icon: colors.featureFamily,
+  },
+};
+
+// Route prefixes for each pillar
+const pillarRoutes: Record<PillarType, string> = {
+  information: "vault",
+  wishes: "wishes",
+  legacy: "legacy",
+  family: "family",
+};
+
+export function PillarSectionCard({
+  section,
+  counts,
+  pillar,
+}: PillarSectionCardProps) {
   const router = useRouter();
   const progressAnim = useRef(new Animated.Value(0)).current;
 
+  const pillarColor = pillarColors[pillar];
+  const routePrefix = pillarRoutes[pillar];
+
   const handlePress = () => {
-    // Navigate to the section (it will redirect to single task if applicable)
-    router.push(`/vault/${section.id}`);
+    router.push(`/${routePrefix}/${section.id}` as never);
   };
 
   // Calculate completion for this section
   // Goal: at least 1 entry per task
   const completedTasks = section.tasks.filter(
-    (task) => (counts[task.taskKey] || 0) > 0,
+    (task) => (counts[task.taskKey] || 0) > 0
   ).length;
   const goalCount = section.tasks.length;
   const progress = goalCount > 0 ? completedTasks / goalCount : 0;
@@ -51,11 +113,13 @@ export function SectionCard({ section, counts }: SectionCardProps) {
   return (
     <PressableCard onPress={handlePress} style={styles.card}>
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
+        <View
+          style={[styles.iconContainer, { backgroundColor: pillarColor.tint }]}
+        >
           <Ionicons
-            name={section.ionIcon as any}
+            name={section.ionIcon as keyof typeof Ionicons.glyphMap}
             size={22}
-            color={colors.textTertiary}
+            color={pillarColor.icon}
           />
         </View>
         <View style={styles.textContent}>
@@ -76,6 +140,7 @@ export function SectionCard({ section, counts }: SectionCardProps) {
                 style={[
                   styles.progressFill,
                   {
+                    backgroundColor: pillarColor.accent,
                     width: progressAnim.interpolate({
                       inputRange: [0, 1],
                       outputRange: ["0%", "100%"],
@@ -103,10 +168,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   iconContainer: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: colors.surfaceSecondary,
     justifyContent: "center",
     alignItems: "center",
     marginRight: spacing.md,
@@ -121,12 +185,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
   },
   title: {
     fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.titleMedium,
     color: colors.textPrimary,
     marginBottom: 2,
+    flexShrink: 1,
   },
   description: {
     fontFamily: typography.fontFamily.regular,
@@ -148,7 +214,6 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: colors.primary,
     borderRadius: 2,
   },
   progressText: {

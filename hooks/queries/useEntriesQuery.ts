@@ -4,11 +4,13 @@
  * TanStack Query hooks for fetching entry data.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useApi } from '@/api';
-import { usePlan } from '@/data/PlanProvider';
-import { queryKeys } from '@/lib/queryKeys';
+import { useApi } from "@/api";
+import type { Entry } from "@/api/types";
+import { usePlan } from "@/data/PlanProvider";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Hook to fetch entries by taskKey
@@ -26,8 +28,15 @@ export function useEntriesQuery<T = Record<string, unknown>>(taskKey: string | u
 
 /**
  * Hook to fetch a single entry by ID
+ *
+ * Uses initialData from cached list queries for instant display,
+ * then refetches if data is stale.
  */
-export function useEntryQuery<T = Record<string, unknown>>(entryId: string | undefined) {
+export function useEntryQuery<T = Record<string, unknown>>(
+  entryId: string | undefined,
+  taskKey?: string,
+) {
+  const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
 
@@ -35,6 +44,41 @@ export function useEntryQuery<T = Record<string, unknown>>(entryId: string | und
     queryKey: queryKeys.entries.single(planId!, entryId!),
     queryFn: () => entries.get<T>(planId!, entryId!),
     enabled: !!planId && !!entryId,
+    // Use cached data from list query as initial data for instant display
+    initialData: () => {
+      if (!planId || !entryId) return undefined;
+
+      // Try to find in taskKey-specific list first
+      if (taskKey) {
+        const listData = queryClient.getQueryData<Entry<T>[]>(
+          queryKeys.entries.byTaskKey(planId, taskKey),
+        );
+        const found = listData?.find((entry) => entry.id === entryId);
+        if (found) return found;
+      }
+
+      // Fall back to all entries cache
+      const allData = queryClient.getQueryData<Entry[]>(
+        queryKeys.entries.all(planId),
+      );
+      return allData?.find((entry) => entry.id === entryId) as
+        | Entry<T>
+        | undefined;
+    },
+    // Provide timestamp so query knows how stale the initial data is
+    initialDataUpdatedAt: () => {
+      if (!planId) return undefined;
+
+      if (taskKey) {
+        const state = queryClient.getQueryState(
+          queryKeys.entries.byTaskKey(planId, taskKey),
+        );
+        if (state?.dataUpdatedAt) return state.dataUpdatedAt;
+      }
+
+      return queryClient.getQueryState(queryKeys.entries.all(planId))
+        ?.dataUpdatedAt;
+    },
   });
 }
 
@@ -77,3 +121,39 @@ export function useEntryCountsQuery() {
     enabled: !!planId,
   });
 }
+
+/**
+ * Hook to prefetch entries for multiple task keys
+ *
+ * Call this on section screens to prefetch entries for all tasks,
+ * so navigation to task screens is instant.
+ *
+ * @param taskKeys - Array of task keys to prefetch
+ *
+ * @example
+ * ```tsx
+ * const tasks = section.tasks.map(t => t.taskKey);
+ * usePrefetchEntriesByTaskKeys(tasks);
+ * ```
+ */
+export function usePrefetchEntriesByTaskKeys(taskKeys: string[]) {
+  const queryClient = useQueryClient();
+  const { planId } = usePlan();
+  const { entries } = useApi();
+
+  // Prefetch on mount and when taskKeys change
+  useEffect(() => {
+    if (!planId || taskKeys.length === 0) return;
+
+    // Prefetch entries for each task key
+    taskKeys.forEach((taskKey) => {
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.entries.byTaskKey(planId, taskKey),
+        queryFn: () => entries.listByTaskKey(planId, taskKey),
+        // Only prefetch if data is older than 30 seconds
+        staleTime: 30000,
+      });
+    });
+  }, [planId, taskKeys, queryClient, entries]);
+}
+
