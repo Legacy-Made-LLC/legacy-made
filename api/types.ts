@@ -635,6 +635,34 @@ export interface HardSituationsMetadata {
 }
 
 // ============================================================================
+// Progress Types
+// ============================================================================
+
+/**
+ * Data stored in a progress record for a task
+ */
+export interface TaskProgressData {
+  /** Whether the task is in progress or explicitly completed */
+  status: "in_progress" | "complete";
+  /** ISO date when the user marked the task complete */
+  completedAt?: string;
+}
+
+/**
+ * A progress record from the API
+ */
+export interface ProgressRecord {
+  /** The task key this progress is for (e.g., "contacts.primary", "financial") */
+  key: string;
+  /** The plan this progress belongs to */
+  planId: string;
+  /** Progress data */
+  data: TaskProgressData;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
 // Wish Model (Same shape as Entry, but for wishes pillar)
 // ============================================================================
 

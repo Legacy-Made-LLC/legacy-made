@@ -57,6 +57,9 @@ export type {
   LovedOnesKnowMetadata,
   FaithPreferencesMetadata,
   HardSituationsMetadata,
+  // Progress types
+  ProgressRecord,
+  TaskProgressData,
 } from './types';
 
 // File utilities
@@ -81,6 +84,9 @@ export type { EntitlementsService } from './entitlements';
 
 export { createWishesService } from './wishes';
 export type { WishesService } from './wishes';
+
+export { createProgressService } from './progress';
+export type { ProgressService } from './progress';
 
 // Mappers
 export {

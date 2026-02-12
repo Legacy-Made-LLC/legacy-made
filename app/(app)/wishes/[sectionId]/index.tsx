@@ -8,7 +8,7 @@
 import { WishesTaskPicker } from "@/components/wishes/WishesTaskPicker";
 import { colors, spacing, typography } from "@/constants/theme";
 import { getWishesSection } from "@/constants/wishes";
-import { useWishCountsQuery, usePrefetchWishesByTaskKeys } from "@/hooks/queries";
+import { useAllProgressQuery, usePrefetchWishesByTaskKeys } from "@/hooks/queries";
 import { Redirect, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useLayoutEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -16,7 +16,7 @@ import { StyleSheet, Text, View } from "react-native";
 export default function WishesSectionScreen() {
   const { sectionId } = useLocalSearchParams<{ sectionId: string }>();
   const navigation = useNavigation();
-  const { data: counts = {} } = useWishCountsQuery();
+  const { data: progress = {} } = useAllProgressQuery();
 
   const section = getWishesSection(sectionId);
 
@@ -52,7 +52,7 @@ export default function WishesSectionScreen() {
   }
 
   // Multiple tasks - show task picker
-  return <WishesTaskPicker section={section} counts={counts} />;
+  return <WishesTaskPicker section={section} progress={progress} />;
 }
 
 const styles = StyleSheet.create({

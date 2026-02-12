@@ -38,3 +38,15 @@ export {
 
 // Entitlements
 export { useEntitlementsQuery } from './useEntitlementsQuery';
+
+// Progress
+export {
+  useAllProgressQuery,
+  useTaskProgressQuery,
+} from './useProgressQuery';
+
+export {
+  useMarkTaskComplete,
+  useMarkTaskInProgress,
+  useSetProgressIfNew,
+} from './useProgressMutations';

@@ -7,7 +7,9 @@
  * Uses lavender color theme (featureWishes) instead of sage green.
  */
 
+import type { TaskProgressData } from "@/api/types";
 import { PressableCard } from "@/components/ui/Card";
+import { TaskStatusIndicator } from "@/components/ui/TaskStatusIndicator";
 import { colors, spacing, typography } from "@/constants/theme";
 import type { WishesSection } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,11 +20,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface WishesTaskPickerProps {
   section: WishesSection;
-  /** Wish counts by taskKey for showing completion status */
-  counts?: Record<string, number>;
+  /** Progress by taskKey for showing completion status */
+  progress?: Record<string, TaskProgressData>;
 }
 
-export function WishesTaskPicker({ section, counts = {} }: WishesTaskPickerProps) {
+export function WishesTaskPicker({ section, progress = {} }: WishesTaskPickerProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -39,9 +41,7 @@ export function WishesTaskPicker({ section, counts = {} }: WishesTaskPickerProps
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {section.tasks.map((task, index) => {
-        const hasWish = (counts[task.taskKey] || 0) > 0;
-
+      {section.tasks.map((task) => {
         return (
           <PressableCard
             key={task.id}
@@ -49,22 +49,13 @@ export function WishesTaskPicker({ section, counts = {} }: WishesTaskPickerProps
             style={styles.card}
           >
             <View style={styles.cardContent}>
-              <View style={styles.cardIcon}>
-                <Text style={styles.taskNumber}>{index + 1}</Text>
-              </View>
+              <TaskStatusIndicator
+                progress={progress[task.taskKey]}
+                pillarColor={colors.featureWishes}
+              />
               <View style={styles.cardText}>
                 <Text style={styles.cardTitle}>{task.title}</Text>
                 <Text style={styles.cardDescription}>{task.description}</Text>
-                {hasWish && (
-                  <View style={styles.completedBadge}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={14}
-                      color={colors.success}
-                    />
-                    <Text style={styles.completedText}>Completed</Text>
-                  </View>
-                )}
               </View>
               <Ionicons
                 name="chevron-forward"
@@ -95,20 +86,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  cardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.featureWishes, // Lavender instead of sage
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  taskNumber: {
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
-    color: colors.surface,
-  },
   cardText: {
     flex: 1,
   },
@@ -121,16 +98,5 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
-  },
-  completedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: spacing.xs,
-  },
-  completedText: {
-    fontSize: typography.sizes.caption,
-    color: colors.success,
-    fontFamily: typography.fontFamily.medium,
   },
 });

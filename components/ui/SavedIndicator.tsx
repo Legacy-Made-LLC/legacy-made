@@ -1,34 +1,29 @@
 /**
- * SavedIndicator - Floating auto-save status indicator
+ * SavedIndicator - Floating auto-save error indicator
  *
- * Shows the current auto-save status as a floating pill at the bottom of the screen.
- * Uses Reanimated for smooth fade animations.
+ * Only surfaces UI when an auto-save fails. Success/saving states are silent
+ * to keep the experience calm and unobtrusive.
  *
  * Behavior:
- * - idle/pending: Hidden
- * - saving: Shows "Saving..." (only if visible > 300ms to avoid flicker)
- * - saved: Fade in, hold 1.5s, fade out
- * - error: Persists until tapped to dismiss
+ * - idle/pending/saving/saved: Hidden
+ * - error: Fades in, persists until tapped to dismiss
  */
 
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect } from "react";
+import { Pressable, StyleSheet, Text } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { AutoSaveStatus } from "@/hooks/useAutoSave";
 
-// Animation configuration
 const FADE_DURATION = 200;
-const SAVING_SHOW_DELAY = 300; // Don't show "Saving..." until after this delay
 
 interface SavedIndicatorProps {
   /** Current auto-save status */
@@ -37,7 +32,7 @@ interface SavedIndicatorProps {
   errorMessage?: string;
   /** Callback when error is dismissed */
   onDismissError?: () => void;
-  /** Accent color for the indicator (default: featureWishes) */
+  /** Accent color for the indicator (unused, kept for API compatibility) */
   accentColor?: string;
 }
 
@@ -45,111 +40,23 @@ export function SavedIndicator({
   status,
   errorMessage,
   onDismissError,
-  accentColor = colors.featureWishes,
 }: SavedIndicatorProps) {
   const insets = useSafeAreaInsets();
   const opacity = useSharedValue(0);
-  const savingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Track if we should show saving indicator (after delay)
-  const [showSaving, setShowSaving] = React.useState(false);
+  const shouldShow = status === "error";
 
-  // Handle saving delay to prevent flicker
   useEffect(() => {
-    if (status === "saving") {
-      savingTimerRef.current = setTimeout(() => {
-        setShowSaving(true);
-      }, SAVING_SHOW_DELAY);
-    } else {
-      if (savingTimerRef.current) {
-        clearTimeout(savingTimerRef.current);
-        savingTimerRef.current = null;
-      }
-      setShowSaving(false);
-    }
-
-    return () => {
-      if (savingTimerRef.current) {
-        clearTimeout(savingTimerRef.current);
-      }
-    };
-  }, [status]);
-
-  // Determine visibility based on status
-  const shouldShow =
-    status === "saved" ||
-    status === "error" ||
-    (status === "saving" && showSaving);
-
-  // Animate opacity based on visibility
-  useEffect(() => {
-    if (shouldShow) {
-      opacity.value = withTiming(1, {
-        duration: FADE_DURATION,
-        easing: Easing.out(Easing.ease),
-      });
-    } else {
-      opacity.value = withDelay(
-        status === "idle" ? 0 : FADE_DURATION,
-        withTiming(0, {
-          duration: FADE_DURATION,
-          easing: Easing.in(Easing.ease),
-        }),
-      );
-    }
-  }, [shouldShow, status, opacity]);
+    opacity.value = withTiming(shouldShow ? 1 : 0, {
+      duration: FADE_DURATION,
+      easing: shouldShow ? Easing.out(Easing.ease) : Easing.in(Easing.ease),
+    });
+  }, [shouldShow, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     pointerEvents: opacity.value > 0.5 ? "auto" : "none",
   }));
-
-  // Render content based on status
-  const renderContent = () => {
-    if (status === "error") {
-      return (
-        <Pressable
-          style={[styles.pill, styles.errorPill]}
-          onPress={onDismissError}
-        >
-          <Ionicons
-            name="alert-circle"
-            size={16}
-            color={colors.error}
-            style={styles.icon}
-          />
-          <Text style={styles.errorText} numberOfLines={1}>
-            {errorMessage || "Failed to save"}
-          </Text>
-          <Text style={styles.tapToDismiss}>Tap to dismiss</Text>
-        </Pressable>
-      );
-    }
-
-    if (status === "saving" && showSaving) {
-      return (
-        <View style={[styles.pill, { borderColor: accentColor }]}>
-          <Text style={[styles.text, { color: accentColor }]}>Saving...</Text>
-        </View>
-      );
-    }
-
-    if (status === "saved") {
-      return (
-        <View style={[styles.pill, { borderColor: accentColor }]}>
-          <Ionicons
-            name="checkmark-circle"
-            size={16}
-            color={accentColor}
-            style={styles.icon}
-          />
-          <Text style={[styles.text, { color: accentColor }]}>Saved</Text>
-        </View>
-      );
-    }
-
-    return null;
-  };
 
   return (
     <Animated.View
@@ -159,7 +66,21 @@ export function SavedIndicator({
         animatedStyle,
       ]}
     >
-      {renderContent()}
+      <Pressable
+        style={[styles.pill, styles.errorPill]}
+        onPress={onDismissError}
+      >
+        <Ionicons
+          name="alert-circle"
+          size={16}
+          color={colors.error}
+          style={styles.icon}
+        />
+        <Text style={styles.errorText} numberOfLines={1}>
+          {errorMessage || "Failed to save"}
+        </Text>
+        <Text style={styles.tapToDismiss}>Tap to dismiss</Text>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -180,7 +101,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.pill,
     borderWidth: 1,
-    // Shadow for depth
     shadowColor: colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -193,10 +113,6 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: spacing.xs,
-  },
-  text: {
-    fontSize: typography.sizes.bodySmall,
-    fontFamily: typography.fontFamily.medium,
   },
   errorText: {
     fontSize: typography.sizes.bodySmall,

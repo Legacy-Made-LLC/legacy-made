@@ -14,12 +14,12 @@ import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { wishesSections } from "@/constants/wishes";
 import { useEntitlements } from "@/data/EntitlementsProvider";
-import { useWishCountsQuery } from "@/hooks/queries";
+import { useAllProgressQuery } from "@/hooks/queries";
 
 export default function WishesScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
-  const { data: counts = {} } = useWishCountsQuery();
+  const { data: progress = {} } = useAllProgressQuery();
 
   const isLocked = isLockedPillar("wishes");
   const isViewOnly = isViewOnlyPillar("wishes");
@@ -61,7 +61,7 @@ export default function WishesScreen() {
           <PillarSectionCard
             key={section.id}
             section={section}
-            counts={counts}
+            progress={progress}
             pillar="wishes"
           />
         ))}

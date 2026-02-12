@@ -8,7 +8,7 @@
 import { TaskPicker } from '@/components/vault/TaskPicker';
 import { colors, spacing, typography } from '@/constants/theme';
 import { getSection } from '@/constants/vault';
-import { usePrefetchEntriesByTaskKeys } from '@/hooks/queries';
+import { useAllProgressQuery, usePrefetchEntriesByTaskKeys } from '@/hooks/queries';
 import { Redirect, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useLayoutEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -16,6 +16,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function SectionScreen() {
   const { sectionId } = useLocalSearchParams<{ sectionId: string }>();
   const navigation = useNavigation();
+  const { data: progress = {} } = useAllProgressQuery();
 
   const section = getSection(sectionId);
 
@@ -51,7 +52,7 @@ export default function SectionScreen() {
   }
 
   // Multiple tasks - show task picker
-  return <TaskPicker section={section} />;
+  return <TaskPicker section={section} progress={progress} />;
 }
 
 const styles = StyleSheet.create({

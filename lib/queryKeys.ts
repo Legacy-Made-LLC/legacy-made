@@ -42,4 +42,10 @@ export const queryKeys = {
     // Wish counts for dashboard
     counts: (planId: string) => ['wishes', planId, 'counts'] as const,
   },
+  progress: {
+    // All progress records for a plan
+    all: (planId: string) => ['progress', planId] as const,
+    // Single progress record by taskKey
+    byKey: (planId: string, key: string) => ['progress', planId, key] as const,
+  },
 } as const;
