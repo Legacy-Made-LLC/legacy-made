@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import React from "react";
 import {
   Dimensions,
@@ -47,7 +47,7 @@ const pillars = [
     icon: "document-text-outline" as const,
     totalItems: informationTaskKeys.length,
     taskKeys: informationTaskKeys,
-    route: "/(app)/(tabs)/information",
+    route: "/(app)/(tabs)/information" as Href,
     color: colors.featureInformation,
     tint: colors.featureInformationTint,
   },
@@ -58,7 +58,7 @@ const pillars = [
     icon: "heart-outline" as const,
     totalItems: wishesTaskKeys.length,
     taskKeys: wishesTaskKeys,
-    route: "/(app)/(tabs)/wishes",
+    route: "/(app)/(tabs)/wishes" as Href,
     color: colors.featureWishes,
     tint: colors.featureWishesTint,
   },
@@ -69,7 +69,7 @@ const pillars = [
     icon: "videocam-outline" as const,
     totalItems: 0,
     taskKeys: [] as string[],
-    route: "/(app)/(tabs)/legacy",
+    route: "/(app)/(tabs)/legacy" as Href,
     color: colors.featureLegacy,
     tint: colors.featureLegacyTint,
   },
@@ -80,7 +80,7 @@ const pillars = [
     icon: "people-outline" as const,
     totalItems: 0,
     taskKeys: [] as string[],
-    route: "/(app)/(tabs)/family",
+    route: "/(app)/(tabs)/family" as Href,
     color: colors.featureFamily,
     tint: colors.featureFamilyTint,
   },
@@ -221,7 +221,7 @@ export default function HomeScreen() {
             key={pillar.id}
             pillar={pillar}
             currentProgress={getPillarProgress(pillar)}
-            onPress={() => router.push(pillar.route as any)}
+            onPress={() => router.push(pillar.route)}
           />
         ))}
       </View>

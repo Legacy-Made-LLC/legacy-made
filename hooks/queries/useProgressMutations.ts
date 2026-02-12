@@ -2,7 +2,7 @@
  * Progress Mutation Hooks
  *
  * TanStack Query hooks for updating task progress status.
- * Includes optimistic updates on the progress.all cache.
+ * Includes optimistic updates on both progress.all and progress.byKey caches.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,78 +14,101 @@ import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
- * Mark a task as complete.
- * Upserts { status: "complete", completedAt: ISO } and optimistically updates cache.
+ * Shared mutation hook for upserting progress.
+ * Both useMarkTaskComplete and useMarkTaskInProgress delegate to this.
  */
-export function useMarkTaskComplete(taskKey: string | undefined) {
+function useUpsertProgress(taskKey: string | undefined) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { progress } = useApi();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: TaskProgressData) => {
       if (!planId || !taskKey) {
         throw new Error("Plan ID and task key are required");
       }
-
-      const data: TaskProgressData = {
-        status: "complete",
-        completedAt: new Date().toISOString(),
-      };
-
       return progress.upsert(planId, taskKey, data);
     },
-    onMutate: async () => {
+    onMutate: async (data: TaskProgressData) => {
       if (!planId || !taskKey) return;
 
       await queryClient.cancelQueries({
         queryKey: queryKeys.progress.all(planId),
       });
 
-      const previousProgress = queryClient.getQueryData<
+      // Snapshot both caches for rollback
+      const previousAll = queryClient.getQueryData<
         Record<string, TaskProgressData>
       >(queryKeys.progress.all(planId));
 
-      const newData: TaskProgressData = {
-        status: "complete",
-        completedAt: new Date().toISOString(),
-      };
+      const previousByKey = queryClient.getQueryData<TaskProgressData | null>(
+        queryKeys.progress.byKey(planId, taskKey),
+      );
 
       // Optimistically update the all-progress cache
       queryClient.setQueryData<Record<string, TaskProgressData>>(
         queryKeys.progress.all(planId),
         (old) => ({
           ...old,
-          [taskKey]: newData,
+          [taskKey]: data,
         }),
       );
 
       // Also update the individual key cache
       queryClient.setQueryData(
         queryKeys.progress.byKey(planId, taskKey),
-        newData,
+        data,
       );
 
-      return { previousProgress };
+      return { previousAll, previousByKey };
     },
     onError: (_err, _vars, context) => {
-      if (!planId) return;
+      if (!planId || !taskKey) return;
 
-      if (context?.previousProgress) {
+      // Roll back both caches
+      if (context?.previousAll !== undefined) {
         queryClient.setQueryData(
           queryKeys.progress.all(planId),
-          context.previousProgress,
+          context.previousAll,
+        );
+      }
+      if (context?.previousByKey !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.progress.byKey(planId, taskKey),
+          context.previousByKey,
         );
       }
     },
     onSettled: () => {
-      if (!planId) return;
+      if (!planId || !taskKey) return;
 
       queryClient.invalidateQueries({
         queryKey: queryKeys.progress.all(planId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.progress.byKey(planId, taskKey),
+      });
     },
   });
+}
+
+/**
+ * Mark a task as complete.
+ * Upserts { status: "complete", completedAt: ISO } and optimistically updates cache.
+ */
+export function useMarkTaskComplete(taskKey: string | undefined) {
+  const mutation = useUpsertProgress(taskKey);
+
+  return {
+    ...mutation,
+    mutate: () => {
+      const data: TaskProgressData = {
+        status: "complete",
+        completedAt: new Date().toISOString(),
+      };
+      mutation.mutate(data);
+    },
+  };
 }
 
 /**
@@ -93,72 +116,15 @@ export function useMarkTaskComplete(taskKey: string | undefined) {
  * Upserts { status: "in_progress" } and optimistically updates cache.
  */
 export function useMarkTaskInProgress(taskKey: string | undefined) {
-  const queryClient = useQueryClient();
-  const { planId } = usePlan();
-  const { progress } = useApi();
+  const mutation = useUpsertProgress(taskKey);
 
-  return useMutation({
-    mutationFn: async () => {
-      if (!planId || !taskKey) {
-        throw new Error("Plan ID and task key are required");
-      }
-
-      const data: TaskProgressData = {
-        status: "in_progress",
-      };
-
-      return progress.upsert(planId, taskKey, data);
+  return {
+    ...mutation,
+    mutate: () => {
+      const data: TaskProgressData = { status: "in_progress" };
+      mutation.mutate(data);
     },
-    onMutate: async () => {
-      if (!planId || !taskKey) return;
-
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.progress.all(planId),
-      });
-
-      const previousProgress = queryClient.getQueryData<
-        Record<string, TaskProgressData>
-      >(queryKeys.progress.all(planId));
-
-      const newData: TaskProgressData = {
-        status: "in_progress",
-      };
-
-      // Optimistically update the all-progress cache
-      queryClient.setQueryData<Record<string, TaskProgressData>>(
-        queryKeys.progress.all(planId),
-        (old) => ({
-          ...old,
-          [taskKey]: newData,
-        }),
-      );
-
-      // Also update the individual key cache
-      queryClient.setQueryData(
-        queryKeys.progress.byKey(planId, taskKey),
-        newData,
-      );
-
-      return { previousProgress };
-    },
-    onError: (_err, _vars, context) => {
-      if (!planId) return;
-
-      if (context?.previousProgress) {
-        queryClient.setQueryData(
-          queryKeys.progress.all(planId),
-          context.previousProgress,
-        );
-      }
-    },
-    onSettled: () => {
-      if (!planId) return;
-
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.progress.all(planId),
-      });
-    },
-  });
+  };
 }
 
 /**
@@ -170,42 +136,51 @@ export function useSetProgressIfNew() {
   const { planId } = usePlan();
   const { progress } = useApi();
 
-  const setIfNew = useCallback(async (taskKey: string) => {
-    if (!planId) return;
+  const setIfNew = useCallback(
+    async (taskKey: string) => {
+      if (!planId) return;
 
-    // Check if a progress record already exists in cache
-    const allProgress = queryClient.getQueryData<
-      Record<string, TaskProgressData>
-    >(queryKeys.progress.all(planId));
+      // Check if a progress record already exists in cache
+      const allProgress = queryClient.getQueryData<
+        Record<string, TaskProgressData>
+      >(queryKeys.progress.all(planId));
 
-    if (allProgress?.[taskKey]) {
-      // Already has a progress record, skip
-      return;
-    }
+      if (allProgress?.[taskKey]) {
+        // Already has a progress record, skip
+        return;
+      }
 
-    const data: TaskProgressData = { status: "in_progress" };
+      const data: TaskProgressData = { status: "in_progress" };
 
-    // Optimistically update cache
-    queryClient.setQueryData<Record<string, TaskProgressData>>(
-      queryKeys.progress.all(planId),
-      (old) => ({
-        ...old,
-        [taskKey]: data,
-      }),
-    );
+      // Optimistically update cache
+      queryClient.setQueryData<Record<string, TaskProgressData>>(
+        queryKeys.progress.all(planId),
+        (old) => ({
+          ...old,
+          [taskKey]: data,
+        }),
+      );
 
-    queryClient.setQueryData(
-      queryKeys.progress.byKey(planId, taskKey),
-      data,
-    );
+      queryClient.setQueryData(
+        queryKeys.progress.byKey(planId, taskKey),
+        data,
+      );
 
-    // Fire-and-forget API call
-    try {
-      await progress.upsert(planId, taskKey, data);
-    } catch {
-      // Silently fail - will retry on next entry creation
-    }
-  }, [planId, queryClient, progress]);
+      // Fire-and-forget API call — roll back cache on failure
+      try {
+        await progress.upsert(planId, taskKey, data);
+      } catch {
+        // Roll back optimistic updates so next visit retries
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.progress.all(planId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.progress.byKey(planId, taskKey),
+        });
+      }
+    },
+    [planId, queryClient, progress],
+  );
 
   return { setIfNew };
 }

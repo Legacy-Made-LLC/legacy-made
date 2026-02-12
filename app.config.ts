@@ -20,7 +20,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.gibsonops.legacymade.dev1",
+    bundleIdentifier: IS_PROD
+      ? "com.gibsonops.legacymade"
+      : "com.gibsonops.legacymade.dev1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",

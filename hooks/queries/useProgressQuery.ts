@@ -54,16 +54,6 @@ export function useTaskProgressQuery(taskKey: string | undefined) {
   return useQuery({
     queryKey: queryKeys.progress.byKey(planId!, taskKey!),
     queryFn: async (): Promise<TaskProgressData | null> => {
-      // Try to read from the all-progress cache first
-      const allProgress = queryClient.getQueryData<
-        Record<string, TaskProgressData>
-      >(queryKeys.progress.all(planId!));
-
-      if (allProgress && taskKey! in allProgress) {
-        return allProgress[taskKey!];
-      }
-
-      // Fall back to individual fetch
       try {
         const record = await progress.get(planId!, taskKey!);
         return record.data;
@@ -71,6 +61,13 @@ export function useTaskProgressQuery(taskKey: string | undefined) {
         // No progress record exists for this task (not started)
         return null;
       }
+    },
+    placeholderData: () => {
+      const allProgress = queryClient.getQueryData<
+        Record<string, TaskProgressData>
+      >(queryKeys.progress.all(planId!));
+
+      return allProgress?.[taskKey!] ?? undefined;
     },
     enabled: !!planId && !!taskKey,
   });

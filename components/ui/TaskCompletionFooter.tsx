@@ -98,9 +98,7 @@ export function TaskCompletionFooter({
       style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}
     >
       <AnimatedPressable
-        onPress={() =>
-          isComplete ? markInProgress.mutate() : markComplete.mutate()
-        }
+        onPress={() => markComplete.mutate()}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[
