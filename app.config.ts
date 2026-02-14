@@ -1,12 +1,7 @@
 import { ConfigContext, ExpoConfig } from "expo/config";
 
-if (!process.env.APP_VARIANT) {
-  throw new Error(
-    "APP_VARIANT is not set — run via npm scripts or set it explicitly",
-  );
-}
-
-const IS_PROD = process.env.APP_VARIANT === "production";
+const APP_VARIANT = process.env.APP_VARIANT ?? "production";
+const IS_PROD = APP_VARIANT === "production";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -21,7 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: IS_PROD
-      ? "com.gibsonops.legacymade"
+      ? "com.gibsonops.legacymade.dev1"
       : "com.gibsonops.legacymade.dev1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
