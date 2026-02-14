@@ -25,6 +25,7 @@ import "react-native-reanimated";
 import { DevMenu } from "@/components/dev/DevMenu";
 import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
+import { LocaleProvider } from "@/contexts/LocaleContext";
 import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
@@ -62,32 +63,34 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <BottomSheetModalProvider>
-          <UpgradePromptProvider>
-            <OnboardingProvider>
-              <ClerkProvider
-                tokenCache={tokenCache}
-                publishableKey={CLERK_PUBLISHABLE_KEY}
-              >
-                <QueryProvider>
-                  <PlanProvider>
-                    <EntitlementsProvider>
-                      <Stack
-                        screenOptions={{
-                          headerShown: false,
-                          animation: "fade",
-                        }}
-                      >
-                        {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
-                      </Stack>
-                      <StatusBar style="dark" />
-                      <DevMenu />
-                    </EntitlementsProvider>
-                  </PlanProvider>
-                </QueryProvider>
-              </ClerkProvider>
-            </OnboardingProvider>
-            <GlobalUpgradePrompt />
-          </UpgradePromptProvider>
+          <LocaleProvider>
+            <UpgradePromptProvider>
+              <OnboardingProvider>
+                <ClerkProvider
+                  tokenCache={tokenCache}
+                  publishableKey={CLERK_PUBLISHABLE_KEY}
+                >
+                  <QueryProvider>
+                    <PlanProvider>
+                      <EntitlementsProvider>
+                        <Stack
+                          screenOptions={{
+                            headerShown: false,
+                            animation: "fade",
+                          }}
+                        >
+                          {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
+                        </Stack>
+                        <StatusBar style="dark" />
+                        <DevMenu />
+                      </EntitlementsProvider>
+                    </PlanProvider>
+                  </QueryProvider>
+                </ClerkProvider>
+              </OnboardingProvider>
+              <GlobalUpgradePrompt />
+            </UpgradePromptProvider>
+          </LocaleProvider>
         </BottomSheetModalProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
