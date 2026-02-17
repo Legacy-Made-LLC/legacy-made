@@ -8,7 +8,7 @@
 import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import { getListComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
-import { getSection, getTask } from "@/constants/vault";
+import { useVaultSection, useVaultTask } from "@/constants/vault";
 import { useEntriesQuery } from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -23,8 +23,8 @@ export default function TaskScreen() {
   const router = useRouter();
   const navigation = useNavigation();
 
-  const section = getSection(sectionId);
-  const task = getTask(sectionId, taskId);
+  const section = useVaultSection(sectionId);
+  const task = useVaultTask(sectionId, taskId);
 
   // Set the header title before first render
   useLayoutEffect(() => {

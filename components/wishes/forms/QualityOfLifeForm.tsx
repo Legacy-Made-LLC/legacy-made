@@ -12,6 +12,7 @@ import type { QualityOfLifeMetadata } from "@/api/types";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { qualityOfLifeConditions } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
@@ -27,6 +28,17 @@ import {
 } from "../shared/ReflectionChoices";
 import { wishesFormStyles } from "./formStyles";
 
+const formText = {
+  owner: {
+    question: "I would not want aggressive treatment if I were...",
+    context: "Select any that feel true for you. Leave blank if you're not sure.",
+  },
+  family: {
+    question: "They would not want aggressive treatment if they were...",
+    context: "These are the conditions they selected. Left blank if unsure.",
+  },
+};
+
 interface QualityOfLifeFormValues {
   selectedConditions: string[];
   notes: string;
@@ -41,6 +53,8 @@ export function QualityOfLifeForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | QualityOfLifeMetadata
@@ -125,8 +139,8 @@ export function QualityOfLifeForm({
       )}
 
       <ReflectionPrompt
-        question="I would not want aggressive treatment if I were..."
-        context="Select any that feel true for you. Leave blank if you're not sure."
+        question={t.question}
+        context={t.context}
       />
 
       <form.Field name="selectedConditions">

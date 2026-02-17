@@ -9,20 +9,20 @@ import type { Translations } from "../../types";
 export const familyWishes: Translations["wishes"] = {
   carePrefs: {
     title: "Care Preferences",
-    description: "What mattered when health decisions were being made",
+    description: "What matters when health decisions need to be made",
     tasks: {
       whatMatters: {
         title: "What Matters Most",
         description: "Their priorities for care",
         triggerText: "Understanding their wishes",
         guidanceHeading:
-          "When it came to medical care, this is what mattered most to them.",
+          "When it comes to medical care, this is what matters most to them.",
         guidance:
-          "There's no right answer to these questions. This is about understanding what a meaningful life looked like to them.",
+          "There's no right answer to these questions. This is about understanding what a meaningful life looks like to them.",
         tips: [
-          "They thought about what made a day feel worth living — connection? Comfort? Being present?",
+          "They've shared what makes a day feel worth living — connection? Comfort? Being present?",
           "Some people prioritize length of life, others prioritize quality. Both are valid.",
-          "These are the values they wanted to guide medical decisions.",
+          "These are the values they want to guide medical decisions.",
         ],
         pacingNote: "These are profound reflections. Take your time.",
       },
@@ -30,11 +30,11 @@ export const familyWishes: Translations["wishes"] = {
         title: "Quality of Life",
         description: "When to shift focus",
         triggerText:
-          "Were there circumstances where they'd want to let nature take its course?",
+          "Are there circumstances where they'd want to let nature take its course?",
         guidanceHeading:
-          "Were there circumstances where they'd want to let nature take its course?",
+          "Are there circumstances where they'd want to let nature take its course?",
         guidance:
-          "This isn't about giving up — it's about clarity during an impossible time. They wanted to give guidance that could help with these difficult decisions.",
+          "This isn't about giving up — it's about clarity during an impossible time. They've shared guidance to help with these difficult decisions.",
         tips: [
           "Without guidance, families often feel guilty no matter what they decide. These words can lift that weight.",
           "These aren't medical decisions — they're values that can help guide decisions when the time comes.",
@@ -47,10 +47,10 @@ export const familyWishes: Translations["wishes"] = {
         triggerText: "How should comfort and treatment be balanced?",
         guidanceHeading: "How should comfort and treatment be balanced?",
         guidance:
-          "There's no wrong answer. Some people want every possible treatment; others prioritize peace and comfort. What matters is knowing what they wanted.",
+          "There's no wrong answer. Some people want every possible treatment; others prioritize peace and comfort. What matters is knowing what they want.",
         tips: [
-          "They thought about what mattered more: more time or better quality time?",
-          "Pain medication can make someone drowsy — they've noted how much staying alert mattered to them.",
+          "They've shared what matters more to them: more time or better quality time.",
+          "Pain medication can make someone drowsy — they've noted how much staying alert matters to them.",
           "They may have said 'I trust my care team to decide.' That's a valid preference.",
         ],
       },
@@ -78,8 +78,8 @@ export const familyWishes: Translations["wishes"] = {
       setting: {
         title: "End-of-Life Setting",
         description: "Home, hospital, hospice",
-        triggerText: "Where would they have wanted to be?",
-        guidanceHeading: "Where would they have wanted to be?",
+        triggerText: "Where would they want to be?",
+        guidanceHeading: "Where would they want to be?",
         guidance:
           "Home, hospice, hospital — each has trade-offs. They've shared their preference to help honor their wishes when decisions need to be made quickly.",
         tips: [
@@ -91,8 +91,8 @@ export const familyWishes: Translations["wishes"] = {
       afterDeath: {
         title: "After-Death Preferences",
         description: "Burial, cremation, other",
-        triggerText: "They stated this clearly as a gift.",
-        guidanceHeading: "They stated this clearly as a gift.",
+        triggerText: "They've shared their preference as a gift.",
+        guidanceHeading: "They've shared their preference as a gift.",
         guidance:
           "Burial, cremation, green burial — whatever they chose, stating it removes a heavy decision during an already difficult time.",
         tips: [
@@ -107,11 +107,11 @@ export const familyWishes: Translations["wishes"] = {
         triggerText: "How would they want to be remembered?",
         guidanceHeading: "How would they want to be remembered?",
         guidance:
-          "A quiet gathering, a big celebration, or nothing at all — knowing what they wanted brings more peace to these decisions.",
+          "A quiet gathering, a big celebration, or nothing at all — knowing what they want brings more peace to these decisions.",
         tips: [
-          "They thought about gatherings they'd attended — what felt right, and what didn't?",
+          "They've reflected on gatherings they attended — what felt right, and what didn't.",
           "Some people want celebration; others prefer quiet. Both are meaningful.",
-          "If there's a song or reading that mattered to them, they may have mentioned it here.",
+          "If there's a song or reading that matters to them, they may have mentioned it here.",
           "Even 'keep it simple' or 'make it a party' gives helpful direction.",
         ],
       },
@@ -133,17 +133,17 @@ export const familyWishes: Translations["wishes"] = {
 
   values: {
     title: "Personal Values & Guidance",
-    description: "Emotional and relational guidance they left",
+    description: "Emotional and relational guidance for their loved ones",
     tasks: {
       lovedOnesKnow: {
         title: "What Loved Ones Should Know",
         description: "Final words and reminders",
-        triggerText: "What did they want to say?",
-        guidanceHeading: "What did they want to say?",
+        triggerText: "What they want their loved ones to know",
+        guidanceHeading: "What they want their loved ones to know",
         guidance:
           "These words are a gift — to them for saying them, and to their family for receiving them.",
         tips: [
-          "They thought about what they'd want someone to say to them if they couldn't say it later.",
+          "They've shared what they'd want someone to say to them if they couldn't say it later.",
           "Gratitude is powerful. Specific moments mean more than general praise.",
           "If there are apologies or regrets, this was a chance for them to release them.",
           "Even one honest paragraph is valuable.",
@@ -155,7 +155,7 @@ export const familyWishes: Translations["wishes"] = {
         triggerText: "What traditions or beliefs should be honored?",
         guidanceHeading: "What traditions or beliefs should be honored?",
         guidance:
-          "Whether deeply religious, casually spiritual, or secular — they wanted their beliefs and values to be respected.",
+          "Whether deeply religious, casually spiritual, or secular — they want their beliefs and values to be respected.",
         tips: [
           "They may have included rituals, prayers, or customs that should be observed.",
           "If they had a religious leader or congregation, contact info may be noted.",
@@ -165,7 +165,7 @@ export const familyWishes: Translations["wishes"] = {
       hardSituations: {
         title: "Hard Situations",
         description: "Guidance for conflict",
-        triggerText: "Guidance they left",
+        triggerText: "Their guidance for difficult moments",
         guidanceHeading:
           "These words can prevent conflict during an already difficult time.",
         guidance:

@@ -47,12 +47,12 @@ export const familyVault: Translations["vault"] = {
       people: {
         title: "Important People",
         description: "Everyone else to know about",
-        triggerText: "Who else mattered in their life?",
-        guidanceHeading: "Who else mattered in their life?",
+        triggerText: "Who else matters in their life?",
+        guidanceHeading: "Who else matters in their life?",
         guidance:
-          "Beyond family, there are people who should know — and people they wanted you to know about.",
+          "Beyond family, there are people who should know — and people they want you to know about.",
         tips: [
-          "This may include neighbors, coworkers, or community members who mattered to them.",
+          "This may include neighbors, coworkers, or community members who matter to them.",
           "Some people might be waiting to hear from them regularly.",
           "Some people may have their belongings or keys.",
         ],
@@ -232,7 +232,7 @@ export const familyVault: Translations["vault"] = {
           "Their social media accounts and any memorialization or legacy contact settings are listed here. They've noted which accounts should be deactivated or preserved.",
         tips: [
           "Many platforms offer memorialization or legacy contact options.",
-          "They've noted which accounts they wanted preserved vs. deleted.",
+          "They've noted which accounts they want preserved vs. deleted.",
           "This includes subscriptions, streaming services, and online memberships.",
         ],
       },

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { advanceDirectiveDocTypes } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
@@ -26,6 +27,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateAdvanceDirectiveSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    hasDirectiveLabel: "Do you have advance directive documents?",
+    uploadHelp: "Upload copies of your living will, healthcare power of attorney, or other directive documents.",
+    proxyHeader: "Who should make healthcare decisions for you?",
+    notesPlaceholder: "Anything else about your directive documents...",
+  },
+  family: {
+    hasDirectiveLabel: "Do they have advance directive documents?",
+    uploadHelp: "Copies of their living will, healthcare power of attorney, or other directive documents.",
+    proxyHeader: "Who should make healthcare decisions for them?",
+    notesPlaceholder: "Anything else about their directive documents...",
+  },
+};
 
 const hasDirectiveOptions = [
   { value: "yes", label: "Yes, I have documents" },
@@ -57,6 +73,8 @@ export function AdvanceDirectiveForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | AdvanceDirectiveMetadata
@@ -158,7 +176,7 @@ export function AdvanceDirectiveForm({
             style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
             <Select
-              label="Do you have advance directive documents?"
+              label={t.hasDirectiveLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={hasDirectiveOptions}
@@ -239,7 +257,7 @@ export function AdvanceDirectiveForm({
                     allowCamera={true}
                     disabled={isUploading}
                     placeholder="Add directive documents"
-                    helpText="Upload copies of your living will, healthcare power of attorney, or other directive documents."
+                    helpText={t.uploadHelp}
                     onUpgradeRequired={onStorageUpgradeRequired}
                     deletingIds={deletingFileIds}
                     accentColor={colors.featureWishes}
@@ -252,7 +270,7 @@ export function AdvanceDirectiveForm({
       </form.Subscribe>
 
       <Text style={wishesFormStyles.sectionHeader}>
-        Who should make healthcare decisions for you?
+        {t.proxyHeader}
       </Text>
 
       <form.Field name="proxyName">
@@ -303,7 +321,7 @@ export function AdvanceDirectiveForm({
               label="Additional notes"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Anything else about your directive documents..."
+              placeholder={t.notesPlaceholder}
               maxLength={2000}
             />
           </View>

@@ -9,11 +9,14 @@
  * the new translation system.
  */
 
+import { useMemo } from "react";
+
 import {
   vaultSections as structuralSections,
   type VaultSection as StructuralVaultSection,
   type VaultTask as StructuralVaultTask,
 } from "./vault-structure";
+import { useTranslations } from "@/contexts/LocaleContext";
 import type { Translations } from "@/locales/types";
 
 /**
@@ -167,6 +170,47 @@ export function getDefaultTask(sectionId: string): VaultTask | undefined {
  */
 export function getAllTaskKeys(): string[] {
   return vaultSections.flatMap((s) => s.tasks.map((t) => t.taskKey));
+}
+
+// ============================================================================
+// Reactive Hooks (Perspective-Aware)
+// ============================================================================
+
+/**
+ * Hook that returns vault sections with current perspective translations.
+ * Re-renders when perspective changes via the dev menu.
+ */
+export function useVaultSections(): VaultSection[] {
+  const translations = useTranslations();
+  return useMemo(
+    () => getVaultSectionsWithText(translations.vault),
+    [translations.vault],
+  );
+}
+
+/**
+ * Hook to get a section by ID with current perspective translations.
+ */
+export function useVaultSection(sectionId: string): VaultSection | undefined {
+  const sections = useVaultSections();
+  return useMemo(
+    () => sections.find((s) => s.id === sectionId),
+    [sections, sectionId],
+  );
+}
+
+/**
+ * Hook to get a task by section ID and task ID with current perspective translations.
+ */
+export function useVaultTask(
+  sectionId: string,
+  taskId: string,
+): VaultTask | undefined {
+  const section = useVaultSection(sectionId);
+  return useMemo(
+    () => section?.tasks.find((t) => t.id === taskId),
+    [section, taskId],
+  );
 }
 
 // Also export structural types for new code

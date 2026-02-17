@@ -11,6 +11,7 @@ import type { LovedOnesKnowMetadata } from "@/api/types";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -21,6 +22,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateLovedOnesKnowSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    intro: "These words are a gift \u2014 to you for saying them, and to your family for receiving them. Share as much or as little as feels right.",
+    gratitudePlaceholder: "What are you most grateful for? Who has made a difference in your life?",
+    regretsPlaceholder: "Is there anything you wish you'd done differently? Anyone you'd want to apologize to?",
+    wisdomPlaceholder: "What lessons would you want to pass on? What do you wish you'd learned sooner?",
+    memoriesPlaceholder: "What moments do you treasure most? What stories do you want remembered?",
+    notesPlaceholder: "Anything else you'd want your family to know...",
+  },
+  family: {
+    intro: "These words are a gift \u2014 to them for sharing, and to their family for receiving them.",
+    gratitudePlaceholder: "What they are most grateful for. Who has made a difference in their life.",
+    regretsPlaceholder: "Anything they wish they'd done differently. Anyone they'd want to apologize to.",
+    wisdomPlaceholder: "Lessons they want to pass on. What they wish they'd learned sooner.",
+    memoriesPlaceholder: "Moments they treasure most. Stories they want remembered.",
+    notesPlaceholder: "Anything else they want their family to know...",
+  },
+};
 
 interface LovedOnesKnowFormValues {
   gratitude: string;
@@ -39,6 +59,8 @@ export function LovedOnesKnowForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | LovedOnesKnowMetadata
@@ -118,8 +140,7 @@ export function LovedOnesKnowForm({
       )}
 
       <Text style={wishesFormStyles.intro}>
-        These words are a gift — to you for saying them, and to your family for
-        receiving them. Share as much or as little as feels right.
+        {t.intro}
       </Text>
 
       <form.Field name="gratitude">
@@ -131,7 +152,7 @@ export function LovedOnesKnowForm({
               label="Gratitude"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="What are you most grateful for? Who has made a difference in your life?"
+              placeholder={t.gratitudePlaceholder}
               maxLength={3000}
               minHeight={120}
             />
@@ -146,7 +167,7 @@ export function LovedOnesKnowForm({
               label="Regrets or apologies"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Is there anything you wish you'd done differently? Anyone you'd want to apologize to?"
+              placeholder={t.regretsPlaceholder}
               maxLength={3000}
               minHeight={120}
             />
@@ -161,7 +182,7 @@ export function LovedOnesKnowForm({
               label="Wisdom to share"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="What lessons would you want to pass on? What do you wish you'd learned sooner?"
+              placeholder={t.wisdomPlaceholder}
               maxLength={3000}
               minHeight={120}
             />
@@ -176,7 +197,7 @@ export function LovedOnesKnowForm({
               label="Favorite memories"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="What moments do you treasure most? What stories do you want remembered?"
+              placeholder={t.memoriesPlaceholder}
               maxLength={3000}
               minHeight={120}
             />
@@ -191,7 +212,7 @@ export function LovedOnesKnowForm({
               label="Anything else"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Anything else you'd want your family to know..."
+              placeholder={t.notesPlaceholder}
               maxLength={3000}
               minHeight={100}
             />

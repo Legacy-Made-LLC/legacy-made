@@ -12,6 +12,7 @@ import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -22,6 +23,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateOrganDonationSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    decisionLabel: "What are your wishes on organ donation?",
+    registryLabel: "Are you on your state's donor registry?",
+    registryInfo:
+      "Being on the registry helps, but your family will still be asked. Recording your wishes here ensures they know what you want.",
+  },
+  family: {
+    decisionLabel: "What are their wishes on organ donation?",
+    registryLabel: "Are they on their state's donor registry?",
+    registryInfo:
+      "Being on the registry helps, but families are still asked. Their wishes are recorded here so everyone knows what they want.",
+  },
+};
 
 const decisionOptions = [
   { value: "yes-all", label: "Yes, donate anything that can help" },
@@ -53,6 +69,8 @@ export function OrganDonationForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | OrganDonationMetadata
@@ -135,7 +153,7 @@ export function OrganDonationForm({
             style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
             <Select
-              label="What are your wishes on organ donation?"
+              label={t.decisionLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={decisionOptions}
@@ -170,7 +188,7 @@ export function OrganDonationForm({
         {(field) => (
           <View style={wishesFormStyles.fieldContainer}>
             <Select
-              label="Are you on your state's donor registry?"
+              label={t.registryLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={registryOptions}
@@ -186,9 +204,7 @@ export function OrganDonationForm({
           onRegistry === "no" ? (
             <View style={wishesFormStyles.infoCard}>
               <Text style={wishesFormStyles.infoText}>
-                Being on the registry helps, but your family will still be
-                asked. Recording your wishes here ensures they know what you
-                want.
+                {t.registryInfo}
               </Text>
             </View>
           ) : null

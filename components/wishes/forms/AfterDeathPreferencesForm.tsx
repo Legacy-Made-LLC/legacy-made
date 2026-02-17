@@ -12,6 +12,7 @@ import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -22,6 +23,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateAfterDeathSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    dispositionLabel: "What are your wishes for your body?",
+    prearrangedLabel: "Have you made any pre-arrangements?",
+    notesPlaceholder: "Anything else your family should know...",
+  },
+  family: {
+    dispositionLabel: "What are their wishes for their body?",
+    prearrangedLabel: "Have they made any pre-arrangements?",
+    notesPlaceholder: "Anything else the family should know...",
+  },
+};
 
 const dispositionOptions = [
   { value: "burial", label: "Traditional burial" },
@@ -55,6 +69,8 @@ export function AfterDeathPreferencesForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | AfterDeathMetadata
@@ -139,7 +155,7 @@ export function AfterDeathPreferencesForm({
             style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
             <Select
-              label="What are your wishes for your body?"
+              label={t.dispositionLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={dispositionOptions}
@@ -176,7 +192,7 @@ export function AfterDeathPreferencesForm({
         {(field) => (
           <View style={wishesFormStyles.fieldContainer}>
             <Select
-              label="Have you made any pre-arrangements?"
+              label={t.prearrangedLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={prearrangedOptions}
@@ -214,7 +230,7 @@ export function AfterDeathPreferencesForm({
               label="Additional notes"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Anything else your family should know..."
+              placeholder={t.notesPlaceholder}
               maxLength={2000}
             />
           </View>

@@ -9,6 +9,7 @@
  */
 
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import {
@@ -117,6 +118,7 @@ interface ReflectionCardProps {
 }
 
 function ReflectionCard({ choice, isSelected, onPress }: ReflectionCardProps) {
+  const { isFamily } = usePerspective();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -174,7 +176,9 @@ function ReflectionCard({ choice, isSelected, onPress }: ReflectionCardProps) {
               <View style={styles.checkCircle}>
                 <Ionicons name="checkmark" size={12} color="#fff" />
               </View>
-              <Text style={styles.selectedText}>This matters to me</Text>
+              <Text style={styles.selectedText}>
+                {isFamily ? "This matters to them" : "This matters to me"}
+              </Text>
             </>
           ) : (
             <>

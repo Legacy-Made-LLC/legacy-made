@@ -9,11 +9,14 @@
  * the new translation system.
  */
 
+import { useMemo } from "react";
+
 import {
   wishesSections as structuralSections,
   type WishesSection as StructuralWishesSection,
   type WishesTask as StructuralWishesTask,
 } from "./wishes-structure";
+import { useTranslations } from "@/contexts/LocaleContext";
 import type { Translations } from "@/locales/types";
 
 /**
@@ -190,6 +193,62 @@ export {
   qualityOfLifeConditions,
   whatMattersMostValues,
 } from "./wishes-structure";
+
+// ============================================================================
+// Reactive Hooks (Perspective-Aware)
+// ============================================================================
+
+/**
+ * Hook that returns wishes sections with current perspective translations.
+ * Re-renders when perspective changes via the dev menu.
+ */
+export function useWishesSections(): WishesSection[] {
+  const translations = useTranslations();
+  return useMemo(
+    () => getWishesSectionsWithText(translations.wishes),
+    [translations.wishes],
+  );
+}
+
+/**
+ * Hook to get a wishes section by ID with current perspective translations.
+ */
+export function useWishesSection(
+  sectionId: string,
+): WishesSection | undefined {
+  const sections = useWishesSections();
+  return useMemo(
+    () => sections.find((s) => s.id === sectionId),
+    [sections, sectionId],
+  );
+}
+
+/**
+ * Hook to get a wishes task with current perspective translations.
+ */
+export function useWishesTask(
+  sectionId: string,
+  taskId: string,
+): WishesTask | undefined {
+  const section = useWishesSection(sectionId);
+  return useMemo(
+    () => section?.tasks.find((t) => t.id === taskId),
+    [section, taskId],
+  );
+}
+
+/**
+ * Hook to get a wishes section by task key with current perspective translations.
+ */
+export function useWishesSectionByTaskKey(
+  taskKey: string,
+): WishesSection | undefined {
+  const sections = useWishesSections();
+  return useMemo(
+    () => sections.find((s) => s.tasks.some((t) => t.taskKey === taskKey)),
+    [sections, taskKey],
+  );
+}
 
 // Also export structural types for new code
 export type {

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { faithTraditions } from "@/constants/wishes";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
@@ -24,6 +25,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateFaithPreferencesSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    traditionLabel: "What is your faith or spiritual tradition?",
+    ritualsPlaceholder:
+      "Prayers, ceremonies, traditions that are important to you...",
+    notesPlaceholder: "Anything else about your spiritual preferences...",
+  },
+  family: {
+    traditionLabel: "What is their faith or spiritual tradition?",
+    ritualsPlaceholder:
+      "Prayers, ceremonies, traditions that are important to them...",
+    notesPlaceholder: "Anything else about their spiritual preferences...",
+  },
+};
 
 interface FaithPreferencesFormValues {
   tradition: string;
@@ -43,6 +59,8 @@ export function FaithPreferencesForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | FaithPreferencesMetadata
@@ -129,7 +147,7 @@ export function FaithPreferencesForm({
             style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
             <Select
-              label="What is your faith or spiritual tradition?"
+              label={t.traditionLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={faithTraditions}
@@ -194,7 +212,7 @@ export function FaithPreferencesForm({
               label="Rituals or customs to observe"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Prayers, ceremonies, traditions that are important to you..."
+              placeholder={t.ritualsPlaceholder}
               maxLength={2000}
             />
           </View>
@@ -208,7 +226,7 @@ export function FaithPreferencesForm({
               label="Additional notes"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Anything else about your spiritual preferences..."
+              placeholder={t.notesPlaceholder}
               maxLength={2000}
             />
           </View>

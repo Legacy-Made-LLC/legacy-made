@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Dimensions,
   Image,
@@ -21,8 +21,9 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
-import { vaultSections } from "@/constants/vault";
-import { wishesSections } from "@/constants/wishes";
+import { useVaultSections } from "@/constants/vault";
+import { useWishesSections } from "@/constants/wishes";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { useAllProgressQuery } from "@/hooks/queries";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -30,68 +31,108 @@ const CARD_GAP = spacing.md;
 const HORIZONTAL_PADDING = spacing.lg;
 const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
-// Compute total task counts from section definitions
-const informationTaskKeys = vaultSections.flatMap((s) =>
-  s.tasks.map((t) => t.taskKey),
-);
-const wishesTaskKeys = wishesSections.flatMap((s) =>
-  s.tasks.map((t) => t.taskKey),
-);
+const pillarText = {
+  owner: {
+    pageTitle: "Your Progress",
+    greeting: "You\u2019ve started something meaningful.",
+    information: "Accounts, documents, and key contacts — all in one place.",
+    wishes: "Your healthcare values and end-of-life preferences.",
+    legacy: "Letters, videos, and memories for the people you love.",
+    family: "Share access and keep loved ones in the loop.",
+  },
+  family: {
+    pageTitle: "Their Progress",
+    greeting: "You\u2019re helping preserve what matters.",
+    information: "Their accounts, documents, and key contacts — all in one place.",
+    wishes: "Their healthcare values and end-of-life preferences.",
+    legacy: "Letters, videos, and memories for the people they love.",
+    family: "Shared access and keeping loved ones in the loop.",
+  },
+};
 
-// Pillar definitions for the home screen
-const pillars = [
-  {
-    id: "information",
-    title: "Information",
-    description: "Accounts, documents, and key contacts — all in one place.",
-    icon: "document-text-outline" as const,
-    totalItems: informationTaskKeys.length,
-    taskKeys: informationTaskKeys,
-    route: "/(app)/(tabs)/information" as Href,
-    color: colors.featureInformation,
-    tint: colors.featureInformationTint,
-  },
-  {
-    id: "wishes",
-    title: "Wishes",
-    description: "Your healthcare values and end-of-life preferences.",
-    icon: "heart-outline" as const,
-    totalItems: wishesTaskKeys.length,
-    taskKeys: wishesTaskKeys,
-    route: "/(app)/(tabs)/wishes" as Href,
-    color: colors.featureWishes,
-    tint: colors.featureWishesTint,
-  },
-  {
-    id: "legacy",
-    title: "Legacy",
-    description: "Letters, videos, and memories for the people you love.",
-    icon: "videocam-outline" as const,
-    totalItems: 0,
-    taskKeys: [] as string[],
-    route: "/(app)/(tabs)/legacy" as Href,
-    color: colors.featureLegacy,
-    tint: colors.featureLegacyTint,
-  },
-  {
-    id: "family",
-    title: "Family",
-    description: "Share access and keep loved ones in the loop.",
-    icon: "people-outline" as const,
-    totalItems: 0,
-    taskKeys: [] as string[],
-    route: "/(app)/(tabs)/family" as Href,
-    color: colors.featureFamily,
-    tint: colors.featureFamilyTint,
-  },
-];
+/** Build pillar definitions using current section data */
+function usePillars() {
+  const vaultSections = useVaultSections();
+  const wishesSections = useWishesSections();
+  const { perspective } = usePerspective();
+
+  return useMemo(() => {
+    const informationTaskKeys = vaultSections.flatMap((s) =>
+      s.tasks.map((t) => t.taskKey),
+    );
+    const wishesTaskKeys = wishesSections.flatMap((s) =>
+      s.tasks.map((t) => t.taskKey),
+    );
+
+    const t = pillarText[perspective];
+
+    return [
+      {
+        id: "information",
+        title: "Information",
+        description: t.information,
+        icon: "document-text-outline" as const,
+        totalItems: informationTaskKeys.length,
+        taskKeys: informationTaskKeys,
+        route: "/(app)/(tabs)/information" as Href,
+        color: colors.featureInformation,
+        tint: colors.featureInformationTint,
+      },
+      {
+        id: "wishes",
+        title: "Wishes",
+        description: t.wishes,
+        icon: "heart-outline" as const,
+        totalItems: wishesTaskKeys.length,
+        taskKeys: wishesTaskKeys,
+        route: "/(app)/(tabs)/wishes" as Href,
+        color: colors.featureWishes,
+        tint: colors.featureWishesTint,
+      },
+      {
+        id: "legacy",
+        title: "Legacy",
+        description: t.legacy,
+        icon: "videocam-outline" as const,
+        totalItems: 0,
+        taskKeys: [] as string[],
+        route: "/(app)/(tabs)/legacy" as Href,
+        color: colors.featureLegacy,
+        tint: colors.featureLegacyTint,
+      },
+      {
+        id: "family",
+        title: "Family",
+        description: t.family,
+        icon: "people-outline" as const,
+        totalItems: 0,
+        taskKeys: [] as string[],
+        route: "/(app)/(tabs)/family" as Href,
+        color: colors.featureFamily,
+        tint: colors.featureFamilyTint,
+      },
+    ];
+  }, [vaultSections, wishesSections, perspective]);
+}
 
 // Circular progress configuration
 const CIRCLE_SIZE = 64;
 const CIRCLE_STROKE_WIDTH = 4;
 
+interface PillarDef {
+  id: string;
+  title: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  totalItems: number;
+  taskKeys: string[];
+  route: Href;
+  color: string;
+  tint: string;
+}
+
 interface PillarCardProps {
-  pillar: (typeof pillars)[number];
+  pillar: PillarDef;
   currentProgress: number;
   onPress: () => void;
 }
@@ -152,10 +193,12 @@ function countCompleted(
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const pillars = usePillars();
   const { data: progress = {} } = useAllProgressQuery();
+  const { perspective } = usePerspective();
 
   // Get completed task count for each pillar
-  const getPillarProgress = (pillar: (typeof pillars)[number]) => {
+  const getPillarProgress = (pillar: PillarDef) => {
     return countCompleted(pillar.taskKeys, progress);
   };
 
@@ -177,9 +220,9 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.pageTitle}>Your Progress</Text>
+        <Text style={styles.pageTitle}>{pillarText[perspective].pageTitle}</Text>
         <Text style={styles.greeting}>
-          You&apos;ve started something meaningful.
+          {pillarText[perspective].greeting}
         </Text>
       </View>
 
