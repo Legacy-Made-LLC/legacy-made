@@ -15,6 +15,7 @@ import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import { borderRadius, colors, shadows, spacing, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePerspective } from "@/contexts/LocaleContext";
 
 interface DevAction {
   id: string;
@@ -36,6 +37,7 @@ export function DevMenu() {
   const queryClient = useQueryClient();
   const isFetching = useIsFetching();
   const isLoading = isFetching > 0;
+  const { perspective, setPerspective } = usePerspective();
 
   const insets = useSafeAreaInsets();
 
@@ -68,7 +70,17 @@ export function DevMenu() {
     setIsOpen(false);
   };
 
+  const handleTogglePerspective = () => {
+    setPerspective(perspective === "owner" ? "family" : "owner");
+  };
+
   const actions: DevAction[] = [
+    {
+      id: "toggle-perspective",
+      label: `Perspective: ${perspective === "owner" ? "Owner (you/your)" : "Family (they/their)"}`,
+      icon: "people-outline",
+      onPress: handleTogglePerspective,
+    },
     {
       id: "skip-onboarding",
       label: hasCompletedInitialOnboarding ? "Onboarding already complete" : "Skip Onboarding",
@@ -145,6 +157,13 @@ export function DevMenu() {
                     isSignedIn ? styles.statusComplete : styles.statusIncomplete
                   ]}>
                     {isSignedIn ? "Signed in" : "Not signed in"}
+                  </Text>
+                </View>
+
+                <View style={styles.statusRow}>
+                  <Text style={styles.statusLabel}>Perspective:</Text>
+                  <Text style={[styles.statusValue, styles.statusComplete]}>
+                    {perspective === "owner" ? "Owner" : "Family"}
                   </Text>
                 </View>
 
