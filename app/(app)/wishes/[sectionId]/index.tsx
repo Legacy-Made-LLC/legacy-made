@@ -7,7 +7,7 @@
 
 import { WishesTaskPicker } from "@/components/wishes/WishesTaskPicker";
 import { colors, spacing, typography } from "@/constants/theme";
-import { getWishesSection } from "@/constants/wishes";
+import { useWishesSection } from "@/constants/wishes";
 import { useAllProgressQuery, usePrefetchWishesByTaskKeys } from "@/hooks/queries";
 import { Redirect, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useLayoutEffect, useMemo } from "react";
@@ -18,7 +18,7 @@ export default function WishesSectionScreen() {
   const navigation = useNavigation();
   const { data: progress = {} } = useAllProgressQuery();
 
-  const section = getWishesSection(sectionId);
+  const section = useWishesSection(sectionId);
 
   // Prefetch wishes for all tasks in this section
   const taskKeys = useMemo(

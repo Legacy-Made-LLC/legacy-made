@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -23,6 +24,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateServicePreferencesSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    serviceTypeLabel: "What type of service would you want?",
+    readingsPlaceholder: "Scripture, poems, or passages that matter to you",
+    speakersPlaceholder: "Anyone you'd want to give a eulogy or share memories?",
+    notesPlaceholder: "Any other wishes for how you want to be remembered...",
+  },
+  family: {
+    serviceTypeLabel: "What type of service would they want?",
+    readingsPlaceholder: "Scripture, poems, or passages that matter to them",
+    speakersPlaceholder: "Anyone they'd want to give a eulogy or share memories?",
+    notesPlaceholder: "Any other wishes for how they want to be remembered...",
+  },
+};
 
 const serviceTypeOptions = [
   { value: "traditional-funeral", label: "Traditional funeral service" },
@@ -62,6 +78,8 @@ export function ServicePreferencesForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | ServicePreferencesMetadata
@@ -152,7 +170,7 @@ export function ServicePreferencesForm({
             style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
             <Select
-              label="What type of service would you want?"
+              label={t.serviceTypeLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={serviceTypeOptions}
@@ -220,7 +238,7 @@ export function ServicePreferencesForm({
                       label="Readings or poems"
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
-                      placeholder="Scripture, poems, or passages that matter to you"
+                      placeholder={t.readingsPlaceholder}
                       maxLength={1000}
                     />
                   </View>
@@ -234,7 +252,7 @@ export function ServicePreferencesForm({
                       label="Who should speak?"
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
-                      placeholder="Anyone you'd want to give a eulogy or share memories?"
+                      placeholder={t.speakersPlaceholder}
                       maxLength={1000}
                     />
                   </View>
@@ -266,7 +284,7 @@ export function ServicePreferencesForm({
               label="Additional notes"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Any other wishes for how you want to be remembered..."
+              placeholder={t.notesPlaceholder}
               maxLength={2000}
             />
           </View>

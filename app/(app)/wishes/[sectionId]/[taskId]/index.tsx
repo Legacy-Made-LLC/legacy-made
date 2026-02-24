@@ -29,9 +29,9 @@ import {
 } from "@/components/wishes/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import {
-  getWishesSection,
-  getWishesSectionByTaskKey,
-  getWishesTask,
+  useWishesSection,
+  useWishesSectionByTaskKey,
+  useWishesTask,
 } from "@/constants/wishes";
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
@@ -65,9 +65,9 @@ export default function WishesTaskScreen() {
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
 
-  const section = getWishesSection(sectionId);
-  const task = getWishesTask(sectionId, taskId);
-  const sectionByKey = task ? getWishesSectionByTaskKey(task.taskKey) : null;
+  const section = useWishesSection(sectionId);
+  const task = useWishesTask(sectionId, taskId);
+  const sectionByKey = useWishesSectionByTaskKey(task?.taskKey ?? "");
 
   // Set the header title before first render
   useLayoutEffect(() => {

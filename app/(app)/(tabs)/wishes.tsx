@@ -12,14 +12,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LockedFeatureOverlay, ViewOnlyBadge } from "@/components/entitlements";
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
-import { wishesSections } from "@/constants/wishes";
+import { useWishesSections } from "@/constants/wishes";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useAllProgressQuery } from "@/hooks/queries";
+
+const pageText = {
+  owner: {
+    description: "Your values, preferences, and words\nfor those who matter most",
+  },
+  family: {
+    description: "Their values, preferences, and words\nfor those who matter most",
+  },
+};
 
 export default function WishesScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+  const wishesSections = useWishesSections();
   const { data: progress = {} } = useAllProgressQuery();
+  const { perspective } = usePerspective();
 
   const isLocked = isLockedPillar("wishes");
   const isViewOnly = isViewOnlyPillar("wishes");
@@ -52,7 +64,7 @@ export default function WishesScreen() {
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Wishes & Guidance</Text>
         <Text style={styles.description}>
-          Your values, preferences, and words{"\n"}for those who matter most
+          {pageText[perspective].description}
         </Text>
       </View>
 

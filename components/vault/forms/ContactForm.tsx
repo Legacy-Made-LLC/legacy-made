@@ -8,6 +8,7 @@ import type { MetadataSchema } from "@/api/types";
 import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
 import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
 import { colors, spacing, typography } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -21,6 +22,15 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
+
+const formText = {
+  owner: {
+    photoHelp: "Adding a photo helps your family identify who to contact",
+  },
+  family: {
+    photoHelp: "A photo helps identify who to contact",
+  },
+};
 
 /** Display schema for contact metadata */
 const CONTACT_METADATA_SCHEMA: MetadataSchema = {
@@ -73,6 +83,8 @@ export function ContactForm({
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
   const isNew = !entryId;
 
   // Extract initial values from initialData
@@ -180,7 +192,7 @@ export function ContactForm({
             mode="image"
             maxFiles={1}
             placeholder="Add a photo of this person"
-            helpText="Adding a photo helps your family identify who to contact"
+            helpText={t.photoHelp}
             showStorageIndicator
             onUpgradeRequired={onStorageUpgradeRequired}
           />

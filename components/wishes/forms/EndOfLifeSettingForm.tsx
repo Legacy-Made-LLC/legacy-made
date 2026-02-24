@@ -12,6 +12,7 @@ import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -22,6 +23,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateEndOfLifeSettingSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    settingLabel: "Where would you want to be?",
+    settingNotesPlaceholder: "What makes this setting feel right for you?",
+    visitorsPlaceholder:
+      "Who would you want nearby? Anyone you'd prefer not to have there?",
+    notesPlaceholder:
+      "Anything else about your end-of-life setting preferences...",
+  },
+  family: {
+    settingLabel: "Where would they want to be?",
+    settingNotesPlaceholder: "What makes this setting feel right for them?",
+    visitorsPlaceholder:
+      "Who would they want nearby? Anyone they'd prefer not to have there?",
+    notesPlaceholder:
+      "Anything else about their end-of-life setting preferences...",
+  },
+};
 
 const settingOptions = [
   { value: "home", label: "At home" },
@@ -48,6 +68,8 @@ export function EndOfLifeSettingForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | EndOfLifeSettingMetadata
@@ -132,7 +154,7 @@ export function EndOfLifeSettingForm({
             style={[wishesFormStyles.fieldContainer, { marginTop: spacing.sm }]}
           >
             <Select
-              label="Where would you want to be?"
+              label={t.settingLabel}
               value={field.state.value}
               onValueChange={(val) => field.handleChange(val)}
               options={settingOptions}
@@ -153,7 +175,7 @@ export function EndOfLifeSettingForm({
                     label="Why this choice?"
                     value={field.state.value}
                     onChangeText={(text) => field.handleChange(text)}
-                    placeholder="What makes this setting feel right for you?"
+                    placeholder={t.settingNotesPlaceholder}
                     maxLength={1000}
                   />
                 </View>
@@ -172,7 +194,7 @@ export function EndOfLifeSettingForm({
               label="Visitors and presence"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Who would you want nearby? Anyone you'd prefer not to have there?"
+              placeholder={t.visitorsPlaceholder}
               maxLength={1000}
             />
           </View>
@@ -202,7 +224,7 @@ export function EndOfLifeSettingForm({
               label="Additional notes"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Anything else about your end-of-life setting preferences..."
+              placeholder={t.notesPlaceholder}
               maxLength={2000}
             />
           </View>

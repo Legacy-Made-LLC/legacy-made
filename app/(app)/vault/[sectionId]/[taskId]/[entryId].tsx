@@ -18,7 +18,7 @@ import {
 import { UpgradePrompt } from "@/components/entitlements";
 import { getFormComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
-import { getTask } from "@/constants/vault";
+import { useVaultTask } from "@/constants/vault";
 import { usePlan } from "@/data/PlanProvider";
 import {
   QuotaExceededError,
@@ -49,7 +49,7 @@ export default function EntryScreen() {
   const { planId } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
-  const task = getTask(sectionId, taskId);
+  const task = useVaultTask(sectionId, taskId);
   const isNew = entryId === "new";
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);

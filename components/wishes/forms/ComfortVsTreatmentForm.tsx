@@ -12,6 +12,7 @@ import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -22,6 +23,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateComfortVsTreatmentSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    notesPlaceholder: "Any other preferences about your care...",
+  },
+  family: {
+    notesPlaceholder: "Any other preferences about their care...",
+  },
+};
 
 const preferenceOptions = [
   {
@@ -76,6 +86,8 @@ export function ComfortVsTreatmentForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | ComfortVsTreatmentMetadata
@@ -206,7 +218,7 @@ export function ComfortVsTreatmentForm({
               label="Additional notes"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Any other preferences about your care..."
+              placeholder={t.notesPlaceholder}
               maxLength={2000}
             />
           </View>

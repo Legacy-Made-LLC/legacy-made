@@ -4,12 +4,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
-import { vaultSections } from "@/constants/vault";
+import { useVaultSections } from "@/constants/vault";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { useAllProgressQuery } from "@/hooks/queries";
+
+const pageText = {
+  owner: {
+    description: "Accounts, documents, and contacts —\norganized for when it matters",
+  },
+  family: {
+    description: "Their accounts, documents, and contacts —\norganized for when it matters",
+  },
+};
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
+  const vaultSections = useVaultSections();
   const { data: progress = {} } = useAllProgressQuery();
+  const { perspective } = usePerspective();
 
   return (
     <ScrollView
@@ -23,7 +35,7 @@ export default function InformationScreen() {
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Information Vault</Text>
         <Text style={styles.description}>
-          Accounts, documents, and contacts —{"\n"}organized for when it matters
+          {pageText[perspective].description}
         </Text>
       </View>
 

@@ -12,6 +12,7 @@ import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { Input } from "@/components/ui/Input";
 import { TextArea } from "@/components/ui/TextArea";
 import { colors, spacing } from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
@@ -22,6 +23,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { WishFormProps, WishSaveData } from "../registry";
 import { generateHardSituationsSchema } from "../schemaGenerators";
 import { wishesFormStyles } from "./formStyles";
+
+const formText = {
+  owner: {
+    decisionMakerPlaceholder: "Name of the person you trust most",
+  },
+  family: {
+    decisionMakerPlaceholder: "Name of the person they trust most",
+  },
+};
 
 interface HardSituationsFormValues {
   decisionMaker: string;
@@ -40,6 +50,8 @@ export function HardSituationsForm({
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { perspective } = usePerspective();
+  const t = formText[perspective];
 
   const initialMetadata = initialData?.metadata as
     | HardSituationsMetadata
@@ -127,7 +139,7 @@ export function HardSituationsForm({
               label="Who should make decisions if people disagree?"
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
-              placeholder="Name of the person you trust most"
+              placeholder={t.decisionMakerPlaceholder}
             />
           </View>
         )}
