@@ -53,3 +53,16 @@ export {
   useMarkTaskInProgress,
   useSetProgressIfNew,
 } from './useProgressMutations';
+
+// Trusted Contacts
+export {
+  useTrustedContactsQuery,
+  useTrustedContactQuery,
+} from './useTrustedContactsQuery';
+
+export {
+  useCreateTrustedContact,
+  useUpdateTrustedContact,
+  useDeleteTrustedContact,
+  useResendInvitation,
+} from './useTrustedContactsMutations';

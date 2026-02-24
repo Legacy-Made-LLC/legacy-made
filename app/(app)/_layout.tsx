@@ -211,6 +211,18 @@ export default function AppLayout() {
               title: "",
             }}
           />
+          <Stack.Screen
+            name="family/contacts/new"
+            options={{
+              title: "Add Trusted Contact",
+            }}
+          />
+          <Stack.Screen
+            name="family/contacts/[contactId]"
+            options={{
+              title: "Trusted Contact",
+            }}
+          />
         </Stack>
       </View>
     </View>

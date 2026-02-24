@@ -5,6 +5,7 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
+import * as Sentry from '@sentry/react-native';
 
 export function createQueryClient() {
   return new QueryClient({
@@ -24,6 +25,10 @@ export function createQueryClient() {
       mutations: {
         // Retry mutations once on failure
         retry: 1,
+        // Report all mutation errors to Sentry
+        onError: (error) => {
+          Sentry.captureException(error);
+        },
       },
     },
   });

@@ -11,8 +11,12 @@ import { Button } from "./Button";
 interface EmptyStateProps {
   title: string;
   description: string;
-  buttonTitle: string;
-  onButtonPress: () => void;
+  buttonTitle?: string;
+  onButtonPress?: () => void;
+  /** Override the default icon (defaults to "add-circle-outline") */
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** Override the icon color */
+  iconColor?: string;
   style?: ViewStyle;
 }
 
@@ -21,23 +25,27 @@ export function EmptyState({
   description,
   buttonTitle,
   onButtonPress,
+  icon = "add-circle-outline",
+  iconColor = colors.textTertiary,
   style,
 }: EmptyStateProps) {
   return (
     <View style={[styles.container, style]}>
       <Ionicons
-        name="add-circle-outline"
+        name={icon}
         size={40}
-        color={colors.textTertiary}
+        color={iconColor}
         style={styles.icon}
       />
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-      <Button
-        title={buttonTitle}
-        onPress={onButtonPress}
-        style={styles.button}
-      />
+      <Text style={[styles.description, !buttonTitle && styles.descriptionNoButton]}>{description}</Text>
+      {buttonTitle && onButtonPress && (
+        <Button
+          title={buttonTitle}
+          onPress={onButtonPress}
+          style={styles.button}
+        />
+      )}
     </View>
   );
 }
@@ -68,6 +76,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
+  },
+  descriptionNoButton: {
+    marginBottom: 0,
   },
   button: {
     minWidth: 200,

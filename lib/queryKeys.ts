@@ -48,4 +48,11 @@ export const queryKeys = {
     // Single progress record by taskKey
     byKey: (planId: string, key: string) => ['progress', planId, key] as const,
   },
+  trustedContacts: {
+    // All trusted contacts for a plan
+    all: (planId: string) => ['trustedContacts', planId] as const,
+    // Single trusted contact detail
+    single: (planId: string, contactId: string) =>
+      ['trustedContacts', planId, 'detail', contactId] as const,
+  },
 } as const;

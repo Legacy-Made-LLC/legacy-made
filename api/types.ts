@@ -497,6 +497,103 @@ export interface StorageQuotaError {
 }
 
 // ============================================================================
+// Trusted Contact Types (Family Access Pillar)
+// ============================================================================
+
+/**
+ * Access levels for trusted contacts
+ */
+export type TrustedContactAccessLevel =
+  | "full_edit"
+  | "full_view"
+  | "limited_view"
+  | "view_only";
+
+/**
+ * When the trusted contact should receive access
+ */
+export type TrustedContactAccessTiming = "immediate" | "upon_passing";
+
+/**
+ * Status of a trusted contact invitation
+ */
+export type TrustedContactStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "revoked_by_owner"
+  | "revoked_by_contact";
+
+/**
+ * Trusted contact record from the API
+ */
+export interface TrustedContact {
+  id: string;
+  planId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  relationship?: string;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  accessStatus: TrustedContactStatus;
+  clerkUserId?: string;
+  notes?: string;
+  invitedAt: string;
+  acceptedAt?: string;
+  declinedAt?: string;
+  revokedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Request type for creating a trusted contact
+ */
+export interface CreateTrustedContactRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  relationship?: string;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  notes?: string;
+}
+
+/**
+ * Request type for updating a trusted contact
+ * Email is immutable once set
+ */
+export interface UpdateTrustedContactRequest {
+  firstName?: string;
+  lastName?: string;
+  relationship?: string;
+  accessLevel?: TrustedContactAccessLevel;
+  accessTiming?: TrustedContactAccessTiming;
+  notes?: string;
+}
+
+// ============================================================================
+// Access Invitation Types (Public Deep Link Flow)
+// ============================================================================
+
+/**
+ * Invitation details returned by the public GET endpoint
+ * No authentication required to view these.
+ */
+export interface InvitationDetails {
+  id: string;
+  planId: string;
+  ownerName: string;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  accessStatus: TrustedContactStatus;
+  contactEmail: string;
+  contactFirstName: string;
+  contactLastName: string;
+}
+
+// ============================================================================
 // Wishes Metadata Types
 // ============================================================================
 

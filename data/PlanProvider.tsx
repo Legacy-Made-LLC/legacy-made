@@ -5,13 +5,9 @@
  * the planId for use in API calls throughout the app.
  */
 
-import React, {
-  createContext,
-  useContext,
-  type ReactNode,
-} from 'react';
-import type { Plan } from '@/api';
-import { usePlanQuery } from '@/hooks/queries/usePlanQuery';
+import type { Plan } from "@/api";
+import { usePlanQuery } from "@/hooks/queries/usePlanQuery";
+import React, { createContext, useContext, type ReactNode } from "react";
 
 interface PlanContextType {
   /** The user's plan (null if not loaded yet) */
@@ -40,7 +36,9 @@ export function PlanProvider({ children }: PlanProviderProps) {
     planId: plan?.id ?? null,
     isLoading,
     error,
-    refetch: async () => { await refetch(); },
+    refetch: async () => {
+      await refetch();
+    },
   };
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
@@ -65,7 +63,7 @@ export function PlanProvider({ children }: PlanProviderProps) {
 export function usePlan() {
   const context = useContext(PlanContext);
   if (context === undefined) {
-    throw new Error('usePlan must be used within a PlanProvider');
+    throw new Error("usePlan must be used within a PlanProvider");
   }
   return context;
 }

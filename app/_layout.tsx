@@ -102,8 +102,22 @@ export default Sentry.wrap(function RootLayout() {
                             headerShown: false,
                             animation: "fade",
                           }}
+                          initialRouteName="index"
                         >
-                          {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
+                          <Stack.Screen name="index" />
+                          <Stack.Screen name="(app)" />
+                          <Stack.Screen name="(auth)" />
+                          <Stack.Screen
+                            name="(onboarding)"
+                            options={{ animation: "fade" }}
+                          />
+                          <Stack.Screen
+                            name="invitations/[token]"
+                            options={{
+                              headerShown: false,
+                              presentation: "modal",
+                            }}
+                          />
                         </Stack>
                         <StatusBar style="dark" />
                         <Toast />

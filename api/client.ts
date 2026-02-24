@@ -103,10 +103,9 @@ async function request<T>(
 
     clearTimeout(timeoutId);
 
-    // Parse response
-    const data = await response.json();
-
+    // Handle error responses
     if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
       const apiError = data as ApiError;
       throw new ApiClientError(
         apiError.message || `Request failed with status ${response.status}`,
@@ -115,7 +114,12 @@ async function request<T>(
       );
     }
 
-    return data as T;
+    // Handle empty responses (204 No Content, etc.)
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+      return undefined as T;
+    }
+
+    return await response.json() as T;
   } catch (error) {
     clearTimeout(timeoutId);
 

@@ -4,12 +4,14 @@
 
 import { useMemo, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
+import { createAccessInvitationsService } from './accessInvitations';
 import { createApiClient } from './client';
 import { createEntriesService } from './entries';
 import { createEntitlementsService } from './entitlements';
 import { createFilesService } from './files';
 import { createPlansService } from './plans';
 import { createProgressService } from './progress';
+import { createTrustedContactsService } from './trustedContacts';
 import { createWishesService } from './wishes';
 
 /**
@@ -67,6 +69,14 @@ export function useApi() {
     return createProgressService(client);
   }, [client]);
 
+  const trustedContacts = useMemo(() => {
+    return createTrustedContactsService(client);
+  }, [client]);
+
+  const accessInvitations = useMemo(() => {
+    return createAccessInvitationsService(client);
+  }, [client]);
+
   return {
     /** The base API client for custom requests */
     client,
@@ -82,6 +92,10 @@ export function useApi() {
     wishes,
     /** Progress service for task completion tracking */
     progress,
+    /** Trusted contacts service for family access management */
+    trustedContacts,
+    /** Access invitations service for accepting/declining invitations */
+    accessInvitations,
     /** Whether the user is signed in */
     isSignedIn,
     /** Whether Clerk has finished loading */
