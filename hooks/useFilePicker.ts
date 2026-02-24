@@ -1,4 +1,5 @@
 import { FileAttachment, FileType } from "@/api/types";
+import { toast } from "@/hooks/useToast";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
@@ -199,7 +200,7 @@ export function useFilePicker(
         return attachment;
       } catch (error) {
         console.error("Error picking from library:", error);
-        Alert.alert("Error", "Failed to select file. Please try again.");
+        toast.error({ message: "Failed to select file. Please try again." });
         return null;
       } finally {
         setIsLoading(false);
@@ -240,7 +241,7 @@ export function useFilePicker(
         return attachment;
       } catch (error) {
         console.error("Error capturing from camera:", error);
-        Alert.alert("Error", "Failed to capture. Please try again.");
+        toast.error({ message: "Failed to capture. Please try again." });
         return null;
       } finally {
         setIsLoading(false);
@@ -291,7 +292,7 @@ export function useFilePicker(
       return attachment;
     } catch (error) {
       console.error("Error picking document:", error);
-      Alert.alert("Error", "Failed to select document. Please try again.");
+      toast.error({ message: "Failed to select document. Please try again." });
       return null;
     } finally {
       setIsLoading(false);

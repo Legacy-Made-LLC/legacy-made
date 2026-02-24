@@ -36,6 +36,9 @@ export {
   WishQuotaExceededError,
 } from './useWishesMutations';
 
+// Plan
+export { usePlanQuery } from './usePlanQuery';
+
 // Entitlements
 export { useEntitlementsQuery } from './useEntitlementsQuery';
 

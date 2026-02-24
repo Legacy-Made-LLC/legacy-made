@@ -3,6 +3,7 @@ import { StorageIndicator } from "@/components/entitlements/StorageIndicator";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { PickerMode, useFilePicker } from "@/hooks/useFilePicker";
+import { toast } from "@/hooks/useToast";
 import { Ionicons } from "@expo/vector-icons";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -114,10 +115,10 @@ export function FilePicker({
       // Check if sharing is available
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert(
-          "Sharing Not Available",
-          "Sharing is not available on this device.",
-        );
+        toast.info({
+          title: "Sharing not available",
+          message: "Sharing is not available on this device.",
+        });
         return;
       }
 
@@ -154,7 +155,7 @@ export function FilePicker({
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
-        Alert.alert("Share Failed", `Could not share file: ${message}`);
+        toast.error({ title: "Share failed", message: `Could not share file: ${message}` });
       } finally {
         setSharingIds((prev) => {
           const next = new Set(prev);

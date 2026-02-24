@@ -50,6 +50,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { toast } from "@/hooks/useToast";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
 export default function WishesTaskScreen() {
@@ -178,19 +179,19 @@ export default function WishesTaskScreen() {
             (r) => !r.success && !r.isStorageQuotaError,
           );
           if (failedUploads.length > 0) {
-            Alert.alert(
-              "Upload Failed",
-              `${failedUploads.length} file${failedUploads.length > 1 ? "s" : ""} failed to upload. Try adding them again.`,
-            );
+            toast.error({
+              title: "Upload failed",
+              message: `${failedUploads.length} file${failedUploads.length > 1 ? "s" : ""} failed to upload. Try adding them again.`,
+            });
           }
         } catch (uploadError) {
           if (isStorageQuotaError(uploadError)) {
             setShowStorageUpgradePrompt(true);
           } else {
-            Alert.alert(
-              "Upload Error",
-              "An error occurred during file upload.",
-            );
+            toast.error({
+              title: "Upload error",
+              message: "An error occurred during file upload.",
+            });
           }
         }
       }
@@ -436,10 +437,9 @@ export default function WishesTaskScreen() {
               await autoSave.flushSave();
               wishId = autoSave.recordId;
             } catch {
-              Alert.alert(
-                "Error",
-                "Could not save your wish before uploading files. Please try again."
-              );
+              toast.error({
+                message: "Could not save your wish before uploading files. Please try again.",
+              });
               return;
             }
           }

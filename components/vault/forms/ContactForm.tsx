@@ -9,6 +9,7 @@ import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
 import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePerspective } from "@/contexts/LocaleContext";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -33,7 +34,7 @@ const formText = {
 };
 
 /** Display schema for contact metadata */
-const CONTACT_METADATA_SCHEMA: MetadataSchema = {
+export const CONTACT_METADATA_SCHEMA: MetadataSchema = {
   version: 1,
   fields: {
     firstName: { label: "First Name", order: 1 },
@@ -122,6 +123,8 @@ export function ContactForm({
         isPrimary: taskKey === "contacts.primary",
       };
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title,
@@ -132,7 +135,7 @@ export function ContactForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save contact";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -155,12 +158,13 @@ export function ContactForm({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
+          if (toast.isOffline()) return;
           try {
             await onDelete();
           } catch (err) {
             const message =
               err instanceof Error ? err.message : "Failed to delete contact";
-            Alert.alert("Error", message);
+            toast.error({ message });
           }
         },
       },

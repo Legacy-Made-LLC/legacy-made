@@ -12,6 +12,7 @@ import {
 } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -149,6 +150,8 @@ export function DigitalForm({
         ? value.service.trim()
         : value.accountName.trim();
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title,
@@ -159,7 +162,7 @@ export function DigitalForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save account";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -185,12 +188,13 @@ export function DigitalForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
               const message =
                 err instanceof Error ? err.message : "Failed to delete";
-              Alert.alert("Error", message);
+              toast.error({ message });
             }
           },
         },

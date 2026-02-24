@@ -6,6 +6,7 @@ import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, insuranceSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -113,6 +114,8 @@ export function InsuranceForm({
       // Generate title from provider + policy type
       const title = `${value.provider.trim()} ${value.policyType}`.trim();
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title,
@@ -123,7 +126,7 @@ export function InsuranceForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save policy";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -146,12 +149,13 @@ export function InsuranceForm({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
+          if (toast.isOffline()) return;
           try {
             await onDelete();
           } catch (err) {
             const message =
               err instanceof Error ? err.message : "Failed to delete policy";
-            Alert.alert("Error", message);
+            toast.error({ message });
           }
         },
       },

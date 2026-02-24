@@ -6,6 +6,7 @@ import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, financialSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -108,6 +109,8 @@ export function FinancialForm({
         value.accountName.trim() ||
         `${value.institution.trim()} ${value.accountType}`.trim();
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title,
@@ -118,7 +121,7 @@ export function FinancialForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save account";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -142,12 +145,13 @@ export function FinancialForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
               const message =
                 err instanceof Error ? err.message : "Failed to delete account";
-              Alert.alert("Error", message);
+              toast.error({ message });
             }
           },
         },

@@ -35,8 +35,9 @@ import {
 } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { toast } from "@/hooks/useToast";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -290,10 +291,10 @@ export default function EntryScreen() {
               );
             }
 
-            Alert.alert(
-              "Upload Failed",
-              `${errorMessage} Your entry has been saved. Try adding the files again.`,
-            );
+            toast.error({
+              title: "Upload failed",
+              message: `${errorMessage} Your entry has been saved. Try adding the files again.`,
+            });
           };
 
           try {

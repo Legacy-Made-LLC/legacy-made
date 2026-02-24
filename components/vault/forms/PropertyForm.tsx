@@ -6,6 +6,7 @@ import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, propertySchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -117,6 +118,8 @@ export function PropertyForm({
       // Generate title from type
       const title = value.propertyType;
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title,
@@ -127,7 +130,7 @@ export function PropertyForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save property";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -151,6 +154,7 @@ export function PropertyForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
@@ -158,7 +162,7 @@ export function PropertyForm({
                 err instanceof Error
                   ? err.message
                   : "Failed to delete property";
-              Alert.alert("Error", message);
+              toast.error({ message });
             }
           },
         },

@@ -10,7 +10,7 @@ export default function RootIndex() {
 
   // Wait for Clerk and onboarding state to load before making routing decisions
   if (!isLoaded || !isOnboardingStateLoaded) {
-    return <Loader />;
+    return <Loader branded />;
   }
 
   // If user hasn't completed onboarding, redirect to onboarding

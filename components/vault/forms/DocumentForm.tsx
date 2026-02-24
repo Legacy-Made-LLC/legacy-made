@@ -11,6 +11,7 @@ import {
 } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -128,6 +129,8 @@ export function DocumentForm({
       // Use document type as the title
       const title = value.documentType;
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title,
@@ -138,7 +141,7 @@ export function DocumentForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save document";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -163,6 +166,7 @@ export function DocumentForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
@@ -170,7 +174,7 @@ export function DocumentForm({
                 err instanceof Error
                   ? err.message
                   : "Failed to delete document";
-              Alert.alert("Error", message);
+              toast.error({ message });
             }
           },
         },

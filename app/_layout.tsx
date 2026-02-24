@@ -25,6 +25,7 @@ import "react-native-reanimated";
 import { DevMenu } from "@/components/dev/DevMenu";
 import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
+import { Toast } from "@/components/ui/Toast";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
@@ -105,6 +106,7 @@ export default Sentry.wrap(function RootLayout() {
                           {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
                         </Stack>
                         <StatusBar style="dark" />
+                        <Toast />
                         <DevMenu />
                       </EntitlementsProvider>
                     </PlanProvider>

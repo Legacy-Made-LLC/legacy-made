@@ -1,23 +1,28 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackHeaderProps } from "@react-navigation/native-stack";
+import { onlineManager } from "@tanstack/react-query";
 import { Redirect, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
+import Loader from "@/components/ui/Loader";
 import { Menu } from "@/components/ui/Menu";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
+import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { useCreateEntry } from "@/hooks/queries";
 
 // Custom header that doesn't add safe area inset (our parent Header handles it)
 // Supports custom options: headerDescription for subtitle text
 function StackHeader({ navigation, options, back }: NativeStackHeaderProps) {
-  const title = typeof options.title === 'string' ? options.title : '';
+  const title = typeof options.title === "string" ? options.title : "";
   // Access custom description option (cast to access custom properties)
-  const description = (options as { headerDescription?: string }).headerDescription;
+  const description = (options as { headerDescription?: string })
+    .headerDescription;
 
   return (
     <View style={headerStyles.container}>
@@ -50,8 +55,8 @@ function StackHeader({ navigation, options, back }: NativeStackHeaderProps) {
 
 const headerStyles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.background,
@@ -66,19 +71,19 @@ const headerStyles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontFamily: typography.fontFamily.serifSemiBold,
     fontSize: typography.sizes.titleLarge,
     color: colors.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   description: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     // marginTop: spacing.xs,
   },
   spacer: {
@@ -89,41 +94,65 @@ const headerStyles = StyleSheet.create({
 export default function AppLayout() {
   const { isSignedIn } = useAuth();
   const { pendingContact, clearPendingContact } = useOnboardingContext();
-  const { planId } = usePlan();
+  const {
+    planId,
+    isLoading: isPlanLoading,
+    error: planError,
+    refetch: refetchPlan,
+  } = usePlan();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
 
   // Create entry mutation for saving onboarding contact
-  const createContactMutation = useCreateEntry('contacts.primary');
+  const createContactMutation = useCreateEntry("contacts.primary");
 
   // Save the pending contact from onboarding after authentication and plan is ready
   useEffect(() => {
     if (pendingContact && planId && !hasSavedPendingContact.current) {
       hasSavedPendingContact.current = true;
       // Combine firstName and lastName for the Contact type
-      const fullName = `${pendingContact.firstName} ${pendingContact.lastName}`.trim();
+      const fullName =
+        `${pendingContact.firstName} ${pendingContact.lastName}`.trim();
 
-      createContactMutation.mutateAsync({
-        title: fullName,
-        notes: undefined,
-        metadata: {
-          firstName: pendingContact.firstName,
-          lastName: pendingContact.lastName,
-          relationship: pendingContact.relationship,
-          phone: pendingContact.phone,
-          email: pendingContact.email,
-          isPrimary: true,
-        },
-      }).then(() => {
-        clearPendingContact();
-        // TanStack Query handles cache invalidation automatically
-      });
+      createContactMutation
+        .mutateAsync({
+          title: fullName,
+          notes: undefined,
+          metadata: {
+            firstName: pendingContact.firstName,
+            lastName: pendingContact.lastName,
+            relationship: pendingContact.relationship,
+            phone: pendingContact.phone,
+            email: pendingContact.email,
+            isPrimary: true,
+          },
+          metadataSchema: CONTACT_METADATA_SCHEMA,
+        })
+        .then(() => {
+          clearPendingContact();
+          // TanStack Query handles cache invalidation automatically
+        });
     }
   }, [pendingContact, planId, createContactMutation, clearPendingContact]);
 
   if (!isSignedIn) {
     return <Redirect href="/(auth)" />;
+  }
+
+  // Show loading while plan is being fetched
+  if (isPlanLoading && !planId) {
+    return <Loader branded />;
+  }
+
+  // Show error screen if plan failed to load and we have no data
+  if (planError && !planId) {
+    return (
+      <ErrorScreen
+        isOffline={!onlineManager.isOnline()}
+        onRetry={refetchPlan}
+      />
+    );
   }
 
   return (
@@ -155,31 +184,31 @@ export default function AppLayout() {
           <Stack.Screen
             name="vault/[sectionId]/index"
             options={{
-              title: '',
+              title: "",
             }}
           />
           <Stack.Screen
             name="vault/[sectionId]/[taskId]/index"
             options={{
-              title: '',
+              title: "",
             }}
           />
           <Stack.Screen
             name="vault/[sectionId]/[taskId]/[entryId]"
             options={{
-              title: '',
+              title: "",
             }}
           />
           <Stack.Screen
             name="wishes/[sectionId]/index"
             options={{
-              title: '',
+              title: "",
             }}
           />
           <Stack.Screen
             name="wishes/[sectionId]/[taskId]/index"
             options={{
-              title: '',
+              title: "",
             }}
           />
         </Stack>

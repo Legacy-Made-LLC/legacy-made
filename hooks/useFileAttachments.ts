@@ -11,9 +11,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
-import { Alert } from "react-native";
 
 import { useApi } from "@/api";
+import { toast } from "@/hooks/useToast";
 import type { FileAttachment } from "@/api/types";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -165,10 +165,9 @@ export function useFileAttachments(
 
       // Show error if any deletions failed
       if (failedCount > 0) {
-        Alert.alert(
-          "Error",
-          `${failedCount} file${failedCount > 1 ? "s" : ""} could not be deleted. Please try again.`
-        );
+        toast.error({
+          message: `${failedCount} file${failedCount > 1 ? "s" : ""} could not be deleted. Please try again.`,
+        });
       }
 
       return { hadRemoteDeletions: true, hadSuccessfulDeletions, finalAttachments };

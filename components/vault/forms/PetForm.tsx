@@ -12,6 +12,7 @@ import {
 } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
+import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -103,6 +104,8 @@ export function PetForm({
         careInstructions: value.careInstructions.trim() || null,
       };
 
+      if (toast.isOffline()) return;
+
       try {
         await onSave({
           title: value.name.trim(),
@@ -113,7 +116,7 @@ export function PetForm({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save pet";
-        Alert.alert("Error", message);
+        toast.error({ message });
       }
     },
   });
@@ -137,12 +140,13 @@ export function PetForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
               const message =
                 err instanceof Error ? err.message : "Failed to delete pet";
-              Alert.alert("Error", message);
+              toast.error({ message });
             }
           },
         },

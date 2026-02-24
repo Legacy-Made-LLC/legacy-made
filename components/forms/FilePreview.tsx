@@ -11,9 +11,9 @@ import { Galeria } from "@nandorojo/galeria";
 import { Image } from "expo-image";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useRef, useState } from "react";
+import { toast } from "@/hooks/useToast";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -128,7 +128,7 @@ export function FilePreview({
   // Handle opening a document externally using in-app browser
   const handleOpenDocument = useCallback(async () => {
     if (!file.uri) {
-      Alert.alert("Error", "No download URL available for this file.");
+      toast.error({ message: "No download URL available for this file." });
       return;
     }
 
@@ -137,7 +137,7 @@ export function FilePreview({
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
       });
     } catch {
-      Alert.alert("Error", "Failed to open the file. Please try again.");
+      toast.error({ message: "Failed to open the file. Please try again." });
     }
   }, [file.uri]);
 
