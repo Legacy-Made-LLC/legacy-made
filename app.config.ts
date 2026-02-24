@@ -16,7 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: IS_PROD
-      ? "com.gibsonops.legacymade.dev1"
+      ? "com.mylegacymade.legacymade"
       : "com.gibsonops.legacymade.dev1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,

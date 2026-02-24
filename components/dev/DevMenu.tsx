@@ -1,21 +1,22 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
+import * as Sentry from "@sentry/react-native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+
 import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-
-import { useQueryClient, useIsFetching } from "@tanstack/react-query";
-
-import { borderRadius, colors, shadows, spacing, typography } from "@/constants/theme";
+  borderRadius,
+  colors,
+  shadows,
+  spacing,
+  typography,
+} from "@/constants/theme";
+import { usePerspective } from "@/contexts/LocaleContext";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { usePerspective } from "@/contexts/LocaleContext";
 
 interface DevAction {
   id: string;
@@ -83,7 +84,9 @@ export function DevMenu() {
     },
     {
       id: "skip-onboarding",
-      label: hasCompletedInitialOnboarding ? "Onboarding already complete" : "Skip Onboarding",
+      label: hasCompletedInitialOnboarding
+        ? "Onboarding already complete"
+        : "Skip Onboarding",
       icon: "play-skip-forward-outline",
       onPress: handleSkipOnboarding,
     },
@@ -104,6 +107,14 @@ export function DevMenu() {
       label: isLoading ? "Refreshing..." : "Refresh Data",
       icon: "sync-outline",
       onPress: handleRefreshData,
+    },
+    {
+      id: "test-error",
+      label: "Test Error",
+      icon: "bug-outline",
+      onPress: () => {
+        Sentry.captureException(new Error("Test error"));
+      },
     },
   ];
 
@@ -128,34 +139,46 @@ export function DevMenu() {
         animationType="fade"
         onRequestClose={() => setIsOpen(false)}
       >
-        <Pressable
-          style={styles.overlay}
-          onPress={() => setIsOpen(false)}
-        >
+        <Pressable style={styles.overlay} onPress={() => setIsOpen(false)}>
           <View style={styles.menuContainer}>
             <Pressable onPress={(e) => e.stopPropagation()}>
               <View style={styles.menu}>
                 <View style={styles.header}>
-                  <Ionicons name="build-outline" size={20} color={colors.textPrimary} style={styles.headerIcon} />
+                  <Ionicons
+                    name="build-outline"
+                    size={20}
+                    color={colors.textPrimary}
+                    style={styles.headerIcon}
+                  />
                   <Text style={styles.headerTitle}>Dev Menu</Text>
                 </View>
 
                 <View style={styles.statusRow}>
                   <Text style={styles.statusLabel}>Onboarding:</Text>
-                  <Text style={[
-                    styles.statusValue,
-                    hasCompletedInitialOnboarding ? styles.statusComplete : styles.statusIncomplete
-                  ]}>
-                    {hasCompletedInitialOnboarding ? "Complete" : "Not complete"}
+                  <Text
+                    style={[
+                      styles.statusValue,
+                      hasCompletedInitialOnboarding
+                        ? styles.statusComplete
+                        : styles.statusIncomplete,
+                    ]}
+                  >
+                    {hasCompletedInitialOnboarding
+                      ? "Complete"
+                      : "Not complete"}
                   </Text>
                 </View>
 
                 <View style={styles.statusRow}>
                   <Text style={styles.statusLabel}>Auth:</Text>
-                  <Text style={[
-                    styles.statusValue,
-                    isSignedIn ? styles.statusComplete : styles.statusIncomplete
-                  ]}>
+                  <Text
+                    style={[
+                      styles.statusValue,
+                      isSignedIn
+                        ? styles.statusComplete
+                        : styles.statusIncomplete,
+                    ]}
+                  >
                     {isSignedIn ? "Signed in" : "Not signed in"}
                   </Text>
                 </View>
@@ -182,13 +205,17 @@ export function DevMenu() {
                     <Ionicons
                       name={action.icon}
                       size={18}
-                      color={action.destructive ? colors.error : colors.textPrimary}
+                      color={
+                        action.destructive ? colors.error : colors.textPrimary
+                      }
                       style={styles.menuItemIcon}
                     />
-                    <Text style={[
-                      styles.menuItemLabel,
-                      action.destructive && styles.menuItemLabelDestructive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.menuItemLabel,
+                        action.destructive && styles.menuItemLabelDestructive,
+                      ]}
+                    >
                       {action.label}
                     </Text>
                   </Pressable>
