@@ -71,6 +71,7 @@ export function InsuranceForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -133,9 +134,9 @@ export function InsuranceForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Policy" : "Edit Policy",
+      title: readOnly ? "View Policy" : isNew ? "Add Policy" : "Edit Policy",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -289,7 +290,7 @@ export function InsuranceForm({
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Policy Documents"
             value={attachments ?? []}
@@ -303,6 +304,7 @@ export function InsuranceForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -324,8 +326,9 @@ export function InsuranceForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Policy"

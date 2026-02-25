@@ -25,9 +25,11 @@ const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 interface InputProps extends Omit<TextInputProps, "style"> {
   label: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** When true, the input is non-interactive (view-only) */
+  disabled?: boolean;
 }
 
-export function Input({ label, containerStyle, ...props }: InputProps) {
+export function Input({ label, containerStyle, disabled, ...props }: InputProps) {
   const borderColor = useSharedValue(colors.border);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -47,7 +49,8 @@ export function Input({ label, containerStyle, ...props }: InputProps) {
       <Text style={styles.label}>{label}</Text>
       <AnimatedTextInput
         {...props}
-        style={[styles.input, animatedStyle]}
+        editable={!disabled}
+        style={[styles.input, disabled && styles.disabled, animatedStyle]}
         placeholderTextColor={colors.textTertiary}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -76,5 +79,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  disabled: {
+    backgroundColor: colors.surfaceSecondary,
+    color: colors.textSecondary,
   },
 });

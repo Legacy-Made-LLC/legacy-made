@@ -67,6 +67,7 @@ export function PetForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -123,9 +124,9 @@ export function PetForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Pet" : "Edit Pet",
+      title: readOnly ? "View Pet" : isNew ? "Add Pet" : "Edit Pet",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -268,7 +269,7 @@ export function PetForm({
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Photos & Records"
             value={attachments ?? []}
@@ -282,6 +283,7 @@ export function PetForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -303,8 +305,9 @@ export function PetForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Pet"

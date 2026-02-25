@@ -56,6 +56,7 @@ export function FaithPreferencesForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -153,6 +154,7 @@ export function FaithPreferencesForm({
               options={faithTraditions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -170,6 +172,7 @@ export function FaithPreferencesForm({
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="Church, synagogue, mosque, temple name..."
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -183,6 +186,7 @@ export function FaithPreferencesForm({
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="Pastor, Rabbi, Imam, Priest, etc."
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -196,6 +200,7 @@ export function FaithPreferencesForm({
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="Phone number or email"
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -214,6 +219,7 @@ export function FaithPreferencesForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.ritualsPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -228,6 +234,7 @@ export function FaithPreferencesForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.notesPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

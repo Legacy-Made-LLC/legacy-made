@@ -55,4 +55,8 @@ export const queryKeys = {
     single: (planId: string, contactId: string) =>
       ['trustedContacts', planId, 'detail', contactId] as const,
   },
+  sharedPlans: {
+    // All plans shared with the current user
+    all: () => ['sharedPlans'] as const,
+  },
 } as const;

@@ -111,6 +111,7 @@ export function DigitalForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -169,9 +170,9 @@ export function DigitalForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? labels.addTitle : labels.editTitle,
+      title: readOnly ? labels.editTitle.replace("Edit", "View") : isNew ? labels.addTitle : labels.editTitle,
     });
-  }, [isNew, labels.addTitle, labels.editTitle, navigation]);
+  }, [isNew, readOnly, labels.addTitle, labels.editTitle, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -288,7 +289,7 @@ export function DigitalForm({
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Screenshots & Documents"
             value={attachments ?? []}
@@ -302,6 +303,7 @@ export function DigitalForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -323,8 +325,9 @@ export function DigitalForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title={labels.deleteTitle}

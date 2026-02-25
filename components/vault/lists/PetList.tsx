@@ -31,6 +31,7 @@ export function PetList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -91,8 +92,8 @@ export function PetList({
         <EmptyState
           title="No pets added yet"
           description="Add your pets so your family knows how to care for them."
-          buttonTitle="Add Pet"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Pet"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -148,11 +149,13 @@ export function PetList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Pet</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Pet</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

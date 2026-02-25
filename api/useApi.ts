@@ -11,6 +11,7 @@ import { createEntitlementsService } from './entitlements';
 import { createFilesService } from './files';
 import { createPlansService } from './plans';
 import { createProgressService } from './progress';
+import { createSharedPlansService } from './sharedPlans';
 import { createTrustedContactsService } from './trustedContacts';
 import { createWishesService } from './wishes';
 
@@ -73,6 +74,10 @@ export function useApi() {
     return createTrustedContactsService(client);
   }, [client]);
 
+  const sharedPlans = useMemo(() => {
+    return createSharedPlansService(client);
+  }, [client]);
+
   const accessInvitations = useMemo(() => {
     return createAccessInvitationsService(client);
   }, [client]);
@@ -94,6 +99,8 @@ export function useApi() {
     progress,
     /** Trusted contacts service for family access management */
     trustedContacts,
+    /** Shared plans service for viewing plans shared with the user */
+    sharedPlans,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
     /** Whether the user is signed in */

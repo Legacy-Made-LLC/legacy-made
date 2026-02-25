@@ -393,6 +393,51 @@ export interface Plan {
 }
 
 // ============================================================================
+// Plan Permissions (returned with shared plans by the backend)
+// ============================================================================
+
+/**
+ * Resource types that the backend controls access to
+ */
+export type PlanResource = "entries" | "wishes" | "messages" | "progress";
+
+/**
+ * Read/write permission for a single resource
+ */
+export interface ResourcePermission {
+  read: boolean;
+  write: boolean;
+}
+
+/**
+ * Full permissions object returned by the backend for each shared plan.
+ * Maps each resource to its read/write permission based on the access level.
+ */
+export type PlanPermissions = Record<PlanResource, ResourcePermission>;
+
+/**
+ * A plan shared with the current user, returned by GET /shared-plans
+ *
+ * Flat structure matching the backend response.
+ */
+export interface SharedPlan {
+  planId: string;
+  planName: string;
+  planType: string;
+  /** The name the plan is "for" (e.g., the plan owner's name) */
+  forName: string;
+  ownerFirstName: string;
+  ownerLastName: string;
+  ownerAvatarUrl: string | null;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  accessStatus: TrustedContactStatus;
+  acceptedAt: string | null;
+  /** Backend-calculated permissions based on accessLevel */
+  permissions: PlanPermissions;
+}
+
+// ============================================================================
 // Entitlement Types
 // ============================================================================
 
@@ -503,16 +548,13 @@ export interface StorageQuotaError {
 /**
  * Access levels for trusted contacts
  */
-export type TrustedContactAccessLevel =
-  | "full_edit"
-  | "full_view"
-  | "limited_view"
-  | "view_only";
+export type TrustedContactAccessLevel = "full_edit" | "full_view";
+// | "limited_view";
 
 /**
  * When the trusted contact should receive access
  */
-export type TrustedContactAccessTiming = "immediate" | "upon_passing";
+export type TrustedContactAccessTiming = "immediate"; // | "upon_passing";
 
 /**
  * Status of a trusted contact invitation

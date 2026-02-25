@@ -2,26 +2,29 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { RestrictedAccessOverlay } from "@/components/entitlements";
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
-import { usePerspective } from "@/contexts/LocaleContext";
+import { useTranslations } from "@/contexts/LocaleContext";
+import { usePlan } from "@/data/PlanProvider";
 import { useAllProgressQuery } from "@/hooks/queries";
-
-const pageText = {
-  owner: {
-    description: "Accounts, documents, and contacts —\norganized for when it matters",
-  },
-  family: {
-    description: "Their accounts, documents, and contacts —\norganized for when it matters",
-  },
-};
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
   const vaultSections = useVaultSections();
   const { data: progress = {} } = useAllProgressQuery();
-  const { perspective } = usePerspective();
+  const t = useTranslations();
+  const { canAccessPillar, isViewingSharedPlan } = usePlan();
+
+  if (isViewingSharedPlan && !canAccessPillar("important_info")) {
+    return (
+      <RestrictedAccessOverlay
+        featureName="Information Vault"
+        description="Your access level doesn't include the Information Vault for this plan. You can view Wishes and Legacy Messages."
+      />
+    );
+  }
 
   return (
     <ScrollView
@@ -35,7 +38,7 @@ export default function InformationScreen() {
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Information Vault</Text>
         <Text style={styles.description}>
-          {pageText[perspective].description}
+          {t.pages.information.description}
         </Text>
       </View>
 
@@ -63,6 +66,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   header: {
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
     alignItems: "center",
   },

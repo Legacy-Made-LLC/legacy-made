@@ -47,11 +47,18 @@ export default function EntryScreen() {
   }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const task = useVaultTask(sectionId, taskId);
   const isNew = entryId === "new";
+
+  // Redirect back if trying to create new entry on a read-only plan
+  useEffect(() => {
+    if (isReadOnly && isNew) {
+      router.back();
+    }
+  }, [isReadOnly, isNew, router]);
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
 
@@ -430,6 +437,7 @@ export default function EntryScreen() {
         isUploading={isUploading}
         deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
+        readOnly={isReadOnly}
       />
       <UpgradePrompt
         visible={showUpgradePrompt}

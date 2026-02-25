@@ -75,6 +75,7 @@ export function ServicePreferencesForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -176,6 +177,7 @@ export function ServicePreferencesForm({
               options={serviceTypeOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -195,6 +197,7 @@ export function ServicePreferencesForm({
                       options={toneOptions}
                       placeholder="Select..."
                       clearable
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -208,6 +211,7 @@ export function ServicePreferencesForm({
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="Church, funeral home, park, favorite restaurant..."
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -226,6 +230,7 @@ export function ServicePreferencesForm({
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="Any songs that should be played? Music to avoid?"
                       maxLength={1000}
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -240,6 +245,7 @@ export function ServicePreferencesForm({
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder={t.readingsPlaceholder}
                       maxLength={1000}
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -254,6 +260,7 @@ export function ServicePreferencesForm({
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder={t.speakersPlaceholder}
                       maxLength={1000}
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -268,6 +275,7 @@ export function ServicePreferencesForm({
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="Open casket? Certain songs? Anything that would feel wrong?"
                       maxLength={1000}
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -286,6 +294,7 @@ export function ServicePreferencesForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.notesPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

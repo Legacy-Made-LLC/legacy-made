@@ -68,6 +68,7 @@ export function FinancialForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -128,9 +129,9 @@ export function FinancialForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Account" : "Edit Account",
+      title: readOnly ? "View Account" : isNew ? "Add Account" : "Edit Account",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -253,7 +254,7 @@ export function FinancialForm({
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Statements & Documents"
             value={attachments ?? []}
@@ -267,6 +268,7 @@ export function FinancialForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -288,8 +290,9 @@ export function FinancialForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Account"

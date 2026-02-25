@@ -47,6 +47,7 @@ export function HardSituationsForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -140,6 +141,7 @@ export function HardSituationsForm({
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.decisionMakerPlaceholder}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -154,6 +156,7 @@ export function HardSituationsForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder="What makes them the right choice? This explanation can help others accept their leadership."
               maxLength={1500}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -168,6 +171,7 @@ export function HardSituationsForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder="Should the designated person have final say? Should there be a family vote? What matters more — consensus or action?"
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -182,6 +186,7 @@ export function HardSituationsForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder="Are there any relationships that need healing? Forgiveness to offer? Permission to let go of old hurts?"
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -196,6 +201,7 @@ export function HardSituationsForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder="Anything else that might help during difficult moments..."
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

@@ -35,6 +35,7 @@ export function ContactList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -98,8 +99,8 @@ export function ContactList({
         <EmptyState
           title="No contacts added yet"
           description="Add the first person your loved ones should reach out to."
-          buttonTitle="Add Contact"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Contact"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -154,11 +155,13 @@ export function ContactList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Contact</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Contact</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

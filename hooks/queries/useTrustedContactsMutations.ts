@@ -10,7 +10,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/api";
 import type {
   CreateTrustedContactRequest,
-  EntitlementInfo,
   TrustedContact,
   UpdateTrustedContactRequest,
 } from "@/api/types";
@@ -22,11 +21,14 @@ import { queryKeys } from "@/lib/queryKeys";
  */
 export function useCreateTrustedContact() {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const { trustedContacts } = useApi();
 
   return useMutation({
     mutationFn: (data: CreateTrustedContactRequest) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId) {
         throw new Error("Plan ID is required");
       }
@@ -144,10 +146,7 @@ export function useUpdateTrustedContact() {
         queryKey: queryKeys.trustedContacts.all(planId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.trustedContacts.single(
-          planId,
-          variables.contactId,
-        ),
+        queryKey: queryKeys.trustedContacts.single(planId, variables.contactId),
       });
     },
   });

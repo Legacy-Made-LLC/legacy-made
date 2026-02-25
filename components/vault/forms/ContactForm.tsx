@@ -81,6 +81,7 @@ export function ContactForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -142,9 +143,9 @@ export function ContactForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Contact" : "Edit Contact",
+      title: readOnly ? "View Contact" : isNew ? "Add Contact" : "Edit Contact",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -188,7 +189,7 @@ export function ContactForm({
           phoneRequired={true}
         />
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Photo"
             value={attachments ?? []}
@@ -202,6 +203,7 @@ export function ContactForm({
           />
         )}
 
+        {!readOnly && (
         <View style={styles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -236,8 +238,9 @@ export function ContactForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={styles.deleteContainer}>
             <Pressable
               style={({ pressed }) => [

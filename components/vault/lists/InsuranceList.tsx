@@ -32,6 +32,7 @@ export function InsuranceList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -95,8 +96,8 @@ export function InsuranceList({
         <EmptyState
           title="No policies added yet"
           description="Add your insurance policies so your loved ones know what coverage exists."
-          buttonTitle="Add Policy"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Policy"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -153,11 +154,13 @@ export function InsuranceList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Policy</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Policy</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

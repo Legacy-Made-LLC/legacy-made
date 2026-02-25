@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Pillar } from "@/api/types";
 import { colors, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
 
 const iconSize = 26;
 
@@ -64,11 +65,21 @@ function HomeTabIcon({ focused }: { focused: boolean }) {
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar } = useEntitlements();
+  const { canAccessPillar, isViewingSharedPlan } = usePlan();
 
-  // Check if each pillar is locked
-  const isWishesLocked = isLockedPillar(TAB_TO_PILLAR.wishes);
-  const isLegacyLocked = isLockedPillar(TAB_TO_PILLAR.legacy);
-  const isFamilyLocked = isLockedPillar(TAB_TO_PILLAR.family);
+  // Check if each pillar is locked (by entitlements OR shared plan access level)
+  const isInfoLocked =
+    isLockedPillar(TAB_TO_PILLAR.information) ||
+    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.information));
+  const isWishesLocked =
+    isLockedPillar(TAB_TO_PILLAR.wishes) ||
+    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.wishes));
+  const isLegacyLocked =
+    isLockedPillar(TAB_TO_PILLAR.legacy) ||
+    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.legacy));
+  const isFamilyLocked =
+    isLockedPillar(TAB_TO_PILLAR.family) ||
+    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.family));
 
   return (
     <Tabs
@@ -95,12 +106,25 @@ export default function TabsLayout() {
         name="information"
         options={{
           title: "Info",
-          tabBarActiveTintColor: colors.featureInformation,
+          tabBarActiveTintColor: isInfoLocked
+            ? colors.textTertiary
+            : colors.featureInformation,
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? "document-text" : "document-text-outline"}
-              size={iconSize}
-              color={focused ? colors.featureInformation : colors.textTertiary}
+            <TabIconWithLock
+              isLocked={isInfoLocked}
+              icon={
+                <Ionicons
+                  name={focused ? "document-text" : "document-text-outline"}
+                  size={iconSize}
+                  color={
+                    isInfoLocked
+                      ? colors.textTertiary
+                      : focused
+                        ? colors.featureInformation
+                        : colors.textTertiary
+                  }
+                />
+              }
             />
           ),
         }}

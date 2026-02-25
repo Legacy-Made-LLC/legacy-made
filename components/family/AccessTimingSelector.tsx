@@ -3,12 +3,7 @@
  */
 
 import type { TrustedContactAccessTiming } from "@/api/types";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "@/constants/theme";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -28,13 +23,13 @@ const ACCESS_TIMINGS: AccessTimingOption[] = [
       "They\u2019ll receive an invitation and can access your plan right away.",
     icon: "flash-outline",
   },
-  {
-    value: "upon_passing",
-    label: "Upon my passing",
-    description:
-      "They\u2019ll be notified now, but access will only be granted when the time comes.",
-    icon: "time-outline",
-  },
+  // {
+  //   value: "upon_passing",
+  //   label: "Upon my passing",
+  //   description:
+  //     "They\u2019ll be notified now, but access will only be granted when the time comes.",
+  //   icon: "time-outline",
+  // },
 ];
 
 interface AccessTimingSelectorProps {
@@ -56,10 +51,7 @@ export function AccessTimingSelector({
             <Pressable
               key={option.value}
               onPress={() => onChange(option.value)}
-              style={[
-                styles.option,
-                isSelected && styles.optionSelected,
-              ]}
+              style={[styles.option, isSelected && styles.optionSelected]}
             >
               <View style={styles.optionHeader}>
                 <View style={styles.optionLeft}>
@@ -67,9 +59,7 @@ export function AccessTimingSelector({
                     name={option.icon}
                     size={20}
                     color={
-                      isSelected
-                        ? colors.featureFamily
-                        : colors.textTertiary
+                      isSelected ? colors.featureFamily : colors.textTertiary
                     }
                   />
                   <Text
@@ -82,17 +72,12 @@ export function AccessTimingSelector({
                   </Text>
                 </View>
                 <View
-                  style={[
-                    styles.radio,
-                    isSelected && styles.radioSelected,
-                  ]}
+                  style={[styles.radio, isSelected && styles.radioSelected]}
                 >
                   {isSelected && <View style={styles.radioInner} />}
                 </View>
               </View>
-              <Text style={styles.optionDescription}>
-                {option.description}
-              </Text>
+              <Text style={styles.optionDescription}>{option.description}</Text>
             </Pressable>
           );
         })}

@@ -54,6 +54,14 @@ export {
   useSetProgressIfNew,
 } from './useProgressMutations';
 
+// Shared Plans
+export { useSharedPlansQuery } from './useSharedPlansQuery';
+
+export {
+  useAcceptSharedPlan,
+  useDeclineSharedPlan,
+} from './useSharedPlansMutations';
+
 // Trusted Contacts
 export {
   useTrustedContactsQuery,

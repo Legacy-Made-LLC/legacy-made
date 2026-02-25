@@ -5,10 +5,16 @@
  */
 
 import type { Translations } from "../types";
+import { familyPastCommon } from "./family-past/common";
+import { familyPastPages } from "./family-past/pages";
+import { familyPastVault } from "./family-past/vault";
+import { familyPastWishes } from "./family-past/wishes";
 import { familyCommon } from "./family/common";
+import { familyPages } from "./family/pages";
 import { familyVault } from "./family/vault";
 import { familyWishes } from "./family/wishes";
 import { ownerCommon } from "./owner/common";
+import { ownerPages } from "./owner/pages";
 import { ownerVault } from "./owner/vault";
 import { ownerWishes } from "./owner/wishes";
 
@@ -18,14 +24,26 @@ import { ownerWishes } from "./owner/wishes";
 export const ownerTranslations: Translations = {
   vault: ownerVault,
   wishes: ownerWishes,
+  pages: ownerPages,
   common: ownerCommon,
 };
 
 /**
- * Family perspective translations (they/their)
+ * Family perspective translations - present tense (they/their, person is alive)
  */
 export const familyTranslations: Translations = {
   vault: familyVault,
   wishes: familyWishes,
+  pages: familyPages,
   common: familyCommon,
+};
+
+/**
+ * Family perspective translations - past tense (they/their, person has passed)
+ */
+export const familyPastTranslations: Translations = {
+  vault: familyPastVault,
+  wishes: familyPastWishes,
+  pages: familyPastPages,
+  common: familyPastCommon,
 };

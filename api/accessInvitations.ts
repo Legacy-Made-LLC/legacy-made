@@ -11,8 +11,7 @@ import type { ApiClient } from "./client";
 import { ApiClientError } from "./client";
 import type { InvitationDetails, TrustedContact } from "./types";
 
-const API_URL =
-  Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:3000";
+const API_URL = Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:3000";
 const TIMEOUT = 30000;
 
 /**

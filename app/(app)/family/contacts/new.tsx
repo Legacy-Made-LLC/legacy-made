@@ -16,7 +16,6 @@ import type {
   TrustedContactAccessTiming,
 } from "@/api/types";
 import { AccessLevelSelector } from "@/components/family/AccessLevelSelector";
-import { AccessTimingSelector } from "@/components/family/AccessTimingSelector";
 import { FormInput } from "@/components/forms/FormInput";
 import { FormTextArea } from "@/components/forms/FormTextArea";
 import { Button } from "@/components/ui/Button";
@@ -36,7 +35,7 @@ export default function NewTrustedContactScreen() {
       email: "",
       relationship: "",
       accessLevel: undefined as TrustedContactAccessLevel | undefined,
-      accessTiming: undefined as TrustedContactAccessTiming | undefined,
+      accessTiming: "immediate" as TrustedContactAccessTiming,
       notes: "",
     },
     validationLogic: revalidateLogic(),
@@ -45,10 +44,6 @@ export default function NewTrustedContactScreen() {
 
       if (!value.accessLevel) {
         toast.error({ message: "Please select an access level." });
-        return;
-      }
-      if (!value.accessTiming) {
-        toast.error({ message: "Please select when they should have access." });
         return;
       }
 
@@ -83,13 +78,6 @@ export default function NewTrustedContactScreen() {
     [form],
   );
 
-  const handleAccessTimingChange = useCallback(
-    (value: TrustedContactAccessTiming) => {
-      form.setFieldValue("accessTiming", value);
-    },
-    [form],
-  );
-
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -111,41 +99,47 @@ export default function NewTrustedContactScreen() {
         </Text>
 
         {/* Name fields */}
-        <form.Field
-          name="firstName"
-          validators={{
-            onBlur: ({ value }) =>
-              !value.trim() ? "First name is required" : undefined,
-          }}
-        >
-          {(field) => (
-            <FormInput
-              field={field}
-              label="FIRST NAME"
-              placeholder="Enter first name"
-              autoCapitalize="words"
-              autoComplete="given-name"
-            />
-          )}
-        </form.Field>
+        <View style={styles.nameRow}>
+          <View style={styles.nameField}>
+            <form.Field
+              name="firstName"
+              validators={{
+                onBlur: ({ value }) =>
+                  !value.trim() ? "First name is required" : undefined,
+              }}
+            >
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="FIRST NAME"
+                  placeholder="First name"
+                  autoCapitalize="words"
+                  autoComplete="given-name"
+                />
+              )}
+            </form.Field>
+          </View>
 
-        <form.Field
-          name="lastName"
-          validators={{
-            onBlur: ({ value }) =>
-              !value.trim() ? "Last name is required" : undefined,
-          }}
-        >
-          {(field) => (
-            <FormInput
-              field={field}
-              label="LAST NAME"
-              placeholder="Enter last name"
-              autoCapitalize="words"
-              autoComplete="family-name"
-            />
-          )}
-        </form.Field>
+          <View style={styles.nameField}>
+            <form.Field
+              name="lastName"
+              validators={{
+                onBlur: ({ value }) =>
+                  !value.trim() ? "Last name is required" : undefined,
+              }}
+            >
+              {(field) => (
+                <FormInput
+                  field={field}
+                  label="LAST NAME"
+                  placeholder="Last name"
+                  autoCapitalize="words"
+                  autoComplete="family-name"
+                />
+              )}
+            </form.Field>
+          </View>
+        </View>
 
         <form.Field
           name="email"
@@ -194,7 +188,8 @@ export default function NewTrustedContactScreen() {
         </View>
 
         {/* Access Timing Selector */}
-        <View style={styles.selectorSection}>
+        {/* TODO: Hide for MVP. Not implementing anything but immediate access for now. */}
+        {/* <View style={styles.selectorSection}>
           <form.Field name="accessTiming">
             {(field) => (
               <AccessTimingSelector
@@ -203,7 +198,7 @@ export default function NewTrustedContactScreen() {
               />
             )}
           </form.Field>
-        </View>
+        </View> */}
 
         {/* Notes */}
         <form.Field name="notes">
@@ -251,6 +246,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
+  },
+  nameRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  nameField: {
+    flex: 1,
   },
   selectorSection: {
     marginBottom: spacing.lg,

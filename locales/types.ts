@@ -6,6 +6,7 @@
  */
 
 export type Perspective = "owner" | "family";
+export type FamilyTense = "present" | "past";
 export type Locale = "en"; // Add 'es' | 'fr' | etc. later
 
 /**
@@ -48,6 +49,32 @@ export interface Translations {
     carePrefs: SectionText;
     endOfLife: SectionText;
     values: SectionText;
+  };
+  pages: {
+    home: {
+      pageTitle: string;
+      greeting: string;
+      information: string;
+      wishes: string;
+      legacy: string;
+      family: string;
+    };
+    information: {
+      description: string;
+    };
+    wishes: {
+      description: string;
+    };
+    family: {
+      title: string;
+      description: string;
+      trustedContactsHeader: string;
+      sharedWithMeHeader: string;
+      emptyTitle: string;
+      emptyDescription: string;
+      emptyButton: string;
+      sharedWithMeEmpty: string;
+    };
   };
   common: {
     buttons: {

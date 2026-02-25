@@ -61,7 +61,7 @@ export default function WishesTaskScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
@@ -217,6 +217,7 @@ export default function WishesTaskScreen() {
 
     // Subscribe to form state changes
     const unsubscribe = form.store.subscribe(() => {
+      if (isReadOnly) return;
       const state = form.store.state;
       const getSaveData = getSaveDataRef.current;
 
@@ -227,7 +228,7 @@ export default function WishesTaskScreen() {
     });
 
     return unsubscribe;
-  }, [autoSave]);
+  }, [autoSave, isReadOnly]);
 
   // Navigation protection - ensure pending saves complete before leaving
   useEffect(() => {
@@ -501,12 +502,13 @@ export default function WishesTaskScreen() {
         }}
         guidance={guidance}
         attachments={attachmentsWithUploadState}
-        onAttachmentsChange={handleAttachmentsChange}
+        onAttachmentsChange={isReadOnly ? undefined : handleAttachmentsChange}
         isUploading={isUploading}
         deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
+        readOnly={isReadOnly}
       />
-      {(existingWish || autoSave.recordId) && task && (
+      {(existingWish || autoSave.recordId) && task && !isReadOnly && (
         <TaskCompletionFooter
           taskKey={task.taskKey}
           pillarColor={colors.featureWishes}
@@ -514,12 +516,14 @@ export default function WishesTaskScreen() {
           onComeBackLater={() => router.back()}
         />
       )}
-      <SavedIndicator
-        status={autoSave.status}
-        errorMessage={autoSave.errorMessage}
-        onDismissError={autoSave.dismissError}
-        accentColor={colors.featureWishes}
-      />
+      {!isReadOnly && (
+        <SavedIndicator
+          status={autoSave.status}
+          errorMessage={autoSave.errorMessage}
+          onDismissError={autoSave.dismissError}
+          accentColor={colors.featureWishes}
+        />
+      )}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}

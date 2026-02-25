@@ -31,6 +31,7 @@ export function DocumentList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -91,8 +92,8 @@ export function DocumentList({
         <EmptyState
           title="No documents added yet"
           description="Add your important legal documents so your family knows where to find them."
-          buttonTitle="Add Document"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Document"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -146,11 +147,13 @@ export function DocumentList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Document</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Document</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

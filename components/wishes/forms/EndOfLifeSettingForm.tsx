@@ -65,6 +65,7 @@ export function EndOfLifeSettingForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -160,6 +161,7 @@ export function EndOfLifeSettingForm({
               options={settingOptions}
               placeholder="Select a preference..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -177,6 +179,7 @@ export function EndOfLifeSettingForm({
                     onChangeText={(text) => field.handleChange(text)}
                     placeholder={t.settingNotesPlaceholder}
                     maxLength={1000}
+                    disabled={readOnly}
                   />
                 </View>
               )}
@@ -196,6 +199,7 @@ export function EndOfLifeSettingForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.visitorsPlaceholder}
               maxLength={1000}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -212,6 +216,7 @@ export function EndOfLifeSettingForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder="Any songs, prayers, or atmosphere that would bring comfort?"
               maxLength={1000}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -226,6 +231,7 @@ export function EndOfLifeSettingForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.notesPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

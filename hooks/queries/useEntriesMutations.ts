@@ -13,6 +13,7 @@ import type {
   EntitlementInfo,
   Entry,
   MetadataSchema,
+  TaskProgressData,
   UpdateEntryRequest,
 } from "@/api/types";
 import { useEntitlements } from "@/data/EntitlementsProvider";
@@ -80,13 +81,16 @@ export function useCreateEntry<T = Record<string, unknown>>(
   taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const { entries } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
   const { setIfNew } = useSetProgressIfNew();
 
   return useMutation({
     mutationFn: (data: CreateEntryData<T>) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId || !taskKey) {
         throw new Error("Plan ID and task key are required");
       }
@@ -206,7 +210,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
   taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const { entries } = useApi();
 
   return useMutation({
@@ -217,6 +221,9 @@ export function useUpdateEntry<T = Record<string, unknown>>(
       entryId: string;
       data: UpdateEntryData<T>;
     }) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId) {
         throw new Error("Plan ID is required");
       }
@@ -295,11 +302,14 @@ export function useDeleteEntry<T = Record<string, unknown>>(
   taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
-  const { entries } = useApi();
+  const { planId, isReadOnly } = usePlan();
+  const { entries, progress } = useApi();
 
   return useMutation({
     mutationFn: (entryId: string) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId) {
         throw new Error("Plan ID is required");
       }
@@ -325,6 +335,11 @@ export function useDeleteEntry<T = Record<string, unknown>>(
         queryKeys.entitlements.current(),
       );
 
+      // Track whether this deletion removes the last entry
+      const remainingCount = previousEntries
+        ? previousEntries.filter((entry) => entry.id !== entryId).length
+        : 0;
+
       // Optimistically remove entry from cache
       if (previousEntries) {
         queryClient.setQueryData<Entry<T>[]>(
@@ -339,7 +354,24 @@ export function useDeleteEntry<T = Record<string, unknown>>(
         updateEntriesQuota(previousEntitlements, -1),
       );
 
-      return { previousEntries, previousEntitlements };
+      // If this was the last entry, optimistically clear progress
+      if (remainingCount === 0) {
+        queryClient.setQueryData<Record<string, TaskProgressData>>(
+          queryKeys.progress.all(planId),
+          (old) => {
+            if (!old) return old;
+            const updated = { ...old };
+            delete updated[taskKey];
+            return updated;
+          },
+        );
+        queryClient.setQueryData(
+          queryKeys.progress.byKey(planId, taskKey),
+          null,
+        );
+      }
+
+      return { previousEntries, previousEntitlements, remainingCount };
     },
     onError: (_err, _entryId, context) => {
       if (!planId || !taskKey) return;
@@ -359,8 +391,18 @@ export function useDeleteEntry<T = Record<string, unknown>>(
           context.previousEntitlements,
         );
       }
+
+      // Rollback progress if we optimistically cleared it
+      if (context?.remainingCount === 0) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.progress.all(planId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.progress.byKey(planId, taskKey),
+        });
+      }
     },
-    onSettled: () => {
+    onSettled: (_data, error, _entryId, context) => {
       if (!planId || !taskKey) return;
 
       // Invalidate related queries
@@ -377,6 +419,26 @@ export function useDeleteEntry<T = Record<string, unknown>>(
       queryClient.invalidateQueries({
         queryKey: queryKeys.entitlements.current(),
       });
+
+      // If last entry was deleted successfully, delete the progress record
+      if (!error && context?.remainingCount === 0) {
+        progress.delete(planId, taskKey).then(() => {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.progress.all(planId),
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.progress.byKey(planId, taskKey),
+          });
+        }).catch(() => {
+          // Progress deletion failed — refresh to get actual state
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.progress.all(planId),
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.progress.byKey(planId, taskKey),
+          });
+        });
+      }
     },
   });
 }

@@ -47,6 +47,8 @@ export interface EntryListProps {
   onEntryPress: (entryId: string) => void;
   /** Callback when add button is pressed */
   onAddPress: () => void;
+  /** Whether the plan is read-only (viewing a shared plan) */
+  readOnly?: boolean;
 }
 
 // ============================================================================
@@ -83,6 +85,8 @@ export interface EntryFormProps {
   deletingFileIds?: Set<string>;
   /** Callback when user needs to upgrade for storage */
   onStorageUpgradeRequired?: () => void;
+  /** Whether the plan is read-only (viewing a shared plan) */
+  readOnly?: boolean;
 }
 
 export const listRegistry: Record<string, ComponentType<EntryListProps>> = {

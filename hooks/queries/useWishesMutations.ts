@@ -99,13 +99,16 @@ export function useCreateWish<T = Record<string, unknown>>(
   taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const { wishes } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
   const { setIfNew } = useSetProgressIfNew();
 
   return useMutation({
     mutationFn: (data: CreateWishData<T>) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId || !taskKey) {
         throw new Error("Plan ID and task key are required");
       }
@@ -264,7 +267,7 @@ export function useUpdateWish<T = Record<string, unknown>>(
   taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const { wishes } = useApi();
 
   return useMutation({
@@ -275,6 +278,9 @@ export function useUpdateWish<T = Record<string, unknown>>(
       wishId: string;
       data: UpdateWishData<T>;
     }) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId) {
         throw new Error("Plan ID is required");
       }
@@ -381,11 +387,14 @@ export function useDeleteWish<T = Record<string, unknown>>(
   taskKey: string | undefined,
 ) {
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly } = usePlan();
   const { wishes } = useApi();
 
   return useMutation({
     mutationFn: (wishId: string) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
       if (!planId) {
         throw new Error("Plan ID is required");
       }

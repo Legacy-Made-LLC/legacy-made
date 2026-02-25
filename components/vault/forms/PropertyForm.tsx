@@ -77,6 +77,7 @@ export function PropertyForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -137,9 +138,9 @@ export function PropertyForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Property" : "Edit Property",
+      title: readOnly ? "View Property" : isNew ? "Add Property" : "Edit Property",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -293,7 +294,7 @@ export function PropertyForm({
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Photos & Documents"
             value={attachments ?? []}
@@ -307,6 +308,7 @@ export function PropertyForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -328,8 +330,9 @@ export function PropertyForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Property"

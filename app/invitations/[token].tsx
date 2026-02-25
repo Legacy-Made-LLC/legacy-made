@@ -571,11 +571,7 @@ export default function InvitationScreen() {
           ]}
           hitSlop={12}
         >
-          <Ionicons
-            name="arrow-back"
-            size={20}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
           <Text style={styles.backLinkText}>Back to invitation</Text>
         </Pressable>
 
@@ -722,11 +718,7 @@ export default function InvitationScreen() {
           ]}
           hitSlop={12}
         >
-          <Ionicons
-            name="arrow-back"
-            size={20}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
           <Text style={styles.backLinkText}>Back</Text>
         </Pressable>
 
@@ -829,14 +821,14 @@ export default function InvitationScreen() {
         </View>
         <Text style={styles.accessLabel}>{accessInfo.label}</Text>
         <Text style={styles.accessDescription}>{accessInfo.description}</Text>
-        {invitation.accessTiming === "upon_passing" && (
+        {/* {invitation.accessTiming === "upon_passing" && (
           <View style={styles.timingBadge}>
             <Ionicons name="time-outline" size={14} color={colors.warning} />
             <Text style={styles.timingBadgeText}>
               Access will be granted at the appropriate time
             </Text>
           </View>
-        )}
+        )} */}
       </View>
 
       {/* What is Legacy Made */}

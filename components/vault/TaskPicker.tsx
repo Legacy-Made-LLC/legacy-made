@@ -39,11 +39,6 @@ export function TaskPicker({ section, progress = {} }: TaskPickerProps) {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* TODO: This doesn't look quite right yet and maybe isn't necessary. */}
-      {/* <View style={styles.header}>
-        <Text style={styles.description}>{section.description}</Text>
-      </View> */}
-
       {section.tasks.map((task) => {
         return (
           <PressableCard

@@ -15,12 +15,7 @@ import type { TrustedContactAccessLevel } from "@/api/types";
 import { StatusBadge } from "@/components/family/StatusBadge";
 import { Card } from "@/components/ui/Card";
 import Loader from "@/components/ui/Loader";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "@/constants/theme";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import {
   useDeleteTrustedContact,
   useResendInvitation,
@@ -30,10 +25,9 @@ import {
 import { toast } from "@/hooks/useToast";
 
 const ACCESS_LEVEL_LABELS: Record<string, string> = {
-  full_edit: "Full Edit",
-  full_view: "Full View",
-  limited_view: "Limited View",
-  view_only: "View Only",
+  full_edit: "Can Edit",
+  full_view: "View Only",
+  // limited_view: "Limited View",
 };
 
 const ACCESS_TIMING_LABELS: Record<string, string> = {
@@ -45,9 +39,9 @@ const ACCESS_LEVEL_OPTIONS: {
   value: TrustedContactAccessLevel;
   label: string;
 }[] = [
-  { value: "full_edit", label: "Full Edit" },
-  { value: "full_view", label: "Full View" },
-  { value: "limited_view", label: "Limited View" },
+  { value: "full_edit", label: "Can Edit" },
+  { value: "full_view", label: "View Only" },
+  // { value: "limited_view", label: "Limited View" },
 ];
 
 export default function TrustedContactDetailScreen() {
@@ -70,9 +64,9 @@ export default function TrustedContactDetailScreen() {
     `${contact.firstName.charAt(0)}${contact.lastName.charAt(0)}`.toUpperCase();
   const isPending = contact.accessStatus === "pending";
   const isActive =
-    contact.accessStatus === "pending" ||
-    contact.accessStatus === "accepted";
-  const statusDate = contact.acceptedAt || contact.declinedAt || contact.revokedAt;
+    contact.accessStatus === "pending" || contact.accessStatus === "accepted";
+  const statusDate =
+    contact.acceptedAt || contact.declinedAt || contact.revokedAt;
 
   const handleAccessLevelChange = async (
     newLevel: TrustedContactAccessLevel,
@@ -276,9 +270,7 @@ export default function TrustedContactDetailScreen() {
               color={colors.featureFamily}
             />
             <Text style={styles.secondaryButtonText}>
-              {resendMutation.isPending
-                ? "Sending..."
-                : "Resend Invitation"}
+              {resendMutation.isPending ? "Sending..." : "Resend Invitation"}
             </Text>
           </Pressable>
         )}
@@ -297,9 +289,7 @@ export default function TrustedContactDetailScreen() {
               size={18}
               color={colors.error}
             />
-            <Text style={styles.destructiveButtonText}>
-              Revoke Access
-            </Text>
+            <Text style={styles.destructiveButtonText}>Revoke Access</Text>
           </Pressable>
         )}
       </View>

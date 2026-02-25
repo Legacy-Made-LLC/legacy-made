@@ -60,6 +60,11 @@ export type {
   // Progress types
   ProgressRecord,
   TaskProgressData,
+  // Shared plan types
+  SharedPlan,
+  PlanResource,
+  ResourcePermission,
+  PlanPermissions,
   // Invitation types
   InvitationDetails,
   // Trusted contact types
@@ -88,6 +93,9 @@ export type { EntriesService } from './entries';
 
 export { createPlansService } from './plans';
 export type { PlansService } from './plans';
+
+export { createSharedPlansService } from './sharedPlans';
+export type { SharedPlansService } from './sharedPlans';
 
 export { createFilesService } from './files';
 export type { FilesService } from './files';

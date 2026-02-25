@@ -65,6 +65,7 @@ export function AdvanceDirectiveForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
   attachments = [],
   onAttachmentsChange,
   isUploading,
@@ -182,6 +183,7 @@ export function AdvanceDirectiveForm({
               options={hasDirectiveOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -206,7 +208,7 @@ export function AdvanceDirectiveForm({
                             field.state.value.includes(docType) &&
                               wishesFormStyles.checkboxItemSelected,
                           ]}
-                          onPress={() => toggleDocType(docType)}
+                          onPress={readOnly ? undefined : () => toggleDocType(docType)}
                         >
                           <View
                             style={[
@@ -241,6 +243,7 @@ export function AdvanceDirectiveForm({
                       value={field.state.value}
                       onChangeText={(text) => field.handleChange(text)}
                       placeholder="e.g., Filing cabinet, attorney's office, safe"
+                      disabled={readOnly}
                     />
                   </View>
                 )}
@@ -281,6 +284,7 @@ export function AdvanceDirectiveForm({
               value={field.state.value}
               onChangeText={(text) => field.handleChange(text)}
               placeholder="Full name"
+              disabled={readOnly}
             />
           </View>
         )}
@@ -296,6 +300,7 @@ export function AdvanceDirectiveForm({
                 onChangeText={(text) => field.handleChange(text)}
                 placeholder="Best number"
                 keyboardType="phone-pad"
+                disabled={readOnly}
               />
             </View>
           )}
@@ -308,6 +313,7 @@ export function AdvanceDirectiveForm({
                 value={field.state.value}
                 onChangeText={(text) => field.handleChange(text)}
                 placeholder="e.g., Spouse, Daughter"
+                disabled={readOnly}
               />
             </View>
           )}
@@ -323,6 +329,7 @@ export function AdvanceDirectiveForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.notesPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

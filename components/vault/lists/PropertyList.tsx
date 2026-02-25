@@ -31,6 +31,7 @@ export function PropertyList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -91,8 +92,8 @@ export function PropertyList({
         <EmptyState
           title="Nothing added yet"
           description="Add your property, vehicles, and other physical assets."
-          buttonTitle="Add Property"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Property"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -148,11 +149,13 @@ export function PropertyList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Property</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Property</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

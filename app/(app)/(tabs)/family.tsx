@@ -1,80 +1,109 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   LockedFeatureOverlay,
+  RestrictedAccessOverlay,
   ViewOnlyBadge,
 } from "@/components/entitlements";
+import { SharedPlanCard } from "@/components/family/SharedPlanCard";
 import { TrustedContactCard } from "@/components/family/TrustedContactCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "@/constants/theme";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useTranslations } from "@/contexts/LocaleContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
-import { usePerspective } from "@/contexts/LocaleContext";
-import { useTrustedContactsQuery } from "@/hooks/queries";
-
-const pageText = {
-  owner: {
-    title: "Family Access",
-    description:
-      "Choose who can access your\nplan \u2014 and when.",
-    trustedContactsHeader: "YOUR TRUSTED CONTACTS",
-    sharedWithMeHeader: "SHARED WITH ME",
-    emptyTitle: "Share your plan with\nsomeone you trust",
-    emptyDescription:
-      "Give a family member, friend, or advisor access so they\u2019re never left guessing.",
-    emptyButton: "Add Trusted Contact",
-    sharedWithMeEmpty:
-      "When someone shares their plan with you, it will appear here.",
-  },
-  family: {
-    title: "Family Access",
-    description:
-      "See who has access to this\nplan and manage shared plans.",
-    trustedContactsHeader: "TRUSTED CONTACTS",
-    sharedWithMeHeader: "SHARED WITH ME",
-    emptyTitle: "No trusted contacts yet",
-    emptyDescription:
-      "Trusted contacts will appear here once they\u2019re added to this plan.",
-    emptyButton: "Add Trusted Contact",
-    sharedWithMeEmpty:
-      "When someone shares their plan with you, it will appear here.",
-  },
-};
+import { usePlan } from "@/data/PlanProvider";
+import {
+  useAcceptSharedPlan,
+  useDeclineSharedPlan,
+  useSharedPlansQuery,
+  useTrustedContactsQuery,
+} from "@/hooks/queries";
+import { usePlanSwitching } from "@/hooks/usePlanSwitching";
+import { toast } from "@/hooks/useToast";
 
 export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
-  const { perspective } = usePerspective();
-  const {
-    data: contacts,
-    isLoading,
-  } = useTrustedContactsQuery();
+  const { isViewingSharedPlan, isReadOnly, canAccessPillar } = usePlan();
+  const { switchToSharedPlan } = usePlanSwitching();
+  const { data: contacts, isLoading } = useTrustedContactsQuery();
+  const { data: sharedPlans, isLoading: isLoadingSharedPlans } =
+    useSharedPlansQuery();
+  const acceptMutation = useAcceptSharedPlan();
+  const declineMutation = useDeclineSharedPlan();
 
   const isLocked = isLockedPillar("family_access");
   const isViewOnly = isViewOnlyPillar("family_access");
-  const t = pageText[perspective];
+  const translations = useTranslations();
+  const t = translations.pages.family;
+  const hasSharedPlans = sharedPlans && sharedPlans.length > 0;
+  const showAddContact = !isViewingSharedPlan && !isReadOnly;
+
+  // Sort: pending invitations first, then accepted
+  const sortedSharedPlans = React.useMemo(() => {
+    if (!sharedPlans) return [];
+    return [...sharedPlans].sort((a, b) => {
+      if (a.accessStatus === "pending" && b.accessStatus !== "pending")
+        return -1;
+      if (a.accessStatus !== "pending" && b.accessStatus === "pending")
+        return 1;
+      return 0;
+    });
+  }, [sharedPlans]);
+
+  // Track which plan is currently being actioned
+  const [actioningPlanId, setActioningPlanId] = React.useState<string | null>(
+    null,
+  );
+
+  const handleAcceptInvitation = async (planId: string) => {
+    setActioningPlanId(planId);
+    try {
+      await acceptMutation.mutateAsync(planId);
+      toast.success({ title: "Invitation accepted" });
+    } catch {
+      toast.error({
+        message: "Failed to accept invitation. Please try again.",
+      });
+    } finally {
+      setActioningPlanId(null);
+    }
+  };
+
+  const handleDeclineInvitation = async (planId: string) => {
+    setActioningPlanId(planId);
+    try {
+      await declineMutation.mutateAsync(planId);
+      toast.success({ title: "Invitation declined" });
+    } catch {
+      toast.error({
+        message: "Failed to decline invitation. Please try again.",
+      });
+    } finally {
+      setActioningPlanId(null);
+    }
+  };
 
   if (isLocked) {
     return (
       <LockedFeatureOverlay
         featureName="Family Access"
         description="Manage who can access your legacy information and when they can see it."
+      />
+    );
+  }
+
+  if (isViewingSharedPlan && !canAccessPillar("family_access")) {
+    return (
+      <RestrictedAccessOverlay
+        featureName="Family Access"
+        description="Your access level doesn't include Family Access for this plan. You can view Wishes and Legacy Messages."
       />
     );
   }
@@ -104,9 +133,7 @@ export default function FamilyScreen() {
 
       {/* Your Trusted Contacts Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>
-          {t.trustedContactsHeader}
-        </Text>
+        <Text style={styles.sectionLabel}>{t.trustedContactsHeader}</Text>
 
         {isLoading ? (
           <View style={styles.skeletons}>
@@ -119,28 +146,22 @@ export default function FamilyScreen() {
               <TrustedContactCard
                 key={contact.id}
                 contact={contact}
-                onPress={() =>
-                  router.push(`/family/contacts/${contact.id}`)
-                }
+                onPress={() => router.push(`/family/contacts/${contact.id}`)}
               />
             ))}
             {/* Add button below list */}
-            <Pressable
-              onPress={() => router.push("/family/contacts/new")}
-              style={({ pressed }) => [
-                styles.addButton,
-                pressed && styles.addButtonPressed,
-              ]}
-            >
-              <Ionicons
-                name="add"
-                size={20}
-                color={colors.featureFamily}
-              />
-              <Text style={styles.addButtonText}>
-                Add Trusted Contact
-              </Text>
-            </Pressable>
+            {showAddContact && (
+              <Pressable
+                onPress={() => router.push("/family/contacts/new")}
+                style={({ pressed }) => [
+                  styles.addButton,
+                  pressed && styles.addButtonPressed,
+                ]}
+              >
+                <Ionicons name="add" size={20} color={colors.featureFamily} />
+                <Text style={styles.addButtonText}>Add Trusted Contact</Text>
+              </Pressable>
+            )}
           </View>
         ) : (
           /* Empty State */
@@ -153,9 +174,7 @@ export default function FamilyScreen() {
               />
             </View>
             <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
-            <Text style={styles.emptyDescription}>
-              {t.emptyDescription}
-            </Text>
+            <Text style={styles.emptyDescription}>{t.emptyDescription}</Text>
             <Pressable
               onPress={() => router.push("/family/contacts/new")}
               style={({ pressed }) => [
@@ -163,26 +182,53 @@ export default function FamilyScreen() {
                 pressed && styles.emptyButtonPressed,
               ]}
             >
-              <Text style={styles.emptyButtonText}>
-                {t.emptyButton}
-              </Text>
+              <Text style={styles.emptyButtonText}>{t.emptyButton}</Text>
             </Pressable>
           </View>
         )}
       </View>
 
-      {/* Shared With Me Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>
-          {t.sharedWithMeHeader}
-        </Text>
-        <EmptyState
-          icon="heart-half-outline"
-          iconColor={colors.featureFamily}
-          title="No shared plans yet"
-          description={t.sharedWithMeEmpty}
-        />
-      </View>
+      {/* Shared With Me Section — only shown on user's own plan */}
+      {!isViewingSharedPlan && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t.sharedWithMeHeader}</Text>
+          {isLoadingSharedPlans ? (
+            <View style={styles.skeletons}>
+              <SkeletonCard />
+            </View>
+          ) : hasSharedPlans ? (
+            <View style={styles.contactsList}>
+              {sortedSharedPlans.map((sp) => (
+                <SharedPlanCard
+                  key={sp.planId}
+                  sharedPlan={sp}
+                  onPress={() => {
+                    switchToSharedPlan(sp);
+                  }}
+                  onAccept={
+                    sp.accessStatus === "pending"
+                      ? () => handleAcceptInvitation(sp.planId)
+                      : undefined
+                  }
+                  onDecline={
+                    sp.accessStatus === "pending"
+                      ? () => handleDeclineInvitation(sp.planId)
+                      : undefined
+                  }
+                  isActioning={actioningPlanId === sp.planId}
+                />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              icon="heart-half-outline"
+              iconColor={colors.featureFamily}
+              title="No shared plans yet"
+              description={t.sharedWithMeEmpty}
+            />
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -201,6 +247,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   header: {
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
     alignItems: "center",
   },

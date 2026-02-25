@@ -66,6 +66,7 @@ export function OrganDonationForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -159,6 +160,7 @@ export function OrganDonationForm({
               options={decisionOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -176,6 +178,7 @@ export function OrganDonationForm({
                     onChangeText={(text) => field.handleChange(text)}
                     placeholder="Heart, kidneys, corneas, etc."
                     maxLength={500}
+                    disabled={readOnly}
                   />
                 </View>
               )}
@@ -194,6 +197,7 @@ export function OrganDonationForm({
               options={registryOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -220,6 +224,7 @@ export function OrganDonationForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder="Any religious, cultural, or personal considerations..."
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

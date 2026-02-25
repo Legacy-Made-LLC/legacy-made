@@ -66,6 +66,7 @@ export function AfterDeathPreferencesForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -161,6 +162,7 @@ export function AfterDeathPreferencesForm({
               options={dispositionOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -178,6 +180,7 @@ export function AfterDeathPreferencesForm({
                     onChangeText={(text) => field.handleChange(text)}
                     placeholder="Location preferences, urn/casket style, where ashes should go, etc."
                     maxLength={1500}
+                    disabled={readOnly}
                   />
                 </View>
               )}
@@ -198,6 +201,7 @@ export function AfterDeathPreferencesForm({
               options={prearrangedOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -215,6 +219,7 @@ export function AfterDeathPreferencesForm({
                     onChangeText={(text) => field.handleChange(text)}
                     placeholder="Funeral home name, contract details, what's been paid for..."
                     maxLength={1500}
+                    disabled={readOnly}
                   />
                 </View>
               )}
@@ -232,6 +237,7 @@ export function AfterDeathPreferencesForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.notesPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

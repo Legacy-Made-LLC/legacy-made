@@ -3,12 +3,7 @@
  */
 
 import type { TrustedContactAccessLevel } from "@/api/types";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "@/constants/theme";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -23,24 +18,23 @@ interface AccessLevelOption {
 const ACCESS_LEVELS: AccessLevelOption[] = [
   {
     value: "full_edit",
-    label: "Full Edit",
+    label: "Can Edit",
     description: "Can view and modify your plan entries, wishes, and messages.",
     icon: "create-outline",
   },
   {
     value: "full_view",
-    label: "Full View",
-    description:
-      "Can view everything in your plan but cannot make changes.",
+    label: "View Only",
+    description: "Can view everything in your plan but cannot make changes.",
     icon: "eye-outline",
   },
-  {
-    value: "limited_view",
-    label: "Limited View",
-    description:
-      "Can view your wishes and messages, but not detailed account information.",
-    icon: "eye-off-outline",
-  },
+  // {
+  //   value: "limited_view",
+  //   label: "Limited View",
+  //   description:
+  //     "Can view your wishes and messages, but not detailed account information.",
+  //   icon: "eye-off-outline",
+  // },
 ];
 
 interface AccessLevelSelectorProps {
@@ -62,10 +56,7 @@ export function AccessLevelSelector({
             <Pressable
               key={option.value}
               onPress={() => onChange(option.value)}
-              style={[
-                styles.option,
-                isSelected && styles.optionSelected,
-              ]}
+              style={[styles.option, isSelected && styles.optionSelected]}
             >
               <View style={styles.optionHeader}>
                 <View style={styles.optionLeft}>
@@ -73,9 +64,7 @@ export function AccessLevelSelector({
                     name={option.icon}
                     size={20}
                     color={
-                      isSelected
-                        ? colors.featureFamily
-                        : colors.textTertiary
+                      isSelected ? colors.featureFamily : colors.textTertiary
                     }
                   />
                   <Text
@@ -88,17 +77,12 @@ export function AccessLevelSelector({
                   </Text>
                 </View>
                 <View
-                  style={[
-                    styles.radio,
-                    isSelected && styles.radioSelected,
-                  ]}
+                  style={[styles.radio, isSelected && styles.radioSelected]}
                 >
                   {isSelected && <View style={styles.radioInner} />}
                 </View>
               </View>
-              <Text style={styles.optionDescription}>
-                {option.description}
-              </Text>
+              <Text style={styles.optionDescription}>{option.description}</Text>
             </Pressable>
           );
         })}

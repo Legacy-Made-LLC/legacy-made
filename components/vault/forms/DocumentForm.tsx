@@ -85,6 +85,7 @@ export function DocumentForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -149,9 +150,9 @@ export function DocumentForm({
   useEffect(() => {
     const docLabel = isLegalDocs ? "Legal Document" : "Document";
     navigation.setOptions({
-      title: isNew ? `Add ${docLabel}` : `Edit ${docLabel}`,
+      title: readOnly ? `View ${docLabel}` : isNew ? `Add ${docLabel}` : `Edit ${docLabel}`,
     });
-  }, [isNew, isLegalDocs, navigation]);
+  }, [isNew, readOnly, isLegalDocs, navigation]);
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -284,7 +285,7 @@ export function DocumentForm({
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Attachments"
             value={attachments ?? []}
@@ -298,6 +299,7 @@ export function DocumentForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -319,8 +321,9 @@ export function DocumentForm({
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Document"
