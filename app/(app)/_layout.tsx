@@ -14,6 +14,8 @@ import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
+import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCreateEntry } from "@/hooks/queries";
 
 // Custom header that doesn't add safe area inset (our parent Header handles it)
@@ -100,6 +102,10 @@ export default function AppLayout() {
     error: planError,
     refetch: refetchPlan,
   } = usePlan();
+
+  // Guard against revoked shared plan access
+  useAccessRevocationGuard();
+  useSharedPlanStatusPolling();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);

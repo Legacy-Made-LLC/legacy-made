@@ -15,6 +15,8 @@ import { usePlanTransition } from "@/contexts/PlanTransitionContext";
 import { usePlan } from "@/data/PlanProvider";
 import { router } from "expo-router";
 
+import { toast } from "./useToast";
+
 export function usePlanSwitching() {
   const {
     viewSharedPlan,
@@ -28,6 +30,18 @@ export function usePlanSwitching() {
 
   const switchToSharedPlan = useCallback(
     (sharedPlan: SharedPlan) => {
+      // Prevent navigating to an already-revoked plan
+      if (
+        sharedPlan.accessStatus === "revoked_by_owner" ||
+        sharedPlan.accessStatus === "revoked_by_contact"
+      ) {
+        toast.info({
+          title: "Access no longer available",
+          message: `${sharedPlan.ownerFirstName} has updated your access to their plan.`,
+        });
+        return;
+      }
+
       const label = `Viewing ${sharedPlan.ownerFirstName}\u2019s Plan`;
       transition(label, () => {
         viewSharedPlan(sharedPlan);

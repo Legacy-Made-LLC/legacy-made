@@ -78,7 +78,7 @@ export function PlanTransitionProvider({
 
   const fadeOut = useCallback(() => {
     opacity.value = withTiming(0, { duration: FADE_OUT_MS }, (finished) => {
-      if (finished) scheduleOnRN(() => hide());
+      if (finished) scheduleOnRN(hide);
     });
   }, [hide, opacity]);
 
@@ -103,7 +103,7 @@ export function PlanTransitionProvider({
       // Kick off fade-in on next frame (after the view renders)
       requestAnimationFrame(() => {
         opacity.value = withTiming(1, { duration: FADE_IN_MS }, (finished) => {
-          if (finished) scheduleOnRN(() => onFadeInComplete());
+          if (finished) scheduleOnRN(onFadeInComplete);
         });
       });
     },

@@ -3,7 +3,11 @@
  */
 
 import Constants from "expo-constants";
+
+import { ApiClientError } from "./errors";
 import type { ApiError } from "./types";
+
+export { ApiClientError };
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:3000";
 
@@ -14,21 +18,6 @@ const API_CONFIG = {
   baseUrl: API_URL,
   timeout: 30000,
 };
-
-/**
- * Custom error class for API errors
- */
-export class ApiClientError extends Error {
-  statusCode: number;
-  originalError?: ApiError;
-
-  constructor(message: string, statusCode: number, originalError?: ApiError) {
-    super(message);
-    this.name = "ApiClientError";
-    this.statusCode = statusCode;
-    this.originalError = originalError;
-  }
-}
 
 /**
  * Type for the getToken function from Clerk's useAuth hook

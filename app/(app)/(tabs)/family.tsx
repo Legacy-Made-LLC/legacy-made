@@ -45,16 +45,22 @@ export default function FamilyScreen() {
   const hasSharedPlans = sharedPlans && sharedPlans.length > 0;
   const showAddContact = !isViewingSharedPlan && !isReadOnly;
 
-  // Sort: pending invitations first, then accepted
+  // Filter out revoked plans, then sort: pending invitations first, then accepted
   const sortedSharedPlans = React.useMemo(() => {
     if (!sharedPlans) return [];
-    return [...sharedPlans].sort((a, b) => {
-      if (a.accessStatus === "pending" && b.accessStatus !== "pending")
-        return -1;
-      if (a.accessStatus !== "pending" && b.accessStatus === "pending")
-        return 1;
-      return 0;
-    });
+    return [...sharedPlans]
+      .filter(
+        (sp) =>
+          sp.accessStatus !== "revoked_by_owner" &&
+          sp.accessStatus !== "revoked_by_contact",
+      )
+      .sort((a, b) => {
+        if (a.accessStatus === "pending" && b.accessStatus !== "pending")
+          return -1;
+        if (a.accessStatus !== "pending" && b.accessStatus === "pending")
+          return 1;
+        return 0;
+      });
   }, [sharedPlans]);
 
   // Track which plan is currently being actioned
