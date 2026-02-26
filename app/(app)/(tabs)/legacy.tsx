@@ -3,23 +3,35 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LockedFeatureOverlay, ViewOnlyBadge } from "@/components/entitlements";
+import { LockedFeatureOverlay, RestrictedAccessOverlay, ViewOnlyBadge } from "@/components/entitlements";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
 
 export default function LegacyScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+  const { isViewingSharedPlan, canAccessPillar } = usePlan();
 
   const isLocked = isLockedPillar("messages");
   const isViewOnly = isViewOnlyPillar("messages");
 
-  // Show locked overlay if pillar is locked
-  if (isLocked) {
+  // Show locked overlay if pillar is locked, or if view-only on the user's own plan
+  if (isLocked || (!isViewingSharedPlan && isViewOnly)) {
     return (
       <LockedFeatureOverlay
         featureName="Legacy Messages"
         description="Record video messages and memories to share with your loved ones when the time is right."
+      />
+    );
+  }
+
+  // Show restricted access overlay for shared plan users without messages access
+  if (isViewingSharedPlan && !canAccessPillar("messages")) {
+    return (
+      <RestrictedAccessOverlay
+        featureName="Legacy Messages"
+        description="Your access level doesn't include Legacy Messages for this plan."
       />
     );
   }

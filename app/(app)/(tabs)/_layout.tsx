@@ -64,19 +64,21 @@ function HomeTabIcon({ focused }: { focused: boolean }) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const { isLockedPillar } = useEntitlements();
+  const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
   const { canAccessPillar, isViewingSharedPlan } = usePlan();
 
-  // Check if each pillar is locked (by entitlements OR shared plan access level)
-  const isInfoLocked =
-    isLockedPillar(TAB_TO_PILLAR.information) ||
-    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.information));
-  const isWishesLocked =
-    isLockedPillar(TAB_TO_PILLAR.wishes) ||
-    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.wishes));
-  const isLegacyLocked =
-    isLockedPillar(TAB_TO_PILLAR.legacy) ||
-    (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.legacy));
+  // Check if each pillar is effectively locked:
+  // - Entitlements: fully locked, OR view-only on the user's own plan (paywall)
+  // - Shared plan: no access to that pillar
+  const isEffectivelyLocked = (pillar: Pillar) =>
+    isLockedPillar(pillar) ||
+    (!isViewingSharedPlan && isViewOnlyPillar(pillar)) ||
+    (isViewingSharedPlan && !canAccessPillar(pillar));
+
+  const isInfoLocked = isEffectivelyLocked(TAB_TO_PILLAR.information);
+  const isWishesLocked = isEffectivelyLocked(TAB_TO_PILLAR.wishes);
+  const isLegacyLocked = isEffectivelyLocked(TAB_TO_PILLAR.legacy);
+  // Family tab stays accessible when view-only on own plan (shared plans section still works)
   const isFamilyLocked =
     isLockedPillar(TAB_TO_PILLAR.family) ||
     (isViewingSharedPlan && !canAccessPillar(TAB_TO_PILLAR.family));
@@ -133,7 +135,7 @@ export default function TabsLayout() {
         name="wishes"
         options={{
           title: "Wishes",
-          tabBarActiveTintColor: colors.featureWishes,
+          tabBarActiveTintColor: isWishesLocked ? colors.textTertiary : colors.featureWishes,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isWishesLocked}
@@ -165,7 +167,7 @@ export default function TabsLayout() {
         name="legacy"
         options={{
           title: "Legacy",
-          tabBarActiveTintColor: colors.featureLegacy,
+          tabBarActiveTintColor: isLegacyLocked ? colors.textTertiary : colors.featureLegacy,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isLegacyLocked}
@@ -190,7 +192,7 @@ export default function TabsLayout() {
         name="family"
         options={{
           title: "Family",
-          tabBarActiveTintColor: colors.featureFamily,
+          tabBarActiveTintColor: isFamilyLocked ? colors.textTertiary : colors.featureFamily,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isFamilyLocked}

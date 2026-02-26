@@ -22,6 +22,7 @@ import {
   useTrustedContactQuery,
   useUpdateTrustedContact,
 } from "@/hooks/queries";
+import { usePillarGuard } from "@/hooks/usePillarGuard";
 import { toast } from "@/hooks/useToast";
 
 const ACCESS_LEVEL_LABELS: Record<string, string> = {
@@ -54,6 +55,16 @@ export default function TrustedContactDetailScreen() {
   const updateMutation = useUpdateTrustedContact();
   const deleteMutation = useDeleteTrustedContact();
   const resendMutation = useResendInvitation();
+  const { guardOverlay } = usePillarGuard({
+    pillar: "family_access",
+    featureName: "Family Access",
+    lockedDescription: "Manage who can access your legacy information and when they can see it.",
+    restrictedDescription: "Your access level doesn't include Family Access for this plan.",
+  });
+
+  if (guardOverlay) {
+    return guardOverlay;
+  }
 
   if (isLoading || !contact) {
     return <Loader />;

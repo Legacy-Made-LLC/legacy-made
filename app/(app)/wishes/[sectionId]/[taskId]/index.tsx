@@ -37,6 +37,7 @@ import { usePlan } from "@/data/PlanProvider";
 import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { usePillarGuard } from "@/hooks/usePillarGuard";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
@@ -65,6 +66,13 @@ export default function WishesTaskScreen() {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
+
+  const { guardOverlay } = usePillarGuard({
+    pillar: "wishes",
+    featureName: "Wishes & Guidance",
+    lockedDescription: "Share your personal wishes, values, and guidance for your loved ones.",
+    restrictedDescription: "Your access level doesn't include Wishes & Guidance for this plan.",
+  });
 
   const section = useWishesSection(sectionId);
   const task = useWishesTask(sectionId, taskId);
@@ -458,6 +466,11 @@ export default function WishesTaskScreen() {
   // ============================================================================
   // Render
   // ============================================================================
+
+  // Show guard overlay if pillar is locked or access is restricted
+  if (guardOverlay) {
+    return guardOverlay;
+  }
 
   // Section or task not found
   if (!section || !task) {

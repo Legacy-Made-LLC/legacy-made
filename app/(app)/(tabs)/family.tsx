@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   LockedFeatureOverlay,
   RestrictedAccessOverlay,
-  ViewOnlyBadge,
+  UpgradePrompt,
 } from "@/components/entitlements";
 import { SharedPlanCard } from "@/components/family/SharedPlanCard";
 import { TrustedContactCard } from "@/components/family/TrustedContactCard";
@@ -43,7 +43,9 @@ export default function FamilyScreen() {
   const translations = useTranslations();
   const t = translations.pages.family;
   const hasSharedPlans = sharedPlans && sharedPlans.length > 0;
-  const showAddContact = !isViewingSharedPlan && !isReadOnly;
+  // Can't add contacts if viewing a shared plan, read-only, or view-only on own plan
+  const isOwnPlanViewOnly = !isViewingSharedPlan && isViewOnly;
+  const showAddContact = !isViewingSharedPlan && !isReadOnly && !isOwnPlanViewOnly;
 
   // Filter out revoked plans, then sort: pending invitations first, then accepted
   const sortedSharedPlans = React.useMemo(() => {
@@ -62,6 +64,8 @@ export default function FamilyScreen() {
         return 0;
       });
   }, [sharedPlans]);
+
+  const [showUpgradePrompt, setShowUpgradePrompt] = React.useState(false);
 
   // Track which plan is currently being actioned
   const [actioningPlanId, setActioningPlanId] = React.useState<string | null>(
@@ -96,6 +100,8 @@ export default function FamilyScreen() {
     }
   };
 
+  // Show paywall only if pillar is fully locked (not in pillars or viewOnlyPillars).
+  // View-only on own plan still allows viewing shared plans — just restricts trusted contacts.
   if (isLocked) {
     return (
       <LockedFeatureOverlay
@@ -117,6 +123,7 @@ export default function FamilyScreen() {
   const hasContacts = contacts && contacts.length > 0;
 
   return (
+  <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
@@ -125,12 +132,6 @@ export default function FamilyScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {isViewOnly && (
-        <View style={styles.viewOnlyHeader}>
-          <ViewOnlyBadge />
-        </View>
-      )}
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.pageTitle}>{t.title}</Text>
@@ -145,6 +146,31 @@ export default function FamilyScreen() {
           <View style={styles.skeletons}>
             <SkeletonCard />
             <SkeletonCard />
+          </View>
+        ) : isOwnPlanViewOnly ? (
+          /* Locked state — view-only on own plan, upgrade to add contacts */
+          <View style={styles.emptyState}>
+            <View style={styles.lockedIcon}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={28}
+                color={colors.textTertiary}
+              />
+            </View>
+            <Text style={styles.emptyTitle}>Trusted Contacts</Text>
+            <Text style={styles.emptyDescription}>
+              Upgrade your plan to invite trusted contacts and share access to
+              your legacy information.
+            </Text>
+            <Pressable
+              onPress={() => setShowUpgradePrompt(true)}
+              style={({ pressed }) => [
+                styles.learnMoreButton,
+                pressed && styles.learnMoreButtonPressed,
+              ]}
+            >
+              <Text style={styles.learnMoreText}>Learn More</Text>
+            </Pressable>
           </View>
         ) : hasContacts ? (
           <View style={styles.contactsList}>
@@ -236,6 +262,16 @@ export default function FamilyScreen() {
         </View>
       )}
     </ScrollView>
+
+    {isOwnPlanViewOnly && (
+      <UpgradePrompt
+        visible={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        title="Unlock Trusted Contacts"
+        message="Upgrade your plan to invite trusted contacts and share access to your legacy information."
+      />
+    )}
+  </>
   );
 }
 
@@ -247,10 +283,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-  },
-  viewOnlyHeader: {
-    paddingBottom: spacing.sm,
-    alignItems: "center",
   },
   header: {
     marginTop: spacing.md,
@@ -316,6 +348,32 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: colors.border,
     borderRadius: borderRadius.lg,
+  },
+  learnMoreButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: colors.featureFamily,
+  },
+  learnMoreButtonPressed: {
+    backgroundColor: colors.featureFamilyTint,
+  },
+  learnMoreText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.body,
+    color: colors.featureFamilyDark,
+  },
+  lockedIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceSecondary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.md,
   },
   emptyIcon: {
     width: 72,

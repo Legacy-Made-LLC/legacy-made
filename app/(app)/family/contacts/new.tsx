@@ -21,12 +21,19 @@ import { FormTextArea } from "@/components/forms/FormTextArea";
 import { Button } from "@/components/ui/Button";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCreateTrustedContact } from "@/hooks/queries";
+import { usePillarGuard } from "@/hooks/usePillarGuard";
 import { toast } from "@/hooks/useToast";
 
 export default function NewTrustedContactScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const createMutation = useCreateTrustedContact();
+  const { guardOverlay } = usePillarGuard({
+    pillar: "family_access",
+    featureName: "Family Access",
+    lockedDescription: "Manage who can access your legacy information and when they can see it.",
+    restrictedDescription: "Your access level doesn't include Family Access for this plan.",
+  });
 
   const form = useForm({
     defaultValues: {
@@ -77,6 +84,10 @@ export default function NewTrustedContactScreen() {
     },
     [form],
   );
+
+  if (guardOverlay) {
+    return guardOverlay;
+  }
 
   return (
     <KeyboardAvoidingView

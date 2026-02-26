@@ -62,6 +62,12 @@ export {
   useDeclineSharedPlan,
 } from './useSharedPlansMutations';
 
+// Access Invitations
+export {
+  useAcceptAccessInvitation,
+  useDeclineAccessInvitation,
+} from './useAccessInvitationMutations';
+
 // Trusted Contacts
 export {
   useTrustedContactsQuery,

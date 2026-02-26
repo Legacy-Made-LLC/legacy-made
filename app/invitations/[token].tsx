@@ -22,7 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -40,7 +40,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchInvitationDetails } from "@/api/accessInvitations";
 import { ApiClientError } from "@/api/client";
 import type { InvitationDetails } from "@/api/types";
-import { useApi } from "@/api/useApi";
 import { FormInput, signUpSchema } from "@/components/forms";
 import Loader from "@/components/ui/Loader";
 import {
@@ -50,9 +49,14 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
+import {
+  useAcceptAccessInvitation,
+  useDeclineAccessInvitation,
+  useSharedPlansQuery,
+} from "@/hooks/queries";
+import { PENDING_INVITATION_TOKEN_KEY } from "@/hooks/usePendingInvitation";
+import { usePlanSwitching } from "@/hooks/usePlanSwitching";
 import { toast } from "@/hooks/useToast";
-
-const PENDING_INVITATION_TOKEN_KEY = "legacy_made_pending_invitation_token";
 
 const ACCESS_LEVEL_INFO: Record<
   string,
@@ -90,17 +94,35 @@ type ScreenState =
   | { kind: "verify"; invitation: InvitationDetails; email: string }
   | { kind: "error"; message: string }
   | { kind: "expired" }
-  | { kind: "done"; outcome: "accepted" | "declined" };
+  | {
+      kind: "done";
+      outcome: "accepted" | "declined";
+      invitation?: InvitationDetails;
+    };
 
 export default function InvitationScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
   const { signUp, isLoaded: isSignUpLoaded, setActive } = useSignUp();
-  const { accessInvitations } = useApi();
+  const acceptMutation = useAcceptAccessInvitation();
+  const declineMutation = useDeclineAccessInvitation();
+  const { data: sharedPlans } = useSharedPlansQuery();
+  const { switchToSharedPlan } = usePlanSwitching();
+
   const [state, setState] = useState<ScreenState>({ kind: "loading" });
-  const [isActing, setIsActing] = useState(false);
+
+  // Track invitation data in a ref so we can read it from effects without
+  // adding `state` to the dependency array.
+  const invitationRef = useRef<InvitationDetails | undefined>(undefined);
+  if (
+    state.kind === "loaded" ||
+    state.kind === "signup" ||
+    state.kind === "verify"
+  ) {
+    invitationRef.current = state.invitation;
+  }
 
   // Signup state
   const [signupError, setSignupError] = useState("");
@@ -172,6 +194,7 @@ export default function InvitationScreen() {
             kind: "done",
             outcome:
               invitation.accessStatus === "accepted" ? "accepted" : "declined",
+            invitation,
           });
         } else {
           setState({ kind: "loaded", invitation });
@@ -195,29 +218,36 @@ export default function InvitationScreen() {
       });
   }, [token]);
 
-  // Check for pending invitation token (escape hatch return)
+  // Check for pending invitation token (escape hatch return).
+  // Also serves as a fast path when usePendingInvitation in the app layout
+  // hasn't fired yet (both clear the token before accepting, so only one wins).
+  const { mutateAsync: acceptInvitation } = acceptMutation;
   useEffect(() => {
+    if (!isSignedIn) return;
+
     const checkPendingToken = async () => {
       try {
         const pendingToken = await AsyncStorage.getItem(
           PENDING_INVITATION_TOKEN_KEY,
         );
-        if (pendingToken && isSignedIn) {
-          await AsyncStorage.removeItem(PENDING_INVITATION_TOKEN_KEY);
-          setIsActing(true);
-          try {
-            await accessInvitations.accept(pendingToken);
-            setState({ kind: "done", outcome: "accepted" });
-            toast.success({ title: "Invitation accepted" });
-          } catch (err) {
-            const message =
-              err instanceof ApiClientError
-                ? err.message
-                : "Couldn\u2019t accept invitation.";
-            toast.error({ message });
-          } finally {
-            setIsActing(false);
-          }
+        if (!pendingToken) return;
+
+        await AsyncStorage.removeItem(PENDING_INVITATION_TOKEN_KEY);
+
+        try {
+          await acceptInvitation(pendingToken);
+          setState({
+            kind: "done",
+            outcome: "accepted",
+            invitation: invitationRef.current,
+          });
+          toast.success({ title: "Invitation accepted" });
+        } catch (err) {
+          const message =
+            err instanceof ApiClientError
+              ? err.message
+              : "Couldn\u2019t accept invitation.";
+          toast.error({ message });
         }
       } catch {
         // Ignore AsyncStorage errors
@@ -225,18 +255,24 @@ export default function InvitationScreen() {
     };
 
     checkPendingToken();
-  }, [isSignedIn, accessInvitations]);
+  }, [isSignedIn, acceptInvitation]);
 
   // ── Handlers ──────────────────────────────────────────────────────────
 
+  const isActing = acceptMutation.isPending || declineMutation.isPending;
+
   const handleAccept = async () => {
     if (!token) return;
+
+    if (!isAuthLoaded) {
+      toast.error({ message: "Still loading, please try again." });
+      return;
+    }
 
     if (!isSignedIn) {
       // Transition to inline sign-up
       if (state.kind === "loaded") {
         const inv = state.invitation;
-        // Pre-fill form from invitation data
         if (inv.contactFirstName)
           signupForm.setFieldValue("firstName", inv.contactFirstName);
         if (inv.contactLastName)
@@ -248,11 +284,11 @@ export default function InvitationScreen() {
       return;
     }
 
-    // User is signed in — accept directly
-    setIsActing(true);
+    // User is signed in — accept via mutation (same pattern as rest of app)
     try {
-      await accessInvitations.accept(token);
-      setState({ kind: "done", outcome: "accepted" });
+      await acceptMutation.mutateAsync(token);
+      const inv = state.kind === "loaded" ? state.invitation : undefined;
+      setState({ kind: "done", outcome: "accepted", invitation: inv });
       toast.success({ title: "Invitation accepted" });
     } catch (err) {
       const message =
@@ -260,8 +296,6 @@ export default function InvitationScreen() {
           ? err.message
           : "Couldn\u2019t accept invitation.";
       toast.error({ message });
-    } finally {
-      setIsActing(false);
     }
   };
 
@@ -277,9 +311,8 @@ export default function InvitationScreen() {
           text: "Decline",
           style: "destructive",
           onPress: async () => {
-            setIsActing(true);
             try {
-              await accessInvitations.decline(token);
+              await declineMutation.mutateAsync(token);
               setState({ kind: "done", outcome: "declined" });
             } catch (err) {
               const message =
@@ -287,8 +320,6 @@ export default function InvitationScreen() {
                   ? err.message
                   : "Couldn\u2019t decline invitation.";
               toast.error({ message });
-            } finally {
-              setIsActing(false);
             }
           },
         },
@@ -309,24 +340,41 @@ export default function InvitationScreen() {
       });
 
       if (result.status === "complete") {
-        // Activate the session
+        // Save invitation token BEFORE activating the session.
+        // setActive triggers isSignedIn → true, which causes the root index
+        // to redirect to /(app), dismissing this modal. The pending token
+        // in AsyncStorage is picked up by usePendingInvitation in the app layout.
+        try {
+          await AsyncStorage.setItem(PENDING_INVITATION_TOKEN_KEY, token);
+        } catch {
+          // If storage fails, we'll still try inline below
+        }
+
+        // Activate the session (this may trigger navigation away from this screen)
         await setActive({ session: result.createdSessionId });
 
         // Brief delay for session propagation to Clerk hooks
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // Auto-accept the invitation
+        // Try to accept inline (fast path if the modal hasn't been dismissed yet).
+        // usePendingInvitation in (app) layout handles the case where
+        // this screen is dismissed before accept completes.
+        const inv = state.kind === "verify" ? state.invitation : undefined;
         try {
-          await accessInvitations.accept(token);
-          setState({ kind: "done", outcome: "accepted" });
+          await acceptMutation.mutateAsync(token);
+          await AsyncStorage.removeItem(PENDING_INVITATION_TOKEN_KEY).catch(
+            () => {},
+          );
+          setState({ kind: "done", outcome: "accepted", invitation: inv });
           toast.success({ title: "Account created & invitation accepted" });
         } catch (acceptErr) {
+          // Don't clear the pending token — let usePendingInvitation retry
           const message =
             acceptErr instanceof ApiClientError
               ? acceptErr.message
               : "Account created but couldn\u2019t accept invitation.";
           toast.error({ message });
-          setState({ kind: "done", outcome: "accepted" });
+          setState({ kind: "done", outcome: "accepted", invitation: inv });
         }
       } else {
         setOtpError("Verification could not be completed. Please try again.");
@@ -381,6 +429,28 @@ export default function InvitationScreen() {
       router.replace("/(app)/(tabs)/home");
     } else {
       router.replace("/(auth)");
+    }
+  };
+
+  const handleViewAcceptedPlan = () => {
+    if (!isSignedIn || state.kind !== "done" || !state.invitation) {
+      handleGoHome();
+      return;
+    }
+
+    const plan = sharedPlans?.find(
+      (sp) => sp.planId === state.invitation!.planId,
+    );
+    if (plan) {
+      // Dismiss the modal first, then switch plans.
+      // switchToSharedPlan uses router.push, which would layer on top of
+      // this modal. By dismissing first we return to the (app) stack.
+      router.dismiss();
+      switchToSharedPlan(plan);
+    } else {
+      // Plan data hasn't loaded yet — dismiss modal and go to Family tab
+      router.dismiss();
+      router.replace("/(app)/(tabs)/family");
     }
   };
 
@@ -517,18 +587,22 @@ export default function InvitationScreen() {
           </Text>
           <Text style={styles.expiredDescription}>
             {isAccepted
-              ? "You now have access to this plan. You can view it in the Family Access section."
+              ? `You now have access to ${state.invitation?.ownerName ? `${state.invitation.ownerName}\u2019s` : "this"} plan.`
               : "The plan owner has been notified."}
           </Text>
           <Pressable
-            onPress={handleGoHome}
+            onPress={isAccepted ? handleViewAcceptedPlan : handleGoHome}
             style={({ pressed }) => [
               styles.primaryButton,
               pressed && styles.buttonPressed,
             ]}
           >
             <Text style={styles.primaryButtonText}>
-              {isAccepted ? "Go to My Plans" : "Go to Legacy Made"}
+              {isAccepted && state.invitation?.ownerName
+                ? `View Plan`
+                : isAccepted
+                  ? "View Plan"
+                  : "Go to Legacy Made"}
             </Text>
           </Pressable>
         </View>
@@ -841,6 +915,17 @@ export default function InvitationScreen() {
         </Text>
       </View>
 
+      {/* Accept error */}
+      {acceptMutation.isError ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            {acceptMutation.error instanceof ApiClientError
+              ? acceptMutation.error.message
+              : "Couldn\u2019t accept invitation. Please try again."}
+          </Text>
+        </View>
+      ) : null}
+
       {/* Actions */}
       <View style={styles.actions}>
         <Pressable
@@ -853,7 +938,11 @@ export default function InvitationScreen() {
           ]}
         >
           <Text style={styles.primaryButtonText}>
-            {isActing ? "Please wait..." : "Accept Invitation"}
+            {isActing
+              ? "Please wait..."
+              : acceptMutation.isError
+                ? "Try Again"
+                : "Accept Invitation"}
           </Text>
         </Pressable>
 

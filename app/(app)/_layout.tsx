@@ -15,6 +15,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { usePendingInvitation } from "@/hooks/usePendingInvitation";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCreateEntry } from "@/hooks/queries";
 
@@ -106,6 +107,9 @@ export default function AppLayout() {
   // Guard against revoked shared plan access
   useAccessRevocationGuard();
   useSharedPlanStatusPolling();
+
+  // Accept any pending invitation that was stored before auth redirect
+  usePendingInvitation();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);

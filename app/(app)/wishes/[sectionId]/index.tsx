@@ -9,6 +9,7 @@ import { WishesTaskPicker } from "@/components/wishes/WishesTaskPicker";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useWishesSection } from "@/constants/wishes";
 import { useAllProgressQuery, usePrefetchWishesByTaskKeys } from "@/hooks/queries";
+import { usePillarGuard } from "@/hooks/usePillarGuard";
 import { Redirect, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useLayoutEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -17,6 +18,12 @@ export default function WishesSectionScreen() {
   const { sectionId } = useLocalSearchParams<{ sectionId: string }>();
   const navigation = useNavigation();
   const { data: progress = {} } = useAllProgressQuery();
+  const { guardOverlay } = usePillarGuard({
+    pillar: "wishes",
+    featureName: "Wishes & Guidance",
+    lockedDescription: "Share your personal wishes, values, and guidance for your loved ones.",
+    restrictedDescription: "Your access level doesn't include Wishes & Guidance for this plan.",
+  });
 
   const section = useWishesSection(sectionId);
 
@@ -36,6 +43,11 @@ export default function WishesSectionScreen() {
       });
     }
   }, [section, navigation]);
+
+  // Show guard overlay if pillar is locked or access is restricted
+  if (guardOverlay) {
+    return guardOverlay;
+  }
 
   // Section not found
   if (!section) {
