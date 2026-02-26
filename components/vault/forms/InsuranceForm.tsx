@@ -180,6 +180,7 @@ export function InsuranceForm({
               field={field}
               label="Insurance Provider"
               placeholder="e.g., State Farm, MetLife, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -197,7 +198,7 @@ export function InsuranceForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -224,6 +225,7 @@ export function InsuranceForm({
                   label="Policy #"
                   placeholder="e.g., LF-2847592"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -236,6 +238,7 @@ export function InsuranceForm({
                   label="Coverage"
                   placeholder="e.g., $500,000"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -248,6 +251,7 @@ export function InsuranceForm({
               field={field}
               label="Beneficiaries"
               placeholder="e.g., Jane Doe, John Doe"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -261,6 +265,7 @@ export function InsuranceForm({
                   label="Agent Name"
                   placeholder="e.g., John Smith"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -274,6 +279,7 @@ export function InsuranceForm({
                   placeholder="(555) 123-4567"
                   keyboardType="phone-pad"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -286,6 +292,7 @@ export function InsuranceForm({
               field={field}
               label="Notes"
               placeholder="i.e. physical location, contact information, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>

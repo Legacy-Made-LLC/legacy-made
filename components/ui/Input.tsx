@@ -82,6 +82,5 @@ const styles = StyleSheet.create({
   },
   disabled: {
     backgroundColor: colors.surfaceSecondary,
-    color: colors.textSecondary,
   },
 });

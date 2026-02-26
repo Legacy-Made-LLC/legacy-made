@@ -177,6 +177,7 @@ export function FinancialForm({
               field={field}
               label="Bank/Institution"
               placeholder="e.g., Chase Bank"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -194,7 +195,7 @@ export function FinancialForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -218,6 +219,7 @@ export function FinancialForm({
               field={field}
               label="Account Name"
               placeholder="e.g., Primary Checking"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -228,6 +230,7 @@ export function FinancialForm({
               field={field}
               label="Account Owner(s)"
               placeholder="e.g., John & Jane Doe"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -240,6 +243,7 @@ export function FinancialForm({
               placeholder="e.g., 4521"
               keyboardType="number-pad"
               maxLength={4}
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -250,6 +254,7 @@ export function FinancialForm({
               field={field}
               label="Notes"
               placeholder="Any additional details about this account"
+              disabled={readOnly}
             />
           )}
         </form.Field>

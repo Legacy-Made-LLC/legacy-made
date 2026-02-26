@@ -93,7 +93,7 @@ export function Select({
     handleClose();
   }, [onValueChange, handleClose]);
 
-  const showClear = clearable && !!value;
+  const showClear = clearable && !!value && !disabled;
 
   return (
     <View style={[styles.container, containerStyle]}>

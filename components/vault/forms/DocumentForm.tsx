@@ -207,7 +207,7 @@ export function DocumentForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -235,6 +235,7 @@ export function DocumentForm({
                     label="Attorney/Preparer"
                     placeholder="e.g., David Park, Esq."
                     containerStyle={{ marginBottom: 0 }}
+                    disabled={readOnly}
                   />
                 )}
               </form.Field>
@@ -248,6 +249,7 @@ export function DocumentForm({
                     placeholder="(555) 123-4567"
                     keyboardType="phone-pad"
                     containerStyle={{ marginBottom: 0 }}
+                    disabled={readOnly}
                   />
                 )}
               </form.Field>
@@ -261,6 +263,7 @@ export function DocumentForm({
               field={field}
               label="Location"
               placeholder="e.g., Safe deposit box at Chase Bank"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -271,6 +274,7 @@ export function DocumentForm({
               field={field}
               label="Who Has a Copy?"
               placeholder="e.g., Attorney David Park"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -281,6 +285,7 @@ export function DocumentForm({
               field={field}
               label="Notes"
               placeholder="Any additional details about this document"
+              disabled={readOnly}
             />
           )}
         </form.Field>

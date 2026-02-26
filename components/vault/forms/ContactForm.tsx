@@ -187,6 +187,7 @@ export function ContactForm({
           form={form}
           showReasonField={true}
           phoneRequired={true}
+          disabled={readOnly}
         />
 
         {!readOnly && onAttachmentsChange && (

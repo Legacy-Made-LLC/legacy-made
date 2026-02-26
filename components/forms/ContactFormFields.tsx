@@ -46,12 +46,14 @@ export interface ContactFormData {
 
 interface ContactFormFieldsWithFormProps {
   /** TanStack Form instance - uses any to avoid complex generic constraints */
-   
+
   form: any;
   showReasonField?: boolean;
   phoneRequired?: boolean;
   reasonLabel?: string;
   reasonPlaceholder?: string;
+  /** When true, all fields are non-interactive (view-only) */
+  disabled?: boolean;
 }
 
 export function ContactFormFieldsWithForm({
@@ -60,6 +62,7 @@ export function ContactFormFieldsWithForm({
   phoneRequired = false,
   reasonLabel = 'Why this person?',
   reasonPlaceholder = 'What makes them the right contact?',
+  disabled,
 }: ContactFormFieldsWithFormProps) {
   return (
     <>
@@ -74,6 +77,7 @@ export function ContactFormFieldsWithForm({
                 placeholder="First name"
                 autoCapitalize="words"
                 autoCorrect={false}
+                disabled={disabled}
                 containerStyle={styles.nameFieldInput}
               />
             )}
@@ -89,6 +93,7 @@ export function ContactFormFieldsWithForm({
                 placeholder="Last name"
                 autoCapitalize="words"
                 autoCorrect={false}
+                disabled={disabled}
                 containerStyle={styles.nameFieldInput}
               />
             )}
@@ -105,6 +110,7 @@ export function ContactFormFieldsWithForm({
             onValueChange={field.handleChange}
             options={RELATIONSHIP_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
             placeholder="Select relationship"
+            disabled={disabled}
           />
         )}
       </form.Field>
@@ -119,6 +125,7 @@ export function ContactFormFieldsWithForm({
             keyboardType="phone-pad"
             autoCorrect={false}
             maxLength={14}
+            disabled={disabled}
             onValueChange={(v) => field.handleChange(formatPhoneNumber(v))}
           />
         )}
@@ -134,6 +141,7 @@ export function ContactFormFieldsWithForm({
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            disabled={disabled}
           />
         )}
       </form.Field>
@@ -146,6 +154,7 @@ export function ContactFormFieldsWithForm({
               field={field}
               label={reasonLabel}
               placeholder={reasonPlaceholder}
+              disabled={disabled}
             />
           )}
         </form.Field>

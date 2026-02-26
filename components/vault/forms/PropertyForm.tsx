@@ -195,7 +195,7 @@ export function PropertyForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -226,7 +226,7 @@ export function PropertyForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -250,6 +250,7 @@ export function PropertyForm({
               field={field}
               label="Address/Description"
               placeholder="e.g., 123 Main St or 2021 Honda CR-V"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -260,6 +261,7 @@ export function PropertyForm({
               field={field}
               label="Mortgage/Lien Holder"
               placeholder="e.g., Wells Fargo, Toyota Financial"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -270,6 +272,7 @@ export function PropertyForm({
               field={field}
               label="Where Documents are Stored"
               placeholder="e.g., Filing cabinet, safe deposit box"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -280,6 +283,7 @@ export function PropertyForm({
               field={field}
               label="Key/Access Location"
               placeholder="e.g., Kitchen drawer, with neighbor"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -290,6 +294,7 @@ export function PropertyForm({
               field={field}
               label="Notes"
               placeholder="e.g. HOA, utilities, alarm codes, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>

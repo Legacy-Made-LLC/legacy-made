@@ -221,6 +221,7 @@ export function DigitalForm({
                 field={field}
                 label="Name"
                 placeholder={labels.namePlaceholder}
+                disabled={readOnly}
               />
             )}
           </form.Field>
@@ -232,6 +233,7 @@ export function DigitalForm({
               field={field}
               label="Service/Platform"
               placeholder={labels.servicePlaceholder}
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -244,6 +246,7 @@ export function DigitalForm({
               placeholder="e.g., email@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -261,7 +264,7 @@ export function DigitalForm({
                       field.state.value === level &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(level)}
+                    onPress={readOnly ? undefined : () => field.handleChange(level)}
                   >
                     <Text
                       style={[
@@ -285,6 +288,7 @@ export function DigitalForm({
               field={field}
               label="How to Access"
               placeholder="Where can the password be found? Don't store the actual password here."
+              disabled={readOnly}
             />
           )}
         </form.Field>

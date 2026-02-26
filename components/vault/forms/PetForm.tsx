@@ -173,6 +173,7 @@ export function PetForm({
               label="Pet Name"
               placeholder="e.g., Luna"
               autoCapitalize="words"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -190,7 +191,7 @@ export function PetForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -214,6 +215,7 @@ export function PetForm({
               field={field}
               label="Breed/Description"
               placeholder="e.g., Golden Retriever, orange tabby"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -227,6 +229,7 @@ export function PetForm({
                   label="Veterinarian"
                   placeholder="e.g., Bay Area Pet Hospital"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -243,6 +246,7 @@ export function PetForm({
                     field.handleChange(formatPhoneNumber(text))
                   }
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -255,6 +259,7 @@ export function PetForm({
               field={field}
               label="Who Will Care for Them?"
               placeholder="e.g., Margaret Chen"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -265,6 +270,7 @@ export function PetForm({
               field={field}
               label="Care Instructions"
               placeholder="Special diet, medications, routines, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>
