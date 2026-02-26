@@ -286,6 +286,20 @@ export interface MetadataSchema {
 }
 
 // ============================================================================
+// Entry Completion Status
+// ============================================================================
+
+export type EntryCompletionStatus = "complete" | "draft";
+
+/**
+ * Returns true if the entry is a draft.
+ * Entries without a completionStatus are treated as complete (backward compat).
+ */
+export function isEntryDraft(entry: Entry): boolean {
+  return entry.completionStatus === "draft";
+}
+
+// ============================================================================
 // Entry Types
 // ============================================================================
 
@@ -302,6 +316,8 @@ export interface Entry<T = Record<string, unknown>> {
   title: string | null;
   notes: string | null;
   sortOrder: number;
+  /** Whether this entry is complete or still a draft */
+  completionStatus?: EntryCompletionStatus;
   metadata: T;
   /** Display schema for rendering metadata (optional for backwards compatibility) */
   metadataSchema?: MetadataSchema;
@@ -325,6 +341,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   title?: string;
   notes?: string | null;
   sortOrder?: number;
+  completionStatus?: EntryCompletionStatus;
   metadata: T;
   metadataSchema: MetadataSchema;
 }
@@ -336,6 +353,7 @@ export interface UpdateEntryRequest<T = Record<string, unknown>> {
   title?: string;
   notes?: string | null;
   sortOrder?: number;
+  completionStatus?: EntryCompletionStatus;
   metadata?: Partial<T>;
   metadataSchema?: MetadataSchema;
 }
@@ -390,6 +408,51 @@ export interface Plan {
   name: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ============================================================================
+// Plan Permissions (returned with shared plans by the backend)
+// ============================================================================
+
+/**
+ * Resource types that the backend controls access to
+ */
+export type PlanResource = "entries" | "wishes" | "messages" | "progress";
+
+/**
+ * Read/write permission for a single resource
+ */
+export interface ResourcePermission {
+  read: boolean;
+  write: boolean;
+}
+
+/**
+ * Full permissions object returned by the backend for each shared plan.
+ * Maps each resource to its read/write permission based on the access level.
+ */
+export type PlanPermissions = Record<PlanResource, ResourcePermission>;
+
+/**
+ * A plan shared with the current user, returned by GET /shared-plans
+ *
+ * Flat structure matching the backend response.
+ */
+export interface SharedPlan {
+  planId: string;
+  planName: string;
+  planType: string;
+  /** The name the plan is "for" (e.g., the plan owner's name) */
+  forName: string;
+  ownerFirstName: string;
+  ownerLastName: string;
+  ownerAvatarUrl: string | null;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  accessStatus: TrustedContactStatus;
+  acceptedAt: string | null;
+  /** Backend-calculated permissions based on accessLevel */
+  permissions: PlanPermissions;
 }
 
 // ============================================================================
@@ -454,8 +517,7 @@ export interface EntitlementInfo {
  * Entitlement error codes from the API
  */
 export type EntitlementErrorCode =
-  | "PILLAR_LOCKED"
-  | "PILLAR_VIEW_ONLY"
+  | "FEATURE_LOCKED"
   | "QUOTA_EXCEEDED";
 
 /**
@@ -494,6 +556,100 @@ export interface StorageQuotaError {
     /** Suggested tier to upgrade to */
     suggestedTier?: SubscriptionTier;
   };
+}
+
+// ============================================================================
+// Trusted Contact Types (Family Access Pillar)
+// ============================================================================
+
+/**
+ * Access levels for trusted contacts
+ */
+export type TrustedContactAccessLevel = "full_edit" | "full_view";
+// | "limited_view";
+
+/**
+ * When the trusted contact should receive access
+ */
+export type TrustedContactAccessTiming = "immediate"; // | "upon_passing";
+
+/**
+ * Status of a trusted contact invitation
+ */
+export type TrustedContactStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "revoked_by_owner"
+  | "revoked_by_contact";
+
+/**
+ * Trusted contact record from the API
+ */
+export interface TrustedContact {
+  id: string;
+  planId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  relationship?: string;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  accessStatus: TrustedContactStatus;
+  clerkUserId?: string;
+  notes?: string;
+  invitedAt: string;
+  acceptedAt?: string;
+  declinedAt?: string;
+  revokedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Request type for creating a trusted contact
+ */
+export interface CreateTrustedContactRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  relationship?: string;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  notes?: string;
+}
+
+/**
+ * Request type for updating a trusted contact
+ * Email is immutable once set
+ */
+export interface UpdateTrustedContactRequest {
+  firstName?: string;
+  lastName?: string;
+  relationship?: string;
+  accessLevel?: TrustedContactAccessLevel;
+  accessTiming?: TrustedContactAccessTiming;
+  notes?: string;
+}
+
+// ============================================================================
+// Access Invitation Types (Public Deep Link Flow)
+// ============================================================================
+
+/**
+ * Invitation details returned by the public GET endpoint
+ * No authentication required to view these.
+ */
+export interface InvitationDetails {
+  id: string;
+  planId: string;
+  ownerName: string;
+  accessLevel: TrustedContactAccessLevel;
+  accessTiming: TrustedContactAccessTiming;
+  accessStatus: TrustedContactStatus;
+  contactEmail: string;
+  contactFirstName: string;
+  contactLastName: string;
 }
 
 // ============================================================================

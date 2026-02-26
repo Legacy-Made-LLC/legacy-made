@@ -2,7 +2,8 @@
  * DigitalList - Displays a list of digital access entries
  */
 
-import type { Entry } from "@/api/types";
+import { type Entry, isEntryDraft } from "@/api/types";
+import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -76,6 +77,7 @@ export function DigitalList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -137,8 +139,8 @@ export function DigitalList({
         <EmptyState
           title={labels.emptyTitle}
           description={labels.emptyDescription}
-          buttonTitle={labels.addButton}
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : labels.addButton}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -191,6 +193,7 @@ export function DigitalList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
+                {isEntryDraft(entry) && <EntryDraftBadge />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>
@@ -198,11 +201,13 @@ export function DigitalList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ {labels.addButton}</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ {labels.addButton}</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

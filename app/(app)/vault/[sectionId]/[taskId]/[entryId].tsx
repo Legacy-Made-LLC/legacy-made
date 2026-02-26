@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   apiFileToAttachment,
+  type EntryCompletionStatus,
   MetadataSchema,
   type FileAttachment,
 } from "@/api/types";
@@ -47,11 +48,18 @@ export default function EntryScreen() {
   }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly, isViewingSharedPlan, sharedPlanInfo } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const task = useVaultTask(sectionId, taskId);
   const isNew = entryId === "new";
+
+  // Redirect back if trying to create new entry on a read-only plan
+  useEffect(() => {
+    if (isReadOnly && isNew) {
+      router.back();
+    }
+  }, [isReadOnly, isNew, router]);
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
 
@@ -258,6 +266,7 @@ export default function EntryScreen() {
       notes?: string | null;
       metadata: Record<string, unknown>;
       metadataSchema: MetadataSchema;
+      completionStatus?: EntryCompletionStatus;
     }) => {
       if (!task || !planId) return;
 
@@ -269,10 +278,16 @@ export default function EntryScreen() {
         const wasNew = isNew;
 
         if (isNew) {
-          const createdEntry = await createMutation.mutateAsync(data);
+          const createdEntry = await createMutation.mutateAsync({
+            ...data,
+            completionStatus: data.completionStatus,
+          });
           savedEntryId = createdEntry.id;
         } else {
-          await updateMutation.mutateAsync({ entryId, data });
+          await updateMutation.mutateAsync({
+            entryId,
+            data: { ...data, completionStatus: data.completionStatus },
+          });
           savedEntryId = entryId;
         }
 
@@ -430,18 +445,29 @@ export default function EntryScreen() {
         isUploading={isUploading}
         deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
+        readOnly={isReadOnly}
       />
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
-        title="You've Reached Your Limit"
-        message="You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+        title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its entry limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
       <UpgradePrompt
         visible={showStorageUpgradePrompt}
         onClose={() => setShowStorageUpgradePrompt(false)}
         title="Storage Limit Reached"
-        message="This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important files safe."
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its storage limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important files safe."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
     </>
   );

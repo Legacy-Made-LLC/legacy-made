@@ -2,12 +2,14 @@
  * Locale Context - Manages i18n and perspective switching
  *
  * Provides translations and perspective switching functionality throughout the app.
+ * Supports family tense (present/past) for when the plan owner is alive vs. has passed.
  */
 
 import React, { createContext, useContext, useMemo, useState } from "react";
 
 import {
   getTranslations,
+  type FamilyTense,
   type Locale,
   type Perspective,
   type Translations,
@@ -16,9 +18,11 @@ import {
 interface LocaleContextValue {
   locale: Locale;
   perspective: Perspective;
+  familyTense: FamilyTense;
   translations: Translations;
   setLocale: (locale: Locale) => void;
   setPerspective: (perspective: Perspective) => void;
+  setFamilyTense: (tense: FamilyTense) => void;
 }
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
@@ -27,6 +31,7 @@ interface LocaleProviderProps {
   children: React.ReactNode;
   defaultLocale?: Locale;
   defaultPerspective?: Perspective;
+  defaultFamilyTense?: FamilyTense;
 }
 
 /**
@@ -36,24 +41,28 @@ export function LocaleProvider({
   children,
   defaultLocale = "en",
   defaultPerspective = "owner",
+  defaultFamilyTense = "present",
 }: LocaleProviderProps) {
   const [locale, setLocale] = useState<Locale>(defaultLocale);
   const [perspective, setPerspective] = useState<Perspective>(defaultPerspective);
+  const [familyTense, setFamilyTense] = useState<FamilyTense>(defaultFamilyTense);
 
   const translations = useMemo(
-    () => getTranslations(locale, perspective),
-    [locale, perspective],
+    () => getTranslations(locale, perspective, familyTense),
+    [locale, perspective, familyTense],
   );
 
   const value = useMemo(
     () => ({
       locale,
       perspective,
+      familyTense,
       translations,
       setLocale,
       setPerspective,
+      setFamilyTense,
     }),
-    [locale, perspective, translations],
+    [locale, perspective, familyTense, translations],
   );
 
   return (
@@ -80,17 +89,27 @@ export function usePerspective(): {
   setPerspective: (perspective: Perspective) => void;
   isOwner: boolean;
   isFamily: boolean;
+  familyTense: FamilyTense;
+  setFamilyTense: (tense: FamilyTense) => void;
+  isFamilyPresent: boolean;
+  isFamilyPast: boolean;
 } {
   const context = useContext(LocaleContext);
   if (!context) {
     throw new Error("usePerspective must be used within a LocaleProvider");
   }
 
+  const isFamily = context.perspective === "family";
+
   return {
     perspective: context.perspective,
     setPerspective: context.setPerspective,
     isOwner: context.perspective === "owner",
-    isFamily: context.perspective === "family",
+    isFamily,
+    familyTense: context.familyTense,
+    setFamilyTense: context.setFamilyTense,
+    isFamilyPresent: isFamily && context.familyTense === "present",
+    isFamilyPast: isFamily && context.familyTense === "past",
   };
 }
 

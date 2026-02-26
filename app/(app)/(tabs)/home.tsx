@@ -23,7 +23,7 @@ import {
 } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
 import { useWishesSections } from "@/constants/wishes";
-import { usePerspective } from "@/contexts/LocaleContext";
+import { useTranslations } from "@/contexts/LocaleContext";
 import { useAllProgressQuery } from "@/hooks/queries";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -31,30 +31,11 @@ const CARD_GAP = spacing.md;
 const HORIZONTAL_PADDING = spacing.lg;
 const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
-const pillarText = {
-  owner: {
-    pageTitle: "Your Progress",
-    greeting: "You\u2019ve started something meaningful.",
-    information: "Accounts, documents, and key contacts — all in one place.",
-    wishes: "Your healthcare values and end-of-life preferences.",
-    legacy: "Letters, videos, and memories for the people you love.",
-    family: "Share access and keep loved ones in the loop.",
-  },
-  family: {
-    pageTitle: "Their Progress",
-    greeting: "You\u2019re helping preserve what matters.",
-    information: "Their accounts, documents, and key contacts — all in one place.",
-    wishes: "Their healthcare values and end-of-life preferences.",
-    legacy: "Letters, videos, and memories for the people they love.",
-    family: "Shared access and keeping loved ones in the loop.",
-  },
-};
-
 /** Build pillar definitions using current section data */
 function usePillars() {
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
-  const { perspective } = usePerspective();
+  const translations = useTranslations();
 
   return useMemo(() => {
     const informationTaskKeys = vaultSections.flatMap((s) =>
@@ -64,7 +45,7 @@ function usePillars() {
       s.tasks.map((t) => t.taskKey),
     );
 
-    const t = pillarText[perspective];
+    const t = translations.pages.home;
 
     return [
       {
@@ -112,7 +93,7 @@ function usePillars() {
         tint: colors.featureFamilyTint,
       },
     ];
-  }, [vaultSections, wishesSections, perspective]);
+  }, [vaultSections, wishesSections, translations]);
 }
 
 // Circular progress configuration
@@ -195,7 +176,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const pillars = usePillars();
   const { data: progress = {} } = useAllProgressQuery();
-  const { perspective } = usePerspective();
+  const t = useTranslations();
 
   // Get completed task count for each pillar
   const getPillarProgress = (pillar: PillarDef) => {
@@ -220,10 +201,10 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.pageTitle}>{pillarText[perspective].pageTitle}</Text>
-        <Text style={styles.greeting}>
-          {pillarText[perspective].greeting}
+        <Text style={styles.pageTitle}>
+          {t.pages.home.pageTitle}
         </Text>
+        <Text style={styles.greeting}>{t.pages.home.greeting}</Text>
       </View>
 
       {/* TODO: Add guidance card */}
@@ -283,6 +264,7 @@ const styles = StyleSheet.create({
   },
   // Welcome Section
   welcome: {
+    marginTop: spacing.md,
     marginBottom: spacing.lg,
     alignItems: "center",
   },

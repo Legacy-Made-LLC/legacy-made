@@ -83,6 +83,7 @@ export function ComfortVsTreatmentForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -176,6 +177,7 @@ export function ComfortVsTreatmentForm({
               options={preferenceOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -191,6 +193,7 @@ export function ComfortVsTreatmentForm({
               options={painManagementOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -206,6 +209,7 @@ export function ComfortVsTreatmentForm({
               options={alertnessOptions}
               placeholder="Select..."
               clearable
+              disabled={readOnly}
             />
           </View>
         )}
@@ -220,6 +224,7 @@ export function ComfortVsTreatmentForm({
               onChangeText={(text) => field.handleChange(text)}
               placeholder={t.notesPlaceholder}
               maxLength={2000}
+              disabled={readOnly}
             />
           </View>
         )}

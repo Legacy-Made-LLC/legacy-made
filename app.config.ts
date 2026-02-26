@@ -22,7 +22,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
     },
-    appleTeamId: "283YQ4PTU9",
+    appleTeamId: "LQ7UL43SY2",
+    associatedDomains: ["applinks:app.legacymade.com"],
   },
   android: {
     adaptiveIcon: {
@@ -33,6 +34,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     predictiveBackGestureEnabled: false,
     package: "com.legacymade.LegacyMade",
     permissions: ["android.permission.RECORD_AUDIO"],
+    intentFilters: [
+      {
+        action: "VIEW",
+        autoVerify: true,
+        data: [
+          {
+            scheme: "https",
+            host: "app.legacymade.com",
+            pathPrefix: "/invitations",
+          },
+        ],
+        category: ["BROWSABLE", "DEFAULT"],
+      },
+    ],
   },
   web: {
     output: "static",

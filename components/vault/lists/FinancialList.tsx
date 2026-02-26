@@ -2,7 +2,8 @@
  * FinancialList - Displays a list of financial account entries
  */
 
-import type { Entry } from "@/api/types";
+import { type Entry, isEntryDraft } from "@/api/types";
+import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -31,6 +32,7 @@ export function FinancialList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -94,8 +96,8 @@ export function FinancialList({
         <EmptyState
           title="No accounts added yet"
           description="Add your first financial account so your loved ones know where everything is."
-          buttonTitle="Add Account"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Account"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -159,6 +161,7 @@ export function FinancialList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
+                {isEntryDraft(entry) && <EntryDraftBadge />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>
@@ -166,11 +169,13 @@ export function FinancialList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Account</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Account</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

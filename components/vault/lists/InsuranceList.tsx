@@ -2,7 +2,8 @@
  * InsuranceList - Displays a list of insurance policy entries
  */
 
-import type { Entry } from "@/api/types";
+import { type Entry, isEntryDraft } from "@/api/types";
+import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -32,6 +33,7 @@ export function InsuranceList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -95,8 +97,8 @@ export function InsuranceList({
         <EmptyState
           title="No policies added yet"
           description="Add your insurance policies so your loved ones know what coverage exists."
-          buttonTitle="Add Policy"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Policy"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -146,6 +148,7 @@ export function InsuranceList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
+                {isEntryDraft(entry) && <EntryDraftBadge />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>
@@ -153,11 +156,13 @@ export function InsuranceList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Policy</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Policy</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

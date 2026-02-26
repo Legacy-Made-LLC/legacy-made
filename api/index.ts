@@ -60,10 +60,28 @@ export type {
   // Progress types
   ProgressRecord,
   TaskProgressData,
+  // Shared plan types
+  SharedPlan,
+  PlanResource,
+  ResourcePermission,
+  PlanPermissions,
+  // Invitation types
+  InvitationDetails,
+  // Trusted contact types
+  TrustedContact,
+  TrustedContactAccessLevel,
+  TrustedContactAccessTiming,
+  TrustedContactStatus,
+  CreateTrustedContactRequest,
+  UpdateTrustedContactRequest,
 } from './types';
 
 // File utilities
 export { apiFileToAttachment } from './types';
+
+// Access Invitations (public + authenticated)
+export { fetchInvitationDetails, createAccessInvitationsService } from './accessInvitations';
+export type { AccessInvitationsService } from './accessInvitations';
 
 // Client
 export { createApiClient, ApiClientError } from './client';
@@ -76,6 +94,9 @@ export type { EntriesService } from './entries';
 export { createPlansService } from './plans';
 export type { PlansService } from './plans';
 
+export { createSharedPlansService } from './sharedPlans';
+export type { SharedPlansService } from './sharedPlans';
+
 export { createFilesService } from './files';
 export type { FilesService } from './files';
 
@@ -87,6 +108,9 @@ export type { WishesService } from './wishes';
 
 export { createProgressService } from './progress';
 export type { ProgressService } from './progress';
+
+export { createTrustedContactsService } from './trustedContacts';
+export type { TrustedContactsService } from './trustedContacts';
 
 // Mappers
 export {

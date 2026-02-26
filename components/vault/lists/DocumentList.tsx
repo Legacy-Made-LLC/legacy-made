@@ -2,7 +2,8 @@
  * DocumentList - Displays a list of legal document entries
  */
 
-import type { Entry } from "@/api/types";
+import { type Entry, isEntryDraft } from "@/api/types";
+import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -31,6 +32,7 @@ export function DocumentList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -91,8 +93,8 @@ export function DocumentList({
         <EmptyState
           title="No documents added yet"
           description="Add your important legal documents so your family knows where to find them."
-          buttonTitle="Add Document"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Document"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -139,6 +141,7 @@ export function DocumentList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
+                {isEntryDraft(entry) && <EntryDraftBadge />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>
@@ -146,11 +149,13 @@ export function DocumentList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Document</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Document</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }

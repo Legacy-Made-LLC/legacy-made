@@ -2,14 +2,14 @@
  * FinancialForm - Form for creating/editing financial account entries
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, financialSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -68,10 +68,12 @@ export function FinancialForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as
     | FinancialMetadata
@@ -117,6 +119,7 @@ export function FinancialForm({
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: FINANCIAL_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -128,9 +131,14 @@ export function FinancialForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Account" : "Edit Account",
+      title: readOnly ? "View Account" : isNew ? "Add Account" : "Edit Account",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -176,6 +184,7 @@ export function FinancialForm({
               field={field}
               label="Bank/Institution"
               placeholder="e.g., Chase Bank"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -193,7 +202,7 @@ export function FinancialForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -217,6 +226,7 @@ export function FinancialForm({
               field={field}
               label="Account Name"
               placeholder="e.g., Primary Checking"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -227,6 +237,7 @@ export function FinancialForm({
               field={field}
               label="Account Owner(s)"
               placeholder="e.g., John & Jane Doe"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -239,6 +250,7 @@ export function FinancialForm({
               placeholder="e.g., 4521"
               keyboardType="number-pad"
               maxLength={4}
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -249,11 +261,12 @@ export function FinancialForm({
               field={field}
               label="Notes"
               placeholder="Any additional details about this account"
+              disabled={readOnly}
             />
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Statements & Documents"
             value={attachments ?? []}
@@ -267,6 +280,7 @@ export function FinancialForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -277,19 +291,29 @@ export function FinancialForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Button
-                  title={buttonTitle}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                />
+                <>
+                  <Button
+                    title={buttonTitle}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
+                  />
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={formStyles.draftLinkContainer}
+                  >
+                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Account"

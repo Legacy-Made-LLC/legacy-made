@@ -8,6 +8,7 @@
  * Only renders when the task has content (entries > 0 or wish exists).
  */
 
+import { type Entry, isEntryDraft } from "@/api/types";
 import {
   borderRadius,
   colors,
@@ -21,8 +22,8 @@ import {
   useTaskProgressQuery,
 } from "@/hooks/queries";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useRef } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -43,6 +44,8 @@ interface TaskCompletionFooterProps {
   pillarTint: string;
   /** Navigate back when "Come Back Later" is tapped */
   onComeBackLater: () => void;
+  /** Current entries for this task (used to check for drafts) */
+  entries?: Entry[];
 }
 
 export function TaskCompletionFooter({
@@ -50,6 +53,7 @@ export function TaskCompletionFooter({
   pillarColor,
   pillarTint,
   onComeBackLater,
+  entries,
 }: TaskCompletionFooterProps) {
   const insets = useSafeAreaInsets();
   const { data: progressData } = useTaskProgressQuery(taskKey);
@@ -78,6 +82,25 @@ export function TaskCompletionFooter({
 
   const isComplete = progressData?.status === "complete";
 
+  const handleMarkComplete = useCallback(() => {
+    const draftCount = entries?.filter(isEntryDraft).length ?? 0;
+    if (draftCount > 0) {
+      Alert.alert(
+        "You Have Draft Entries",
+        `${draftCount} ${draftCount === 1 ? "entry is" : "entries are"} still marked as a draft. Do you still want to mark this task as complete?`,
+        [
+          { text: "Go Back", style: "cancel" },
+          {
+            text: "Mark Complete Anyway",
+            onPress: () => markComplete.mutate(),
+          },
+        ],
+      );
+    } else {
+      markComplete.mutate();
+    }
+  }, [entries, markComplete]);
+
   // Pop animation when checkmark appears
   useEffect(() => {
     if (isComplete && !wasComplete.current) {
@@ -98,7 +121,7 @@ export function TaskCompletionFooter({
       style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}
     >
       <AnimatedPressable
-        onPress={() => markComplete.mutate()}
+        onPress={handleMarkComplete}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[

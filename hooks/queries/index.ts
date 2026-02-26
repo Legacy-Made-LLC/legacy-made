@@ -40,7 +40,7 @@ export {
 export { usePlanQuery } from './usePlanQuery';
 
 // Entitlements
-export { useEntitlementsQuery } from './useEntitlementsQuery';
+export { useEntitlementsQuery, usePlanEntitlementsQuery } from './useEntitlementsQuery';
 
 // Progress
 export {
@@ -53,3 +53,30 @@ export {
   useMarkTaskInProgress,
   useSetProgressIfNew,
 } from './useProgressMutations';
+
+// Shared Plans
+export { useSharedPlansQuery } from './useSharedPlansQuery';
+
+export {
+  useAcceptSharedPlan,
+  useDeclineSharedPlan,
+} from './useSharedPlansMutations';
+
+// Access Invitations
+export {
+  useAcceptAccessInvitation,
+  useDeclineAccessInvitation,
+} from './useAccessInvitationMutations';
+
+// Trusted Contacts
+export {
+  useTrustedContactsQuery,
+  useTrustedContactQuery,
+} from './useTrustedContactsQuery';
+
+export {
+  useCreateTrustedContact,
+  useUpdateTrustedContact,
+  useDeleteTrustedContact,
+  useResendInvitation,
+} from './useTrustedContactsMutations';

@@ -10,10 +10,13 @@ import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
 import Loader from "@/components/ui/Loader";
 import { Menu } from "@/components/ui/Menu";
+import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
-import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
+import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { usePendingInvitation } from "@/hooks/usePendingInvitation";
+import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCreateEntry } from "@/hooks/queries";
 
 // Custom header that doesn't add safe area inset (our parent Header handles it)
@@ -58,7 +61,7 @@ const headerStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     backgroundColor: colors.background,
   },
   backButton: {
@@ -100,6 +103,13 @@ export default function AppLayout() {
     error: planError,
     refetch: refetchPlan,
   } = usePlan();
+
+  // Guard against revoked shared plan access
+  useAccessRevocationGuard();
+  useSharedPlanStatusPolling();
+
+  // Accept any pending invitation that was stored before auth redirect
+  usePendingInvitation();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
@@ -209,6 +219,18 @@ export default function AppLayout() {
             name="wishes/[sectionId]/[taskId]/index"
             options={{
               title: "",
+            }}
+          />
+          <Stack.Screen
+            name="family/contacts/new"
+            options={{
+              title: "Add Trusted Contact",
+            }}
+          />
+          <Stack.Screen
+            name="family/contacts/[contactId]"
+            options={{
+              title: "Trusted Contact",
             }}
           />
         </Stack>

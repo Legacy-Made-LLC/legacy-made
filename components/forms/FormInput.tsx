@@ -25,9 +25,11 @@ export interface FormInputProps extends Omit<TextInputProps, 'style' | 'value' |
   containerStyle?: StyleProp<ViewStyle>;
   /** Optional callback to transform/handle the value - will be called with the raw text */
   onValueChange?: (value: string) => void;
+  /** When true, the input is non-interactive (view-only) */
+  disabled?: boolean;
 }
 
-export function FormInput({ field, label, containerStyle, onValueChange, ...props }: FormInputProps) {
+export function FormInput({ field, label, containerStyle, onValueChange, disabled, ...props }: FormInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue(colors.border);
 
@@ -71,7 +73,8 @@ export function FormInput({ field, label, containerStyle, onValueChange, ...prop
             field.handleChange(text);
           }
         }}
-        style={[styles.input, animatedStyle]}
+        editable={!disabled}
+        style={[styles.input, disabled && styles.disabled, animatedStyle]}
         placeholderTextColor={colors.textTertiary}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -102,6 +105,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  disabled: {
+    backgroundColor: colors.surfaceSecondary,
   },
   errorText: {
     fontSize: typography.sizes.caption,

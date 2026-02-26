@@ -4,12 +4,15 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -116,6 +119,14 @@ export default function VerifyOtpScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
+        <Pressable
+          onPress={router.back}
+          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+          hitSlop={12}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </Pressable>
+
         <View style={styles.header}>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
@@ -174,6 +185,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  backButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
   },
   header: {
     marginBottom: spacing.xl,

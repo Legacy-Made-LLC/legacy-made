@@ -37,6 +37,7 @@ import { usePlan } from "@/data/PlanProvider";
 import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { usePillarGuard } from "@/hooks/usePillarGuard";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
@@ -61,10 +62,17 @@ export default function WishesTaskScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { planId } = usePlan();
+  const { planId, isReadOnly, isViewingSharedPlan, sharedPlanInfo } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
+
+  const { guardOverlay } = usePillarGuard({
+    pillar: "wishes",
+    featureName: "Wishes & Guidance",
+    lockedDescription: "Share your personal wishes, values, and guidance for your loved ones.",
+    restrictedDescription: "Your access level doesn't include Wishes & Guidance for this plan.",
+  });
 
   const section = useWishesSection(sectionId);
   const task = useWishesTask(sectionId, taskId);
@@ -217,6 +225,7 @@ export default function WishesTaskScreen() {
 
     // Subscribe to form state changes
     const unsubscribe = form.store.subscribe(() => {
+      if (isReadOnly) return;
       const state = form.store.state;
       const getSaveData = getSaveDataRef.current;
 
@@ -227,7 +236,7 @@ export default function WishesTaskScreen() {
     });
 
     return unsubscribe;
-  }, [autoSave]);
+  }, [autoSave, isReadOnly]);
 
   // Navigation protection - ensure pending saves complete before leaving
   useEffect(() => {
@@ -458,6 +467,11 @@ export default function WishesTaskScreen() {
   // Render
   // ============================================================================
 
+  // Show guard overlay if pillar is locked or access is restricted
+  if (guardOverlay) {
+    return guardOverlay;
+  }
+
   // Section or task not found
   if (!section || !task) {
     return (
@@ -501,12 +515,13 @@ export default function WishesTaskScreen() {
         }}
         guidance={guidance}
         attachments={attachmentsWithUploadState}
-        onAttachmentsChange={handleAttachmentsChange}
+        onAttachmentsChange={isReadOnly ? undefined : handleAttachmentsChange}
         isUploading={isUploading}
         deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
+        readOnly={isReadOnly}
       />
-      {(existingWish || autoSave.recordId) && task && (
+      {(existingWish || autoSave.recordId) && task && !isReadOnly && (
         <TaskCompletionFooter
           taskKey={task.taskKey}
           pillarColor={colors.featureWishes}
@@ -514,23 +529,35 @@ export default function WishesTaskScreen() {
           onComeBackLater={() => router.back()}
         />
       )}
-      <SavedIndicator
-        status={autoSave.status}
-        errorMessage={autoSave.errorMessage}
-        onDismissError={autoSave.dismissError}
-        accentColor={colors.featureWishes}
-      />
+      {!isReadOnly && (
+        <SavedIndicator
+          status={autoSave.status}
+          errorMessage={autoSave.errorMessage}
+          onDismissError={autoSave.dismissError}
+          accentColor={colors.featureWishes}
+        />
+      )}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
-        title="You've Reached Your Limit"
-        message="You've made great progress sharing your wishes. Upgrade your plan to add more and unlock additional features."
+        title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "You've made great progress sharing your wishes. Upgrade your plan to add more and unlock additional features."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
       <UpgradePrompt
         visible={showStorageUpgradePrompt}
         onClose={() => setShowStorageUpgradePrompt(false)}
         title="Storage Limit Reached"
-        message="This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important documents safe."
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its storage limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important documents safe."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
     </>
   );

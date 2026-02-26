@@ -3,23 +3,38 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LockedFeatureOverlay, ViewOnlyBadge } from "@/components/entitlements";
+import { LockedFeatureOverlay, RestrictedAccessOverlay } from "@/components/entitlements";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
 
 export default function LegacyScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+  const { isViewingSharedPlan, canAccessPillar } = usePlan();
 
   const isLocked = isLockedPillar("messages");
   const isViewOnly = isViewOnlyPillar("messages");
 
-  // Show locked overlay if pillar is locked
-  if (isLocked) {
+  // Show locked overlay if pillar is locked or view-only (plan tier doesn't grant full access)
+  if (isLocked || isViewOnly) {
     return (
       <LockedFeatureOverlay
         featureName="Legacy Messages"
         description="Record video messages and memories to share with your loved ones when the time is right."
+        isSharedPlan={isViewingSharedPlan}
+      />
+    );
+  }
+
+  // Show restricted access overlay for shared plan users without messages access
+  if (isViewingSharedPlan && !canAccessPillar("messages")) {
+    return (
+      <RestrictedAccessOverlay
+        featureName="Legacy Messages"
+        description="Your access level doesn't include Legacy Messages for this plan."
+        accentColor={colors.featureLegacy}
+        tintColor={colors.featureLegacyTint}
       />
     );
   }
@@ -28,11 +43,6 @@ export default function LegacyScreen() {
     <View
       style={[styles.container, { paddingBottom: insets.bottom + spacing.lg }]}
     >
-      {isViewOnly && (
-        <View style={styles.viewOnlyHeader}>
-          <ViewOnlyBadge />
-        </View>
-      )}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Ionicons
@@ -57,11 +67,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingTop: spacing.lg,
-  },
-  viewOnlyHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    alignItems: "center",
   },
   content: {
     flex: 1,

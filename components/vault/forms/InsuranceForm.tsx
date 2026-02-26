@@ -2,14 +2,14 @@
  * InsuranceForm - Form for creating/editing insurance policy entries
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, insuranceSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -71,10 +71,12 @@ export function InsuranceForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as
     | InsuranceMetadata
@@ -122,6 +124,7 @@ export function InsuranceForm({
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: INSURANCE_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -133,9 +136,14 @@ export function InsuranceForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Policy" : "Edit Policy",
+      title: readOnly ? "View Policy" : isNew ? "Add Policy" : "Edit Policy",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -179,6 +187,7 @@ export function InsuranceForm({
               field={field}
               label="Insurance Provider"
               placeholder="e.g., State Farm, MetLife, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -196,7 +205,7 @@ export function InsuranceForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -223,6 +232,7 @@ export function InsuranceForm({
                   label="Policy #"
                   placeholder="e.g., LF-2847592"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -235,6 +245,7 @@ export function InsuranceForm({
                   label="Coverage"
                   placeholder="e.g., $500,000"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -247,6 +258,7 @@ export function InsuranceForm({
               field={field}
               label="Beneficiaries"
               placeholder="e.g., Jane Doe, John Doe"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -260,6 +272,7 @@ export function InsuranceForm({
                   label="Agent Name"
                   placeholder="e.g., John Smith"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -273,6 +286,7 @@ export function InsuranceForm({
                   placeholder="(555) 123-4567"
                   keyboardType="phone-pad"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -285,11 +299,12 @@ export function InsuranceForm({
               field={field}
               label="Notes"
               placeholder="i.e. physical location, contact information, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Policy Documents"
             value={attachments ?? []}
@@ -303,6 +318,7 @@ export function InsuranceForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -313,19 +329,29 @@ export function InsuranceForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Button
-                  title={buttonTitle}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                />
+                <>
+                  <Button
+                    title={buttonTitle}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
+                  />
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={formStyles.draftLinkContainer}
+                  >
+                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Policy"

@@ -2,7 +2,7 @@
  * PetForm - Form for creating/editing pet entries
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import {
   formatPhoneNumber,
   FormInput,
@@ -15,7 +15,7 @@ import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -67,10 +67,12 @@ export function PetForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as PetMetadata | undefined;
 
@@ -112,6 +114,7 @@ export function PetForm({
           notes: value.careInstructions.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: PET_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -123,9 +126,14 @@ export function PetForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? "Add Pet" : "Edit Pet",
+      title: readOnly ? "View Pet" : isNew ? "Add Pet" : "Edit Pet",
     });
-  }, [isNew, navigation]);
+  }, [isNew, readOnly, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -172,6 +180,7 @@ export function PetForm({
               label="Pet Name"
               placeholder="e.g., Luna"
               autoCapitalize="words"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -189,7 +198,7 @@ export function PetForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -213,6 +222,7 @@ export function PetForm({
               field={field}
               label="Breed/Description"
               placeholder="e.g., Golden Retriever, orange tabby"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -226,6 +236,7 @@ export function PetForm({
                   label="Veterinarian"
                   placeholder="e.g., Bay Area Pet Hospital"
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -242,6 +253,7 @@ export function PetForm({
                     field.handleChange(formatPhoneNumber(text))
                   }
                   containerStyle={{ marginBottom: 0 }}
+                  disabled={readOnly}
                 />
               )}
             </form.Field>
@@ -254,6 +266,7 @@ export function PetForm({
               field={field}
               label="Who Will Care for Them?"
               placeholder="e.g., Margaret Chen"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -264,11 +277,12 @@ export function PetForm({
               field={field}
               label="Care Instructions"
               placeholder="Special diet, medications, routines, etc."
+              disabled={readOnly}
             />
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Photos & Records"
             value={attachments ?? []}
@@ -282,6 +296,7 @@ export function PetForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -292,19 +307,29 @@ export function PetForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Button
-                  title={buttonTitle}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                />
+                <>
+                  <Button
+                    title={buttonTitle}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
+                  />
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={formStyles.draftLinkContainer}
+                  >
+                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Pet"

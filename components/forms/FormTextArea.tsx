@@ -24,9 +24,11 @@ interface FormTextAreaProps
   field: AnyFieldApi;
   label: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** When true, the text area is non-interactive (view-only) */
+  disabled?: boolean;
 }
 
-export function FormTextArea({ field, label, containerStyle, ...props }: FormTextAreaProps) {
+export function FormTextArea({ field, label, containerStyle, disabled, ...props }: FormTextAreaProps) {
   const [isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue(colors.border);
 
@@ -66,7 +68,8 @@ export function FormTextArea({ field, label, containerStyle, ...props }: FormTex
         textAlignVertical="top"
         value={field.state.value ?? ''}
         onChangeText={(text) => field.handleChange(text)}
-        style={[styles.textArea, animatedStyle]}
+        editable={!disabled}
+        style={[styles.textArea, disabled && styles.disabled, animatedStyle]}
         placeholderTextColor={colors.textTertiary}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -98,6 +101,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  disabled: {
+    backgroundColor: colors.surfaceSecondary,
   },
   errorText: {
     fontSize: typography.sizes.caption,

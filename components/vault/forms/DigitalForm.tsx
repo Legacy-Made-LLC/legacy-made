@@ -2,7 +2,7 @@
  * DigitalForm - Form for creating/editing digital access entries
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import {
   FormInput,
   FormTextArea,
@@ -15,7 +15,7 @@ import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -111,10 +111,12 @@ export function DigitalForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
   const isSocial = taskKey === "digital.social";
   const labels = getLabels(taskKey);
 
@@ -158,6 +160,7 @@ export function DigitalForm({
           notes: value.accessNotes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: DIGITAL_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -169,9 +172,14 @@ export function DigitalForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: isNew ? labels.addTitle : labels.editTitle,
+      title: readOnly ? labels.editTitle.replace("Edit", "View") : isNew ? labels.addTitle : labels.editTitle,
     });
-  }, [isNew, labels.addTitle, labels.editTitle, navigation]);
+  }, [isNew, readOnly, labels.addTitle, labels.editTitle, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -220,6 +228,7 @@ export function DigitalForm({
                 field={field}
                 label="Name"
                 placeholder={labels.namePlaceholder}
+                disabled={readOnly}
               />
             )}
           </form.Field>
@@ -231,6 +240,7 @@ export function DigitalForm({
               field={field}
               label="Service/Platform"
               placeholder={labels.servicePlaceholder}
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -243,6 +253,7 @@ export function DigitalForm({
               placeholder="e.g., email@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -260,7 +271,7 @@ export function DigitalForm({
                       field.state.value === level &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(level)}
+                    onPress={readOnly ? undefined : () => field.handleChange(level)}
                   >
                     <Text
                       style={[
@@ -284,11 +295,12 @@ export function DigitalForm({
               field={field}
               label="How to Access"
               placeholder="Where can the password be found? Don't store the actual password here."
+              disabled={readOnly}
             />
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Screenshots & Documents"
             value={attachments ?? []}
@@ -302,6 +314,7 @@ export function DigitalForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -312,19 +325,29 @@ export function DigitalForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Button
-                  title={buttonTitle}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                />
+                <>
+                  <Button
+                    title={buttonTitle}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
+                  />
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={formStyles.draftLinkContainer}
+                  >
+                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title={labels.deleteTitle}

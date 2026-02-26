@@ -5,7 +5,7 @@
  * This allows dynamic routing to render the correct components based on the task.
  */
 
-import type { Entry, FileAttachment, MetadataSchema } from "@/api/types";
+import type { Entry, EntryCompletionStatus, FileAttachment, MetadataSchema } from "@/api/types";
 import type { ComponentType } from "react";
 
 // ============================================================================
@@ -47,6 +47,8 @@ export interface EntryListProps {
   onEntryPress: (entryId: string) => void;
   /** Callback when add button is pressed */
   onAddPress: () => void;
+  /** Whether the plan is read-only (viewing a shared plan) */
+  readOnly?: boolean;
 }
 
 // ============================================================================
@@ -66,6 +68,7 @@ export interface EntryFormProps {
     notes?: string | null;
     metadata: Record<string, unknown>;
     metadataSchema: MetadataSchema;
+    completionStatus?: EntryCompletionStatus;
   }) => Promise<void>;
   /** Callback when entry is deleted (only for editing) */
   onDelete?: () => Promise<void>;
@@ -83,6 +86,8 @@ export interface EntryFormProps {
   deletingFileIds?: Set<string>;
   /** Callback when user needs to upgrade for storage */
   onStorageUpgradeRequired?: () => void;
+  /** Whether the plan is read-only (viewing a shared plan) */
+  readOnly?: boolean;
 }
 
 export const listRegistry: Record<string, ComponentType<EntryListProps>> = {

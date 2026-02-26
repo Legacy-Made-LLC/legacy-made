@@ -45,6 +45,8 @@ interface SelectProps {
   placeholder?: string;
   /** Show a clear button when a value is selected */
   clearable?: boolean;
+  /** When true, the select is non-interactive (view-only) */
+  disabled?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
@@ -55,6 +57,7 @@ export function Select({
   options,
   placeholder = "Select...",
   clearable = false,
+  disabled,
   containerStyle,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -90,14 +93,14 @@ export function Select({
     handleClose();
   }, [onValueChange, handleClose]);
 
-  const showClear = clearable && !!value;
+  const showClear = clearable && !!value && !disabled;
 
   return (
     <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
       <AnimatedPressable
-        style={[styles.selectButton, animatedStyle]}
-        onPress={handleOpen}
+        style={[styles.selectButton, disabled && styles.selectButtonDisabled, animatedStyle]}
+        onPress={disabled ? undefined : handleOpen}
       >
         <Text
           style={[styles.selectText, !selectedOption && styles.placeholderText]}
@@ -215,6 +218,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  selectButtonDisabled: {
+    backgroundColor: colors.surfaceSecondary,
   },
   selectText: {
     fontSize: typography.sizes.body,

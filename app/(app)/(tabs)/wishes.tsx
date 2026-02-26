@@ -9,39 +9,45 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LockedFeatureOverlay, ViewOnlyBadge } from "@/components/entitlements";
+import { LockedFeatureOverlay, RestrictedAccessOverlay } from "@/components/entitlements";
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useWishesSections } from "@/constants/wishes";
-import { usePerspective } from "@/contexts/LocaleContext";
+import { useTranslations } from "@/contexts/LocaleContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
 import { useAllProgressQuery } from "@/hooks/queries";
-
-const pageText = {
-  owner: {
-    description: "Your values, preferences, and words\nfor those who matter most",
-  },
-  family: {
-    description: "Their values, preferences, and words\nfor those who matter most",
-  },
-};
 
 export default function WishesScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+  const { isViewingSharedPlan, canAccessPillar } = usePlan();
   const wishesSections = useWishesSections();
   const { data: progress = {} } = useAllProgressQuery();
-  const { perspective } = usePerspective();
+  const t = useTranslations();
 
   const isLocked = isLockedPillar("wishes");
   const isViewOnly = isViewOnlyPillar("wishes");
 
-  // Show locked overlay if pillar is locked
-  if (isLocked) {
+  // Show locked overlay if pillar is locked or view-only (plan tier doesn't grant full access)
+  if (isLocked || isViewOnly) {
     return (
       <LockedFeatureOverlay
         featureName="Wishes & Guidance"
         description="Share your personal wishes, values, and guidance for your loved ones."
+        isSharedPlan={isViewingSharedPlan}
+      />
+    );
+  }
+
+  // Show restricted access overlay for shared plan users without wishes access
+  if (isViewingSharedPlan && !canAccessPillar("wishes")) {
+    return (
+      <RestrictedAccessOverlay
+        featureName="Wishes & Guidance"
+        description="Your access level doesn't include Wishes & Guidance for this plan."
+        accentColor={colors.featureWishes}
+        tintColor={colors.featureWishesTint}
       />
     );
   }
@@ -55,16 +61,10 @@ export default function WishesScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {isViewOnly && (
-        <View style={styles.viewOnlyHeader}>
-          <ViewOnlyBadge />
-        </View>
-      )}
-
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Wishes & Guidance</Text>
         <Text style={styles.description}>
-          {pageText[perspective].description}
+          {t.pages.wishes.description}
         </Text>
       </View>
 
@@ -91,11 +91,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
-  viewOnlyHeader: {
-    paddingBottom: spacing.sm,
-    alignItems: "center",
-  },
   header: {
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
     alignItems: "center",
   },

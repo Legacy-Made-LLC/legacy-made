@@ -3,7 +3,11 @@
  */
 
 import Constants from "expo-constants";
+
+import { ApiClientError } from "./errors";
 import type { ApiError } from "./types";
+
+export { ApiClientError };
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:3000";
 
@@ -14,21 +18,6 @@ const API_CONFIG = {
   baseUrl: API_URL,
   timeout: 30000,
 };
-
-/**
- * Custom error class for API errors
- */
-export class ApiClientError extends Error {
-  statusCode: number;
-  originalError?: ApiError;
-
-  constructor(message: string, statusCode: number, originalError?: ApiError) {
-    super(message);
-    this.name = "ApiClientError";
-    this.statusCode = statusCode;
-    this.originalError = originalError;
-  }
-}
 
 /**
  * Type for the getToken function from Clerk's useAuth hook
@@ -103,10 +92,9 @@ async function request<T>(
 
     clearTimeout(timeoutId);
 
-    // Parse response
-    const data = await response.json();
-
+    // Handle error responses
     if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
       const apiError = data as ApiError;
       throw new ApiClientError(
         apiError.message || `Request failed with status ${response.status}`,
@@ -115,7 +103,12 @@ async function request<T>(
       );
     }
 
-    return data as T;
+    // Handle empty responses (204 No Content, etc.)
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+      return undefined as T;
+    }
+
+    return await response.json() as T;
   } catch (error) {
     clearTimeout(timeoutId);
 

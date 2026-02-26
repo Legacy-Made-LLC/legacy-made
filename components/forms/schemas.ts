@@ -145,15 +145,30 @@ export const documentSchema = z.object({
 export type DocumentFormValues = z.infer<typeof documentSchema>;
 
 /** Property/home responsibility form */
-export const propertySchema = z.object({
-  propertyType: requiredString("Type"),
-  ownership: optionalString,
-  addressDescription: optionalString,
-  lienHolder: optionalString,
-  documentsLocation: optionalString,
-  keyLocation: optionalString,
-  notes: optionalString,
-});
+export const propertySchema = z
+  .object({
+    propertyType: requiredString("Type"),
+    ownership: optionalString,
+    addressDescription: optionalString,
+    lienHolder: optionalString,
+    documentsLocation: optionalString,
+    keyLocation: optionalString,
+    notes: optionalString,
+  })
+  .refine(
+    (data) => {
+      // When type is Vehicle, addressDescription serves as the vehicle description
+      // and is required (it becomes the entry title)
+      if (data.propertyType === "Vehicle") {
+        return data.addressDescription.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Vehicle description is required",
+      path: ["addressDescription"],
+    },
+  );
 export type PropertyFormValues = z.infer<typeof propertySchema>;
 
 /** Digital account form */

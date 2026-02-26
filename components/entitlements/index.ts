@@ -10,4 +10,5 @@ export { StorageIndicator } from './StorageIndicator';
 export { UpgradePrompt } from './UpgradePrompt';
 export { GlobalUpgradePrompt } from './GlobalUpgradePrompt';
 export { LockedFeatureOverlay } from './LockedFeatureOverlay';
+export { RestrictedAccessOverlay } from './RestrictedAccessOverlay';
 export { ViewOnlyBadge } from './ViewOnlyBadge';

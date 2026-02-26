@@ -38,7 +38,8 @@ export function DevMenu() {
   const queryClient = useQueryClient();
   const isFetching = useIsFetching();
   const isLoading = isFetching > 0;
-  const { perspective, setPerspective } = usePerspective();
+  const { perspective, setPerspective, familyTense, setFamilyTense, isFamily } =
+    usePerspective();
 
   const insets = useSafeAreaInsets();
 
@@ -75,13 +76,32 @@ export function DevMenu() {
     setPerspective(perspective === "owner" ? "family" : "owner");
   };
 
+  const handleToggleFamilyTense = () => {
+    setFamilyTense(familyTense === "present" ? "past" : "present");
+  };
+
+  const perspectiveLabel =
+    perspective === "owner"
+      ? "Owner (you/your)"
+      : `Family (they/their) — ${familyTense}`;
+
   const actions: DevAction[] = [
     {
       id: "toggle-perspective",
-      label: `Perspective: ${perspective === "owner" ? "Owner (you/your)" : "Family (they/their)"}`,
+      label: `Perspective: ${perspectiveLabel}`,
       icon: "people-outline",
       onPress: handleTogglePerspective,
     },
+    ...(isFamily
+      ? [
+          {
+            id: "toggle-family-tense",
+            label: `Family Tense: ${familyTense === "present" ? "Present (alive)" : "Past (passed)"}`,
+            icon: "time-outline" as keyof typeof Ionicons.glyphMap,
+            onPress: handleToggleFamilyTense,
+          },
+        ]
+      : []),
     {
       id: "skip-onboarding",
       label: hasCompletedInitialOnboarding
@@ -125,7 +145,7 @@ export function DevMenu() {
         style={({ pressed }) => [
           styles.fab,
           pressed && styles.fabPressed,
-          { bottom: insets.bottom + spacing.md },
+          { bottom: insets.bottom + spacing.lg },
         ]}
         onPress={() => setIsOpen(true)}
       >
@@ -186,7 +206,9 @@ export function DevMenu() {
                 <View style={styles.statusRow}>
                   <Text style={styles.statusLabel}>Perspective:</Text>
                   <Text style={[styles.statusValue, styles.statusComplete]}>
-                    {perspective === "owner" ? "Owner" : "Family"}
+                    {perspective === "owner"
+                      ? "Owner"
+                      : `Family (${familyTense})`}
                   </Text>
                 </View>
 

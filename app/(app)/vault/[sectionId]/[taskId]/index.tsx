@@ -9,7 +9,8 @@ import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import { getListComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useVaultSection, useVaultTask } from "@/constants/vault";
-import { useEntriesQuery } from "@/hooks/queries";
+import { usePlan } from "@/data/PlanProvider";
+import { useEntriesQuery, useTaskProgressQuery } from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useLayoutEffect } from "react";
@@ -23,6 +24,7 @@ export default function TaskScreen() {
   const router = useRouter();
   const navigation = useNavigation();
 
+  const { isReadOnly } = usePlan();
   const section = useVaultSection(sectionId);
   const task = useVaultTask(sectionId, taskId);
 
@@ -41,6 +43,10 @@ export default function TaskScreen() {
 
   // Fetch entries for this task
   const { data: entries = [], isLoading } = useEntriesQuery(task?.taskKey);
+
+  // Check if task is already marked complete (for footer visibility)
+  const { data: progressData } = useTaskProgressQuery(task?.taskKey);
+  const isTaskComplete = progressData?.status === "complete";
 
   // Backwards compatibility: auto-set progress to "in_progress" when entries
   // exist but no progress record has been created yet (pre-progress-feature data)
@@ -89,14 +95,16 @@ export default function TaskScreen() {
           isLoading={isLoading}
           onEntryPress={handleEntryPress}
           onAddPress={handleAddPress}
+          readOnly={isReadOnly}
         />
       </View>
-      {entries.length > 0 && (
+      {(entries.length > 0 || isTaskComplete) && !isReadOnly && (
         <TaskCompletionFooter
           taskKey={task.taskKey}
           pillarColor={colors.featureInformation}
           pillarTint={colors.featureInformationTint}
           onComeBackLater={() => router.back()}
+          entries={entries}
         />
       )}
     </View>

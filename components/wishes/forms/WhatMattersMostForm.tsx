@@ -53,6 +53,7 @@ export function WhatMattersMostForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -153,6 +154,7 @@ export function WhatMattersMostForm({
             choices={whatMattersMostValues}
             selected={field.state.value}
             onToggle={handleToggle}
+            disabled={readOnly}
           />
         )}
       </form.Field>
@@ -166,6 +168,7 @@ export function WhatMattersMostForm({
             placeholder={t.notesPlaceholder}
             maxLength={2000}
             containerStyle={wishesFormStyles.notesSection}
+            disabled={readOnly}
           />
         )}
       </form.Field>

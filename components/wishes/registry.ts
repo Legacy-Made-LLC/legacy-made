@@ -96,6 +96,8 @@ export interface WishFormProps {
   deletingFileIds?: Set<string>;
   /** Callback when storage upgrade is needed */
   onStorageUpgradeRequired?: () => void;
+  /** Whether the form should be read-only (e.g., viewing a shared plan) */
+  readOnly?: boolean;
 }
 
 // ============================================================================

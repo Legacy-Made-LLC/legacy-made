@@ -27,6 +27,7 @@ import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
 import { Toast } from "@/components/ui/Toast";
 import { LocaleProvider } from "@/contexts/LocaleContext";
+import { PlanTransitionProvider } from "@/contexts/PlanTransitionContext";
 import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
@@ -97,17 +98,33 @@ export default Sentry.wrap(function RootLayout() {
                   <QueryProvider>
                     <PlanProvider>
                       <EntitlementsProvider>
-                        <Stack
-                          screenOptions={{
-                            headerShown: false,
-                            animation: "fade",
-                          }}
-                        >
-                          {/* <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} /> */}
-                        </Stack>
-                        <StatusBar style="dark" />
-                        <Toast />
-                        <DevMenu />
+                        <PlanTransitionProvider>
+                          <Stack
+                            screenOptions={{
+                              headerShown: false,
+                              animation: "fade",
+                            }}
+                            initialRouteName="index"
+                          >
+                            <Stack.Screen name="index" />
+                            <Stack.Screen name="(app)" />
+                            <Stack.Screen name="(auth)" />
+                            <Stack.Screen
+                              name="(onboarding)"
+                              options={{ animation: "fade" }}
+                            />
+                            <Stack.Screen
+                              name="invitations/[token]"
+                              options={{
+                                headerShown: false,
+                                presentation: "modal",
+                              }}
+                            />
+                          </Stack>
+                          <StatusBar style="dark" />
+                          <Toast />
+                          <DevMenu />
+                        </PlanTransitionProvider>
                       </EntitlementsProvider>
                     </PlanProvider>
                   </QueryProvider>

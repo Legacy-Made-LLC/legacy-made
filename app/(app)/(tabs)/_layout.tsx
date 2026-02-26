@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Pillar } from "@/api/types";
 import { colors, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
 
 const iconSize = 26;
 
@@ -63,12 +64,25 @@ function HomeTabIcon({ focused }: { focused: boolean }) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const { isLockedPillar } = useEntitlements();
+  const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
+  const { canAccessPillar, isViewingSharedPlan } = usePlan();
 
-  // Check if each pillar is locked
-  const isWishesLocked = isLockedPillar(TAB_TO_PILLAR.wishes);
-  const isLegacyLocked = isLockedPillar(TAB_TO_PILLAR.legacy);
-  const isFamilyLocked = isLockedPillar(TAB_TO_PILLAR.family);
+  // Check if each pillar is effectively locked:
+  // - Entitlements: fully locked OR view-only (plan tier doesn't grant full access)
+  // - Shared plan: no access to that pillar
+  const isEffectivelyLocked = (pillar: Pillar) =>
+    isLockedPillar(pillar) ||
+    isViewOnlyPillar(pillar) ||
+    (isViewingSharedPlan && !canAccessPillar(pillar));
+
+  const isInfoLocked = isEffectivelyLocked(TAB_TO_PILLAR.information);
+  const isWishesLocked = isEffectivelyLocked(TAB_TO_PILLAR.wishes);
+  const isLegacyLocked = isEffectivelyLocked(TAB_TO_PILLAR.legacy);
+  // Family tab is always locked on shared plans — you can't manage someone else's contacts
+  const isFamilyLocked =
+    isLockedPillar(TAB_TO_PILLAR.family) ||
+    isViewOnlyPillar(TAB_TO_PILLAR.family) ||
+    isViewingSharedPlan;
 
   return (
     <Tabs
@@ -95,12 +109,25 @@ export default function TabsLayout() {
         name="information"
         options={{
           title: "Info",
-          tabBarActiveTintColor: colors.featureInformation,
+          tabBarActiveTintColor: isInfoLocked
+            ? colors.textTertiary
+            : colors.featureInformation,
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? "document-text" : "document-text-outline"}
-              size={iconSize}
-              color={focused ? colors.featureInformation : colors.textTertiary}
+            <TabIconWithLock
+              isLocked={isInfoLocked}
+              icon={
+                <Ionicons
+                  name={focused ? "document-text" : "document-text-outline"}
+                  size={iconSize}
+                  color={
+                    isInfoLocked
+                      ? colors.textTertiary
+                      : focused
+                        ? colors.featureInformation
+                        : colors.textTertiary
+                  }
+                />
+              }
             />
           ),
         }}
@@ -109,7 +136,7 @@ export default function TabsLayout() {
         name="wishes"
         options={{
           title: "Wishes",
-          tabBarActiveTintColor: colors.featureWishes,
+          tabBarActiveTintColor: isWishesLocked ? colors.textTertiary : colors.featureWishes,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isWishesLocked}
@@ -141,7 +168,7 @@ export default function TabsLayout() {
         name="legacy"
         options={{
           title: "Legacy",
-          tabBarActiveTintColor: colors.featureLegacy,
+          tabBarActiveTintColor: isLegacyLocked ? colors.textTertiary : colors.featureLegacy,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isLegacyLocked}
@@ -166,7 +193,7 @@ export default function TabsLayout() {
         name="family"
         options={{
           title: "Family",
-          tabBarActiveTintColor: colors.featureFamily,
+          tabBarActiveTintColor: isFamilyLocked ? colors.textTertiary : colors.featureFamily,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isFamilyLocked}

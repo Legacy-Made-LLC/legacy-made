@@ -56,6 +56,8 @@ interface ReflectionChoicesProps {
   customPlaceholder?: string;
   /** Custom label for custom input section */
   customLabel?: string;
+  /** When true, choices are non-interactive (view-only) */
+  disabled?: boolean;
   /** Container style override */
   style?: ViewStyle;
 }
@@ -74,6 +76,7 @@ export function ReflectionChoices({
   onCustomChange,
   customPlaceholder = "Add your own...",
   customLabel = "Something else on your mind?",
+  disabled,
   style,
 }: ReflectionChoicesProps) {
   return (
@@ -84,12 +87,13 @@ export function ReflectionChoices({
             key={choice.id}
             choice={choice}
             isSelected={selected.includes(choice.id)}
-            onPress={() => onToggle(choice.id)}
+            onPress={disabled ? undefined : () => onToggle(choice.id)}
+            disabled={disabled}
           />
         ))}
       </View>
 
-      {allowCustom && (
+      {allowCustom && !disabled && (
         <View style={styles.customInput}>
           <Text style={styles.customLabel}>{customLabel}</Text>
           <TextInput
@@ -114,10 +118,11 @@ export function ReflectionChoices({
 interface ReflectionCardProps {
   choice: ReflectionChoice;
   isSelected: boolean;
-  onPress: () => void;
+  onPress?: () => void;
+  disabled?: boolean;
 }
 
-function ReflectionCard({ choice, isSelected, onPress }: ReflectionCardProps) {
+function ReflectionCard({ choice, isSelected, onPress, disabled }: ReflectionCardProps) {
   const { isFamily } = usePerspective();
   const scale = useSharedValue(1);
 
@@ -136,8 +141,8 @@ function ReflectionCard({ choice, isSelected, onPress }: ReflectionCardProps) {
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onPressIn={disabled ? undefined : handlePressIn}
+      onPressOut={disabled ? undefined : handlePressOut}
     >
       <Animated.View
         style={[styles.card, isSelected && styles.cardSelected, animatedStyle]}
@@ -180,12 +185,12 @@ function ReflectionCard({ choice, isSelected, onPress }: ReflectionCardProps) {
                 {isFamily ? "This matters to them" : "This matters to me"}
               </Text>
             </>
-          ) : (
+          ) : !disabled ? (
             <>
               <View style={styles.dashedCircle} />
               <Text style={styles.unselectedText}>Tap if this resonates</Text>
             </>
-          )}
+          ) : null}
         </View>
       </Animated.View>
     </Pressable>

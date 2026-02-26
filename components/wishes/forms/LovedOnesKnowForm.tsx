@@ -56,6 +56,7 @@ export function LovedOnesKnowForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -155,6 +156,7 @@ export function LovedOnesKnowForm({
               placeholder={t.gratitudePlaceholder}
               maxLength={3000}
               minHeight={120}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -170,6 +172,7 @@ export function LovedOnesKnowForm({
               placeholder={t.regretsPlaceholder}
               maxLength={3000}
               minHeight={120}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -185,6 +188,7 @@ export function LovedOnesKnowForm({
               placeholder={t.wisdomPlaceholder}
               maxLength={3000}
               minHeight={120}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -200,6 +204,7 @@ export function LovedOnesKnowForm({
               placeholder={t.memoriesPlaceholder}
               maxLength={3000}
               minHeight={120}
+              disabled={readOnly}
             />
           </View>
         )}
@@ -215,6 +220,7 @@ export function LovedOnesKnowForm({
               placeholder={t.notesPlaceholder}
               maxLength={3000}
               minHeight={100}
+              disabled={readOnly}
             />
           </View>
         )}

@@ -50,6 +50,7 @@ export function QualityOfLifeForm({
   onFormReady,
   registerGetSaveData,
   guidance,
+  readOnly,
 }: WishFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -149,6 +150,7 @@ export function QualityOfLifeForm({
             choices={qualityOfLifeConditions}
             selected={field.state.value}
             onToggle={handleToggle}
+            disabled={readOnly}
           />
         )}
       </form.Field>
@@ -162,6 +164,7 @@ export function QualityOfLifeForm({
             placeholder="Any nuances, exceptions, or additional context..."
             maxLength={2000}
             containerStyle={wishesFormStyles.notesSection}
+            disabled={readOnly}
           />
         )}
       </form.Field>

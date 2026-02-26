@@ -2,7 +2,7 @@
  * DocumentForm - Form for creating/editing legal document entries
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import {
   FormInput,
   FormTextArea,
@@ -14,7 +14,7 @@ import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -85,10 +85,12 @@ export function DocumentForm({
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
+  readOnly,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   // Determine which document types to show based on taskKey
   const isLegalDocs = taskKey === "documents.legal";
@@ -137,6 +139,7 @@ export function DocumentForm({
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: DOCUMENT_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -149,9 +152,14 @@ export function DocumentForm({
   useEffect(() => {
     const docLabel = isLegalDocs ? "Legal Document" : "Document";
     navigation.setOptions({
-      title: isNew ? `Add ${docLabel}` : `Edit ${docLabel}`,
+      title: readOnly ? `View ${docLabel}` : isNew ? `Add ${docLabel}` : `Edit ${docLabel}`,
     });
-  }, [isNew, isLegalDocs, navigation]);
+  }, [isNew, readOnly, isLegalDocs, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -206,7 +214,7 @@ export function DocumentForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={() => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => field.handleChange(type)}
                   >
                     <Text
                       style={[
@@ -234,6 +242,7 @@ export function DocumentForm({
                     label="Attorney/Preparer"
                     placeholder="e.g., David Park, Esq."
                     containerStyle={{ marginBottom: 0 }}
+                    disabled={readOnly}
                   />
                 )}
               </form.Field>
@@ -247,6 +256,7 @@ export function DocumentForm({
                     placeholder="(555) 123-4567"
                     keyboardType="phone-pad"
                     containerStyle={{ marginBottom: 0 }}
+                    disabled={readOnly}
                   />
                 )}
               </form.Field>
@@ -260,6 +270,7 @@ export function DocumentForm({
               field={field}
               label="Location"
               placeholder="e.g., Safe deposit box at Chase Bank"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -270,6 +281,7 @@ export function DocumentForm({
               field={field}
               label="Who Has a Copy?"
               placeholder="e.g., Attorney David Park"
+              disabled={readOnly}
             />
           )}
         </form.Field>
@@ -280,11 +292,12 @@ export function DocumentForm({
               field={field}
               label="Notes"
               placeholder="Any additional details about this document"
+              disabled={readOnly}
             />
           )}
         </form.Field>
 
-        {onAttachmentsChange && (
+        {!readOnly && onAttachmentsChange && (
           <FilePicker
             label="Attachments"
             value={attachments ?? []}
@@ -298,6 +311,7 @@ export function DocumentForm({
           />
         )}
 
+        {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -308,19 +322,29 @@ export function DocumentForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Button
-                  title={buttonTitle}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                />
+                <>
+                  <Button
+                    title={buttonTitle}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
+                  />
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={formStyles.draftLinkContainer}
+                  >
+                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>
         </View>
+        )}
 
-        {!isNew && onDelete && (
+        {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
               title="Delete Document"

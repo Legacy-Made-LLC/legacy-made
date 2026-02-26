@@ -2,7 +2,8 @@
  * PropertyList - Displays a list of property and vehicle entries
  */
 
-import type { Entry } from "@/api/types";
+import { type Entry, isEntryDraft } from "@/api/types";
+import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,8 +22,8 @@ import { listStyles } from "./listStyles";
 
 interface PropertyMetadata {
   responsibilityType?: string;
-  provider?: string;
-  accountInfo?: string;
+  addressDescription?: string;
+  ownership?: string;
 }
 
 export function PropertyList({
@@ -31,6 +32,7 @@ export function PropertyList({
   isLoading,
   onEntryPress,
   onAddPress,
+  readOnly,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -91,8 +93,8 @@ export function PropertyList({
         <EmptyState
           title="Nothing added yet"
           description="Add your property, vehicles, and other physical assets."
-          buttonTitle="Add Property"
-          onButtonPress={onAddPress}
+          buttonTitle={readOnly ? undefined : "Add Property or Vehicle"}
+          onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>
@@ -118,9 +120,14 @@ export function PropertyList({
 
       {sortedEntries.map((entry, index) => {
         const metadata = entry.metadata as PropertyMetadata;
-        const subtitle = [metadata.responsibilityType, metadata.accountInfo]
-          .filter(Boolean)
-          .join(" · ");
+        const isVehicle = metadata.responsibilityType === "Vehicle";
+        // For vehicles: show ownership if present (title is already the description)
+        // For properties: show address if present
+        const subtitle = isVehicle
+          ? [metadata.ownership].filter(Boolean).join(" · ")
+          : [metadata.addressDescription, metadata.ownership]
+              .filter(Boolean)
+              .join(" · ");
 
         return (
           <AnimatedListItem key={entry.id} index={index}>
@@ -141,6 +148,7 @@ export function PropertyList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
+                {isEntryDraft(entry) && <EntryDraftBadge />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>
@@ -148,11 +156,13 @@ export function PropertyList({
         );
       })}
 
-      <AnimatedListItem index={sortedEntries.length}>
-        <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-          <Text style={listStyles.addText}>+ Add Property</Text>
-        </PressableCard>
-      </AnimatedListItem>
+      {!readOnly && (
+        <AnimatedListItem index={sortedEntries.length}>
+          <PressableCard onPress={onAddPress} style={listStyles.addCard}>
+            <Text style={listStyles.addText}>+ Add Property or Vehicle</Text>
+          </PressableCard>
+        </AnimatedListItem>
+      )}
     </ScrollView>
   );
 }
