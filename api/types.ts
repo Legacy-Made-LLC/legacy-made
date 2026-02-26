@@ -499,8 +499,7 @@ export interface EntitlementInfo {
  * Entitlement error codes from the API
  */
 export type EntitlementErrorCode =
-  | "PILLAR_LOCKED"
-  | "PILLAR_VIEW_ONLY"
+  | "FEATURE_LOCKED"
   | "QUOTA_EXCEEDED";
 
 /**

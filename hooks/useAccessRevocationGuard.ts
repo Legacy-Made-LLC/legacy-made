@@ -17,6 +17,7 @@ import { useEffect, useRef } from "react";
 
 import { ApiClientError } from "@/api/client";
 import { usePlan } from "@/data/PlanProvider";
+import { isEntitlementError } from "@/lib/entitlementHelpers";
 
 import { useRevocationHandler } from "./useRevocationHandler";
 
@@ -44,7 +45,8 @@ export function useAccessRevocationGuard() {
           event.type === "updated" &&
           event.action.type === "error" &&
           event.action.error instanceof ApiClientError &&
-          event.action.error.statusCode === 403
+          event.action.error.statusCode === 403 &&
+          !isEntitlementError(event.action.error)
         ) {
           handleRevocationRef.current();
         }
@@ -57,7 +59,8 @@ export function useAccessRevocationGuard() {
             event.type === "updated" &&
             event.action.type === "error" &&
             event.action.error instanceof ApiClientError &&
-            event.action.error.statusCode === 403
+            event.action.error.statusCode === 403 &&
+            !isEntitlementError(event.action.error)
           ) {
             handleRevocationRef.current();
           }

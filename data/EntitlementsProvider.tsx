@@ -1,12 +1,18 @@
 /**
  * EntitlementsProvider - Manages user entitlements and provides access checks
  *
- * This context fetches the user's entitlements when they're authenticated
- * and provides helper methods for checking feature access and quotas.
+ * Two entitlement sources:
+ * - Plan entitlements (GET /plans/:planId/entitlements): used for all access
+ *   checks — pillar locks, quotas, storage. The backend resolves the correct
+ *   entitlements for the plan regardless of whether it's the user's own plan
+ *   or a shared plan.
+ * - User entitlements (GET /entitlements): used only for account menu display
+ *   values (tier badge, upgrade prompts).
  */
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   type ReactNode,
@@ -19,7 +25,11 @@ import type {
   QuotaInfo,
   SubscriptionTier,
 } from "@/api/types";
-import { useEntitlementsQuery } from "@/hooks/queries/useEntitlementsQuery";
+import { usePlan } from "@/data/PlanProvider";
+import {
+  useEntitlementsQuery,
+  usePlanEntitlementsQuery,
+} from "@/hooks/queries/useEntitlementsQuery";
 
 /**
  * Default entitlements for unauthenticated or loading states
@@ -70,7 +80,7 @@ const DEFAULT_ENTITLEMENTS: EntitlementInfo = {
 };
 
 interface EntitlementsContextType {
-  /** Raw entitlements data */
+  /** Plan entitlements — used for all access checks (pillar locks, quotas) */
   entitlements: EntitlementInfo;
   /** Whether entitlements are currently loading */
   isLoading: boolean;
@@ -79,17 +89,17 @@ interface EntitlementsContextType {
   /** Refetch entitlements */
   refetch: () => void;
 
-  // Computed values
-  /** Current subscription tier */
+  // Computed values (always reflect the viewer's own subscription)
+  /** Viewer's current subscription tier */
   tier: SubscriptionTier;
-  /** Human-readable tier name */
+  /** Viewer's human-readable tier name */
   tierName: string;
-  /** Marketing tagline for the tier */
+  /** Marketing tagline for the viewer's tier */
   tierDescription: string;
-  /** Whether user is on free tier */
+  /** Whether the viewer is on free tier */
   isFree: boolean;
 
-  // Access check methods
+  // Access check methods (use plan entitlements)
   /** Check if a pillar can be edited (full access) */
   canEditPillar: (pillar: Pillar) => boolean;
   /** Check if a pillar can be viewed (either editable or view-only) */
@@ -99,7 +109,7 @@ interface EntitlementsContextType {
   /** Check if a pillar is locked (not in pillars or viewOnlyPillars) */
   isLockedPillar: (pillar: Pillar) => boolean;
 
-  // Quota check methods
+  // Quota check methods (use plan entitlements)
   /** Check if user can create a new item (within quota) */
   canCreate: (feature: QuotaFeature) => boolean;
   /** Get remaining quota for a feature */
@@ -111,7 +121,7 @@ interface EntitlementsContextType {
   /** Check if approaching limit (80%+ used) */
   isApproachingLimit: (feature: QuotaFeature) => boolean;
 
-  // Storage-specific methods
+  // Storage-specific methods (use plan entitlements)
   /** Check if user can upload files (has storage quota > 0) */
   canUpload: () => boolean;
   /** Get storage used in MB */
@@ -129,7 +139,7 @@ interface EntitlementsContextType {
 }
 
 const EntitlementsContext = createContext<EntitlementsContextType | undefined>(
-  undefined
+  undefined,
 );
 
 interface EntitlementsProviderProps {
@@ -137,18 +147,39 @@ interface EntitlementsProviderProps {
 }
 
 export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
-  const { data, isLoading, error, refetch } = useEntitlementsQuery();
+  const { planId } = usePlan();
 
-  // Use fetched entitlements or defaults
-  const entitlements = data ?? DEFAULT_ENTITLEMENTS;
+  // User's own entitlements — only for account menu display (tier, tierName)
+  const ownQuery = useEntitlementsQuery();
+
+  // Plan entitlements — used for all access checks (pillar locks, quotas, storage).
+  // The backend resolves the correct entitlements for any plan, whether it's
+  // the user's own or a shared plan they're viewing.
+  const planQuery = usePlanEntitlementsQuery(planId);
+
+  const ownEntitlements = ownQuery.data ?? DEFAULT_ENTITLEMENTS;
+  const planEntitlements = planQuery.data ?? DEFAULT_ENTITLEMENTS;
+
+  const isLoading = ownQuery.isLoading || planQuery.isLoading;
+  const error = ownQuery.error ?? planQuery.error ?? null;
+
+  const refetch = useCallback(() => {
+    ownQuery.refetch();
+    planQuery.refetch();
+  }, [ownQuery, planQuery]);
 
   const value = useMemo<EntitlementsContextType>(() => {
-    const tier = entitlements.tier;
-    const tierName = entitlements.tierName;
-    const tierDescription = entitlements.tierDescription;
+    // Plan entitlements drive all access checks
+    const entitlements = planEntitlements;
+
+    // Display values reflect the viewer's own subscription
+    // (for account menu, upgrade prompts, tier badges)
+    const tier = ownEntitlements.tier;
+    const tierName = ownEntitlements.tierName;
+    const tierDescription = ownEntitlements.tierDescription;
     const isFree = tier === "free";
 
-    // Access check methods
+    // Access check methods — operate on the plan's entitlements
     const canEditPillar = (pillar: Pillar): boolean => {
       return entitlements.pillars.includes(pillar);
     };
@@ -291,7 +322,7 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
       isStorageFull,
       isStorageUnlimited,
     };
-  }, [entitlements, isLoading, error, refetch]);
+  }, [planEntitlements, ownEntitlements, isLoading, error, refetch]);
 
   return (
     <EntitlementsContext.Provider value={value}>
@@ -302,6 +333,10 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
 
 /**
  * Hook to access entitlements context
+ *
+ * - `tier`, `tierName`, `isFree` — viewer's own subscription (account menu, tier badges)
+ * - `canEditPillar`, `canCreate`, quota/storage methods — plan entitlements
+ *   (resolved by the backend for the active plan, own or shared)
  *
  * @example
  * ```tsx
@@ -320,7 +355,7 @@ export function useEntitlements() {
   const context = useContext(EntitlementsContext);
   if (context === undefined) {
     throw new Error(
-      "useEntitlements must be used within an EntitlementsProvider"
+      "useEntitlements must be used within an EntitlementsProvider",
     );
   }
   return context;

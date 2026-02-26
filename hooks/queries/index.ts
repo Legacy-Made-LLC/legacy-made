@@ -40,7 +40,7 @@ export {
 export { usePlanQuery } from './usePlanQuery';
 
 // Entitlements
-export { useEntitlementsQuery } from './useEntitlementsQuery';
+export { useEntitlementsQuery, usePlanEntitlementsQuery } from './useEntitlementsQuery';
 
 // Progress
 export {

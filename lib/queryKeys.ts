@@ -31,6 +31,8 @@ export const queryKeys = {
   entitlements: {
     // Current user's entitlements
     current: () => ['entitlements', 'current'] as const,
+    // Entitlements for a specific plan (plan owner's entitlements)
+    forPlan: (planId: string) => ['entitlements', 'plan', planId] as const,
   },
   wishes: {
     // All wishes for a plan
