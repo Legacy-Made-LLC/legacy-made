@@ -5,8 +5,8 @@
  * Follows same pattern as useEntriesQuery.ts for consistency.
  */
 
-import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { useApi } from "@/api";
 import type { Wish } from "@/api/types";
@@ -25,7 +25,7 @@ import { queryKeys } from "@/lib/queryKeys";
  * ```
  */
 export function useWishesQuery<T = Record<string, unknown>>(
-  taskKey: string | undefined
+  taskKey: string | undefined,
 ) {
   const { planId } = usePlan();
   const { wishes } = useApi();
@@ -164,7 +164,7 @@ export function useWishCountsQuery() {
       for (const [taskKey, taskWishes] of Object.entries(groupedByTaskKey)) {
         queryClient.setQueryData(
           queryKeys.wishes.byTaskKey(planId!, taskKey),
-          taskWishes
+          taskWishes,
         );
       }
 
@@ -207,9 +207,7 @@ export function usePrefetchWishesByTaskKeys(taskKeys: string[]) {
       queryClient.prefetchQuery({
         queryKey: queryKeys.wishes.byTaskKey(planId, taskKey),
         queryFn: () => wishes.listByTaskKey(planId, taskKey),
-        staleTime: 1000 * 60 * 5, // 5 minutes - matches global config
       });
     });
   }, [planId, taskKeys, queryClient, wishes]);
 }
-

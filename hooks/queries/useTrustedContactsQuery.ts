@@ -13,6 +13,10 @@ import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Hook to fetch all trusted contacts for the current plan
+ *
+ * Uses a short stale time and always refetches on app focus because
+ * contact statuses (pending → accepted, revoked, etc.) can change
+ * at any time via actions in other apps or by the plan owner.
  */
 export function useTrustedContactsQuery() {
   const { planId } = usePlan();
@@ -22,6 +26,8 @@ export function useTrustedContactsQuery() {
     queryKey: queryKeys.trustedContacts.all(planId!),
     queryFn: () => trustedContacts.list(planId!),
     enabled: !!planId,
+    staleTime: 30 * 1000, // 30 seconds — statuses change frequently
+    refetchOnWindowFocus: "always",
   });
 }
 

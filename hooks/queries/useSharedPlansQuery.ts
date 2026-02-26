@@ -12,7 +12,9 @@ import { queryKeys } from '@/lib/queryKeys';
 /**
  * Hook to fetch all plans shared with the current user
  *
- * Uses a 5-minute stale time since shared plans rarely change.
+ * Uses a short stale time and always refetches on app focus because
+ * shared plan statuses (pending → accepted, revoked, etc.) can change
+ * at any time via the plan owner's actions.
  */
 export function useSharedPlansQuery() {
   const { sharedPlans, isSignedIn, isLoaded } = useApi();
@@ -21,6 +23,7 @@ export function useSharedPlansQuery() {
     queryKey: queryKeys.sharedPlans.all(),
     queryFn: () => sharedPlans.list(),
     enabled: isLoaded && isSignedIn,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 seconds — statuses change frequently
+    refetchOnWindowFocus: "always",
   });
 }
