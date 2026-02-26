@@ -33,6 +33,8 @@ export default function LegacyScreen() {
       <RestrictedAccessOverlay
         featureName="Legacy Messages"
         description="Your access level doesn't include Legacy Messages for this plan."
+        accentColor={colors.featureLegacy}
+        tintColor={colors.featureLegacyTint}
       />
     );
   }

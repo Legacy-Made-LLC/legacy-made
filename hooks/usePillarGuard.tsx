@@ -16,8 +16,16 @@ import {
   LockedFeatureOverlay,
   RestrictedAccessOverlay,
 } from "@/components/entitlements";
+import { colors } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
+
+const PILLAR_COLORS: Record<Pillar, { accent: string; tint: string }> = {
+  important_info: { accent: colors.featureInformation, tint: colors.featureInformationTint },
+  wishes: { accent: colors.featureWishes, tint: colors.featureWishesTint },
+  messages: { accent: colors.featureLegacy, tint: colors.featureLegacyTint },
+  family_access: { accent: colors.featureFamily, tint: colors.featureFamilyTint },
+};
 
 interface UsePillarGuardOptions {
   pillar: Pillar;
@@ -61,10 +69,13 @@ export function usePillarGuard({
       />
     );
   } else if (isViewingSharedPlan && !canAccessPillar(pillar)) {
+    const pillarColors = PILLAR_COLORS[pillar];
     guardOverlay = (
       <RestrictedAccessOverlay
         featureName={featureName}
         description={restrictedDescription}
+        accentColor={pillarColors?.accent}
+        tintColor={pillarColors?.tint}
       />
     );
   }

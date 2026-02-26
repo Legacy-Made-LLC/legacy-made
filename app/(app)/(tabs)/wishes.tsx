@@ -46,6 +46,8 @@ export default function WishesScreen() {
       <RestrictedAccessOverlay
         featureName="Wishes & Guidance"
         description="Your access level doesn't include Wishes & Guidance for this plan."
+        accentColor={colors.featureWishes}
+        tintColor={colors.featureWishesTint}
       />
     );
   }

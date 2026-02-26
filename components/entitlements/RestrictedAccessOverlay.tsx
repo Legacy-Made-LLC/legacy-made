@@ -24,11 +24,17 @@ import { usePlanSwitching } from "@/hooks/usePlanSwitching";
 interface RestrictedAccessOverlayProps {
   featureName: string;
   description?: string;
+  /** Pillar accent color for the icon and button (defaults to colors.textTertiary / colors.primary) */
+  accentColor?: string;
+  /** Pillar tint color for the icon background (defaults to colors.surfaceSecondary) */
+  tintColor?: string;
 }
 
 export function RestrictedAccessOverlay({
   featureName,
   description,
+  accentColor,
+  tintColor,
 }: RestrictedAccessOverlayProps) {
   const insets = useSafeAreaInsets();
   const { switchToMyPlan } = usePlanSwitching();
@@ -36,11 +42,11 @@ export function RestrictedAccessOverlay({
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, tintColor != null && { backgroundColor: tintColor }]}>
           <Ionicons
             name="eye-off-outline"
             size={40}
-            color={colors.textTertiary}
+            color={accentColor ?? colors.textTertiary}
           />
         </View>
 
@@ -55,6 +61,7 @@ export function RestrictedAccessOverlay({
           onPress={switchToMyPlan}
           style={({ pressed }) => [
             styles.button,
+            accentColor != null && { backgroundColor: accentColor },
             pressed && styles.buttonPressed,
           ]}
         >

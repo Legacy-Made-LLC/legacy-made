@@ -22,6 +22,8 @@ export default function InformationScreen() {
       <RestrictedAccessOverlay
         featureName="Information Vault"
         description="Your access level doesn't include the Information Vault for this plan. You can view Wishes and Legacy Messages."
+        accentColor={colors.featureInformation}
+        tintColor={colors.featureInformationTint}
       />
     );
   }

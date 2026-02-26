@@ -30,7 +30,7 @@ export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
-  const { isViewingSharedPlan, isReadOnly, canAccessPillar } = usePlan();
+  const { isViewingSharedPlan, isReadOnly } = usePlan();
   const { switchToSharedPlan } = usePlanSwitching();
   const { data: contacts, isLoading } = useTrustedContactsQuery();
   const { data: sharedPlans, isLoading: isLoadingSharedPlans } =
@@ -112,11 +112,13 @@ export default function FamilyScreen() {
     );
   }
 
-  if (isViewingSharedPlan && !canAccessPillar("family_access")) {
+  if (isViewingSharedPlan) {
     return (
       <RestrictedAccessOverlay
         featureName="Family Access"
-        description="Your access level doesn't include Family Access for this plan. You can view Wishes and Legacy Messages."
+        description="Family Access settings can only be managed from your own plan."
+        accentColor={colors.featureFamily}
+        tintColor={colors.featureFamilyTint}
       />
     );
   }
