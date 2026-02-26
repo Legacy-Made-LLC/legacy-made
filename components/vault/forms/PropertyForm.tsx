@@ -1,15 +1,21 @@
 /**
  * PropertyForm - Form for creating/editing property and vehicle entries
+ *
+ * Uses a segmented control to toggle between Property and Vehicle modes.
+ * The form fields adapt contextually based on the selected type.
+ * Metadata field keys are unchanged for backwards compatibility.
  */
 
 import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, propertySchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Select } from "@/components/ui/Select";
 import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -21,50 +27,90 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
 import { formStyles } from "./formStyles";
 
-const propertyTypes = [
-  "Primary Home",
-  "Vacation Home",
-  "Rental Property",
-  "Vehicle",
-  "Storage Unit",
-  "Land",
-  "Other",
+/** Top-level type segments */
+const TYPE_SEGMENTS = [
+  { value: "Property", label: "Property" },
+  { value: "Vehicle", label: "Vehicle" },
 ] as const;
+
+/** Property sub-types shown in the dropdown when "Property" is selected */
+const PROPERTY_SUBTYPES = [
+  { value: "Primary Home", label: "Primary Home" },
+  { value: "Vacation Home", label: "Vacation Home" },
+  { value: "Rental Property", label: "Rental Property" },
+  { value: "Storage Unit", label: "Storage Unit" },
+  { value: "Land", label: "Land" },
+  { value: "Other", label: "Other" },
+] as const;
+
 const ownershipTypes = ["Own", "Lease", "Rent", "Finance"] as const;
 
-/** Display schema for property metadata */
-const PROPERTY_METADATA_SCHEMA: MetadataSchema = {
-  version: 1,
-  fields: {
-    responsibilityType: {
-      label: "Property Type",
-      order: 1,
-      valueLabels: Object.fromEntries(propertyTypes.map((t) => [t, t])),
-    },
-    ownership: {
-      label: "Ownership",
-      order: 2,
-      valueLabels: Object.fromEntries(ownershipTypes.map((t) => [t, t])),
-    },
-    addressDescription: { label: "Address/Description", order: 3 },
-    lienHolder: { label: "Mortgage/Lien Holder", order: 4 },
-    documentsLocation: { label: "Where Documents are Stored", order: 5 },
-    keyLocation: { label: "Key/Access Location", order: 6 },
-    notes: { label: "Notes", order: 7 },
-  },
-};
+/**
+ * All possible responsibilityType values — union of property sub-types + "Vehicle".
+ * Used for the metadata schema valueLabels so existing entries display correctly.
+ */
+const ALL_RESPONSIBILITY_TYPES = [
+  ...PROPERTY_SUBTYPES.map((s) => s.value),
+  "Vehicle",
+] as const;
 
-type PropertyType = (typeof propertyTypes)[number];
+/** Build the display schema with labels contextual to property vs vehicle */
+function buildMetadataSchema(isVehicle: boolean): MetadataSchema {
+  return {
+    version: 1,
+    fields: {
+      responsibilityType: {
+        label: "Type",
+        order: 1,
+        valueLabels: Object.fromEntries(
+          ALL_RESPONSIBILITY_TYPES.map((t) => [t, t]),
+        ),
+      },
+      ownership: {
+        label: "Ownership",
+        order: 2,
+        valueLabels: Object.fromEntries(ownershipTypes.map((t) => [t, t])),
+      },
+      addressDescription: {
+        label: isVehicle ? "Vehicle Description" : "Address",
+        order: 3,
+      },
+      lienHolder: {
+        label: isVehicle ? "Lien Holder" : "Mortgage/Lien Holder",
+        order: 4,
+      },
+      documentsLocation: {
+        label: isVehicle ? "Title & Documents Location" : "Where Documents are Stored",
+        order: 5,
+      },
+      keyLocation: {
+        label: isVehicle ? "Key Location" : "Key/Access Location",
+        order: 6,
+      },
+      notes: { label: "Notes", order: 7 },
+    },
+  };
+}
+
+type ResponsibilityType = (typeof ALL_RESPONSIBILITY_TYPES)[number];
 type OwnershipType = (typeof ownershipTypes)[number];
 
 interface PropertyMetadata {
-  responsibilityType: PropertyType;
+  responsibilityType: ResponsibilityType;
   ownership?: OwnershipType;
   addressDescription?: string | null;
   lienHolder?: string | null;
   documentsLocation?: string | null;
   keyLocation?: string | null;
   notes?: string | null;
+}
+
+/**
+ * Derive the top-level segment from the stored responsibilityType.
+ * "Vehicle" → Vehicle; anything else → Property.
+ */
+function deriveTopLevelType(responsibilityType: string | undefined): "Property" | "Vehicle" {
+  return responsibilityType === "Vehicle" ? "Vehicle" : "Property";
 }
 
 export function PropertyForm({
@@ -86,10 +132,26 @@ export function PropertyForm({
 
   const initialMetadata = initialData?.metadata as PropertyMetadata | undefined;
 
+  // Track the top-level segment (Property vs Vehicle) as local state,
+  // derived from the stored responsibilityType for existing entries.
+  const [topLevelType, setTopLevelType] = useState<"Property" | "Vehicle">(
+    () => deriveTopLevelType(initialMetadata?.responsibilityType),
+  );
+  const isVehicle = topLevelType === "Vehicle";
+
+  // Track the last-used property sub-type so switching back from Vehicle
+  // restores the previous selection instead of always resetting to "Primary Home".
+  const lastPropertySubtypeRef = useRef<string>(
+    initialMetadata?.responsibilityType === "Vehicle"
+      ? "Primary Home"
+      : (initialMetadata?.responsibilityType ?? "Primary Home"),
+  );
+
   const defaultValues = useMemo(
     () => ({
-      propertyType: (initialMetadata?.responsibilityType ??
-        "Primary Home") as string,
+      // The propertyType field stores the responsibilityType value that gets saved.
+      // For vehicles: "Vehicle". For properties: the sub-type (e.g. "Primary Home").
+      propertyType: (initialMetadata?.responsibilityType ?? "Primary Home") as string,
       ownership: (initialMetadata?.ownership ?? "Own") as string,
       addressDescription: initialMetadata?.addressDescription ?? "",
       lienHolder: initialMetadata?.lienHolder ?? "",
@@ -107,8 +169,10 @@ export function PropertyForm({
       onDynamic: propertySchema,
     },
     onSubmit: async ({ value }) => {
+      const vehicleEntry = value.propertyType === "Vehicle";
+
       const metadata: PropertyMetadata = {
-        responsibilityType: value.propertyType as PropertyType,
+        responsibilityType: value.propertyType as ResponsibilityType,
         ownership: value.ownership as OwnershipType,
         addressDescription: value.addressDescription.trim() || null,
         lienHolder: value.lienHolder.trim() || null,
@@ -117,8 +181,10 @@ export function PropertyForm({
         notes: value.notes.trim() || null,
       };
 
-      // Generate title from type
-      const title = value.propertyType;
+      // Generate title: vehicle description for vehicles, sub-type for properties
+      const title = vehicleEntry
+        ? value.addressDescription.trim()
+        : value.propertyType;
 
       if (toast.isOffline()) return;
 
@@ -127,22 +193,40 @@ export function PropertyForm({
           title,
           notes: value.notes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: PROPERTY_METADATA_SCHEMA,
+          metadataSchema: buildMetadataSchema(vehicleEntry),
           completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Failed to save property";
+          err instanceof Error ? err.message : "Failed to save";
         toast.error({ message });
       }
     },
   });
 
+  // Contextual header title
   useEffect(() => {
-    navigation.setOptions({
-      title: readOnly ? "View Property" : isNew ? "Add Property" : "Edit Property",
-    });
-  }, [isNew, readOnly, navigation]);
+    const typeLabel = isVehicle ? "Vehicle" : "Property";
+    const prefix = readOnly ? "View" : isNew ? "Add" : "Edit";
+    navigation.setOptions({ title: `${prefix} ${typeLabel}` });
+  }, [isNew, readOnly, isVehicle, navigation]);
+
+  /** Handle top-level segment change */
+  const handleTopLevelChange = (segment: string) => {
+    if (segment === "Vehicle") {
+      // Remember current property sub-type before switching
+      const currentValue = form.getFieldValue("propertyType");
+      if (currentValue !== "Vehicle") {
+        lastPropertySubtypeRef.current = currentValue;
+      }
+      form.setFieldValue("propertyType", "Vehicle");
+      setTopLevelType("Vehicle");
+    } else {
+      // Restore the last-used property sub-type
+      form.setFieldValue("propertyType", lastPropertySubtypeRef.current);
+      setTopLevelType("Property");
+    }
+  };
 
   const handleSaveWithStatus = (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
@@ -152,10 +236,10 @@ export function PropertyForm({
   const handleDelete = () => {
     if (!onDelete) return;
 
-    const propertyType = form.getFieldValue("propertyType");
+    const typeLabel = isVehicle ? "vehicle" : "property";
     Alert.alert(
-      "Delete Property",
-      `Are you sure you want to delete this ${propertyType || "item"}?`,
+      `Delete ${isVehicle ? "Vehicle" : "Property"}`,
+      `Are you sure you want to delete this ${typeLabel}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -169,7 +253,7 @@ export function PropertyForm({
               const message =
                 err instanceof Error
                   ? err.message
-                  : "Failed to delete property";
+                  : `Failed to delete ${typeLabel}`;
               toast.error({ message });
             }
           },
@@ -189,37 +273,50 @@ export function PropertyForm({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-        <form.Field name="propertyType">
-          {(field) => (
-            <View style={formStyles.fieldContainer}>
-              <Text style={formStyles.label}>Property Type</Text>
-              <View style={formStyles.typeGrid}>
-                {propertyTypes.map((type) => (
-                  <Pressable
-                    key={type}
-                    style={[
-                      formStyles.typeButton,
-                      field.state.value === type &&
-                        formStyles.typeButtonSelected,
-                    ]}
-                    onPress={readOnly ? undefined : () => field.handleChange(type)}
-                  >
-                    <Text
-                      style={[
-                        formStyles.typeButtonText,
-                        field.state.value === type &&
-                          formStyles.typeButtonTextSelected,
-                      ]}
-                    >
-                      {type}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-        </form.Field>
+        {/* Top-level type toggle: Property vs Vehicle */}
+        <View style={formStyles.fieldContainer}>
+          <SegmentedControl
+            options={TYPE_SEGMENTS}
+            value={topLevelType}
+            onValueChange={handleTopLevelChange}
+            disabled={readOnly}
+          />
+        </View>
 
+        {/* Property sub-type dropdown (only for properties) */}
+        {!isVehicle && (
+          <form.Field name="propertyType">
+            {(field) => (
+              <Select
+                label="Property Type"
+                value={field.state.value}
+                onValueChange={(val) => field.handleChange(val)}
+                options={PROPERTY_SUBTYPES.map((s) => ({
+                  value: s.value,
+                  label: s.label,
+                }))}
+                placeholder="Select property type..."
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        )}
+
+        {/* Vehicle description (only for vehicles) */}
+        {isVehicle && (
+          <form.Field name="addressDescription">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Vehicle Description"
+                placeholder="e.g., 2021 Honda CR-V"
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        )}
+
+        {/* Ownership pills */}
         <form.Field name="ownership">
           {(field) => (
             <View style={formStyles.fieldContainer}>
@@ -251,23 +348,30 @@ export function PropertyForm({
           )}
         </form.Field>
 
-        <form.Field name="addressDescription">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Address/Description"
-              placeholder="e.g., 123 Main St or 2021 Honda CR-V"
-              disabled={readOnly}
-            />
-          )}
-        </form.Field>
+        {/* Address (only for properties — vehicles use addressDescription above) */}
+        {!isVehicle && (
+          <form.Field name="addressDescription">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Address"
+                placeholder="e.g., 123 Main St, San Francisco, CA"
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        )}
 
         <form.Field name="lienHolder">
           {(field) => (
             <FormInput
               field={field}
-              label="Mortgage/Lien Holder"
-              placeholder="e.g., Wells Fargo, Toyota Financial"
+              label={isVehicle ? "Lien Holder" : "Mortgage/Lien Holder"}
+              placeholder={
+                isVehicle
+                  ? "e.g., Toyota Financial, paid off"
+                  : "e.g., Wells Fargo"
+              }
               disabled={readOnly}
             />
           )}
@@ -277,7 +381,7 @@ export function PropertyForm({
           {(field) => (
             <FormInput
               field={field}
-              label="Where Documents are Stored"
+              label={isVehicle ? "Title & Documents Location" : "Where Documents are Stored"}
               placeholder="e.g., Filing cabinet, safe deposit box"
               disabled={readOnly}
             />
@@ -288,8 +392,12 @@ export function PropertyForm({
           {(field) => (
             <FormInput
               field={field}
-              label="Key/Access Location"
-              placeholder="e.g., Kitchen drawer, with neighbor"
+              label={isVehicle ? "Key Location" : "Key/Access Location"}
+              placeholder={
+                isVehicle
+                  ? "e.g., Key hook by front door, spare in kitchen drawer"
+                  : "e.g., Kitchen drawer, with neighbor"
+              }
               disabled={readOnly}
             />
           )}
@@ -300,7 +408,11 @@ export function PropertyForm({
             <FormTextArea
               field={field}
               label="Notes"
-              placeholder="e.g. HOA, utilities, alarm codes, etc."
+              placeholder={
+                isVehicle
+                  ? "e.g., Regular maintenance at Honda of SF, parking spot #12"
+                  : "e.g., HOA, utilities, alarm codes, etc."
+              }
               disabled={readOnly}
             />
           )}
@@ -314,7 +426,11 @@ export function PropertyForm({
             mode="all"
             maxFiles={10}
             placeholder="Add photos or documents"
-            helpText="Attach photos of the property, vehicle, or related documents"
+            helpText={
+              isVehicle
+                ? "Attach photos of the vehicle, title, or registration"
+                : "Attach photos of the property or related documents"
+            }
             showStorageIndicator
             onUpgradeRequired={onStorageUpgradeRequired}
           />
@@ -356,7 +472,7 @@ export function PropertyForm({
         {!readOnly && !isNew && onDelete && (
           <View style={formStyles.deleteContainer}>
             <Button
-              title="Delete Property"
+              title={`Delete ${isVehicle ? "Vehicle" : "Property"}`}
               variant="destructive"
               onPress={handleDelete}
             />

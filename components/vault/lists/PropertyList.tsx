@@ -22,8 +22,8 @@ import { listStyles } from "./listStyles";
 
 interface PropertyMetadata {
   responsibilityType?: string;
-  provider?: string;
-  accountInfo?: string;
+  addressDescription?: string;
+  ownership?: string;
 }
 
 export function PropertyList({
@@ -93,7 +93,7 @@ export function PropertyList({
         <EmptyState
           title="Nothing added yet"
           description="Add your property, vehicles, and other physical assets."
-          buttonTitle={readOnly ? undefined : "Add Property"}
+          buttonTitle={readOnly ? undefined : "Add Property or Vehicle"}
           onButtonPress={readOnly ? undefined : onAddPress}
           style={{ marginTop: spacing.sm }}
         />
@@ -120,9 +120,14 @@ export function PropertyList({
 
       {sortedEntries.map((entry, index) => {
         const metadata = entry.metadata as PropertyMetadata;
-        const subtitle = [metadata.responsibilityType, metadata.accountInfo]
-          .filter(Boolean)
-          .join(" · ");
+        const isVehicle = metadata.responsibilityType === "Vehicle";
+        // For vehicles: show ownership if present (title is already the description)
+        // For properties: show address if present
+        const subtitle = isVehicle
+          ? [metadata.ownership].filter(Boolean).join(" · ")
+          : [metadata.addressDescription, metadata.ownership]
+              .filter(Boolean)
+              .join(" · ");
 
         return (
           <AnimatedListItem key={entry.id} index={index}>
@@ -154,7 +159,7 @@ export function PropertyList({
       {!readOnly && (
         <AnimatedListItem index={sortedEntries.length}>
           <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-            <Text style={listStyles.addText}>+ Add Property</Text>
+            <Text style={listStyles.addText}>+ Add Property or Vehicle</Text>
           </PressableCard>
         </AnimatedListItem>
       )}
