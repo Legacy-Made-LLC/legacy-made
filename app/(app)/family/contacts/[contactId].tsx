@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/Card";
 import Loader from "@/components/ui/Loader";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import {
+  useCreateTrustedContact,
   useDeleteTrustedContact,
   useResendInvitation,
   useTrustedContactQuery,
@@ -52,14 +53,17 @@ export default function TrustedContactDetailScreen() {
   const [showAccessPicker, setShowAccessPicker] = useState(false);
 
   const { data: contact, isLoading } = useTrustedContactQuery(contactId);
+  const createMutation = useCreateTrustedContact();
   const updateMutation = useUpdateTrustedContact();
   const deleteMutation = useDeleteTrustedContact();
   const resendMutation = useResendInvitation();
   const { guardOverlay } = usePillarGuard({
     pillar: "family_access",
     featureName: "Family Access",
-    lockedDescription: "Manage who can access your legacy information and when they can see it.",
-    restrictedDescription: "Your access level doesn't include Family Access for this plan.",
+    lockedDescription:
+      "Manage who can access your legacy information and when they can see it.",
+    restrictedDescription:
+      "Your access level doesn't include Family Access for this plan.",
   });
 
   if (guardOverlay) {
@@ -76,6 +80,9 @@ export default function TrustedContactDetailScreen() {
   const isPending = contact.accessStatus === "pending";
   const isActive =
     contact.accessStatus === "pending" || contact.accessStatus === "accepted";
+  const isRevoked =
+    contact.accessStatus === "revoked_by_owner" ||
+    contact.accessStatus === "revoked_by_contact";
   const statusDate =
     contact.acceptedAt || contact.declinedAt || contact.revokedAt;
 
@@ -128,6 +135,40 @@ export default function TrustedContactDetailScreen() {
               toast.error({
                 message: "Couldn\u2019t revoke access.",
               });
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleRestore = () => {
+    Alert.alert(
+      "Restore Access",
+      `This will send a new invitation to ${fullName}. They\u2019ll need to accept it to regain access.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restore",
+          onPress: async () => {
+            if (toast.isOffline()) return;
+            try {
+              await createMutation.mutateAsync({
+                email: contact.email,
+                firstName: contact.firstName,
+                lastName: contact.lastName,
+                relationship: contact.relationship,
+                accessLevel: contact.accessLevel,
+                accessTiming: contact.accessTiming,
+                notes: contact.notes ?? undefined,
+              });
+              toast.success({
+                title: "Invitation sent",
+                message: `A new invitation has been sent to ${contact.email}.`,
+              });
+              router.back();
+            } catch {
+              toast.error({ message: "Couldn\u2019t restore access." });
             }
           },
         },
@@ -282,6 +323,26 @@ export default function TrustedContactDetailScreen() {
             />
             <Text style={styles.secondaryButtonText}>
               {resendMutation.isPending ? "Sending..." : "Resend Invitation"}
+            </Text>
+          </Pressable>
+        )}
+
+        {isRevoked && (
+          <Pressable
+            onPress={handleRestore}
+            disabled={createMutation.isPending}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={18}
+              color={colors.featureFamily}
+            />
+            <Text style={styles.secondaryButtonText}>
+              {createMutation.isPending ? "Restoring..." : "Restore Access"}
             </Text>
           </Pressable>
         )}
