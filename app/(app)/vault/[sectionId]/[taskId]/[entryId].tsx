@@ -47,7 +47,7 @@ export default function EntryScreen() {
   }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { planId, isReadOnly } = usePlan();
+  const { planId, isReadOnly, isViewingSharedPlan, sharedPlanInfo } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const task = useVaultTask(sectionId, taskId);
@@ -442,14 +442,24 @@ export default function EntryScreen() {
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
-        title="You've Reached Your Limit"
-        message="You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+        title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its entry limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
       <UpgradePrompt
         visible={showStorageUpgradePrompt}
         onClose={() => setShowStorageUpgradePrompt(false)}
         title="Storage Limit Reached"
-        message="This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important files safe."
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its storage limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important files safe."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
     </>
   );

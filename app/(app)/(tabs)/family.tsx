@@ -43,9 +43,10 @@ export default function FamilyScreen() {
   const translations = useTranslations();
   const t = translations.pages.family;
   const hasSharedPlans = sharedPlans && sharedPlans.length > 0;
-  // Can't add contacts if viewing a shared plan, read-only, or view-only on own plan
+  // View-only on own plan — show upgrade prompts for trusted contacts
   const isOwnPlanViewOnly = !isViewingSharedPlan && isViewOnly;
-  const showAddContact = !isViewingSharedPlan && !isReadOnly && !isOwnPlanViewOnly;
+  // Can't add contacts if viewing a shared plan, read-only, or view-only
+  const showAddContact = !isViewingSharedPlan && !isReadOnly && !isViewOnly;
 
   // Filter out revoked plans, then sort: pending invitations first, then accepted
   const sortedSharedPlans = React.useMemo(() => {
@@ -123,155 +124,155 @@ export default function FamilyScreen() {
   const hasContacts = contacts && contacts.length > 0;
 
   return (
-  <>
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: insets.bottom + spacing.lg + 80 },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.pageTitle}>{t.title}</Text>
-        <Text style={styles.description}>{t.description}</Text>
-      </View>
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + spacing.lg + 80 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.pageTitle}>{t.title}</Text>
+          <Text style={styles.description}>{t.description}</Text>
+        </View>
 
-      {/* Your Trusted Contacts Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>{t.trustedContactsHeader}</Text>
+        {/* Your Trusted Contacts Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t.trustedContactsHeader}</Text>
 
-        {isLoading ? (
-          <View style={styles.skeletons}>
-            <SkeletonCard />
-            <SkeletonCard />
-          </View>
-        ) : isOwnPlanViewOnly ? (
-          /* Locked state — view-only on own plan, upgrade to add contacts */
-          <View style={styles.emptyState}>
-            <View style={styles.lockedIcon}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={28}
-                color={colors.textTertiary}
-              />
+          {isLoading ? (
+            <View style={styles.skeletons}>
+              <SkeletonCard />
+              <SkeletonCard />
             </View>
-            <Text style={styles.emptyTitle}>Trusted Contacts</Text>
-            <Text style={styles.emptyDescription}>
-              Upgrade your plan to invite trusted contacts and share access to
-              your legacy information.
-            </Text>
-            <Pressable
-              onPress={() => setShowUpgradePrompt(true)}
-              style={({ pressed }) => [
-                styles.learnMoreButton,
-                pressed && styles.learnMoreButtonPressed,
-              ]}
-            >
-              <Text style={styles.learnMoreText}>Learn More</Text>
-            </Pressable>
-          </View>
-        ) : hasContacts ? (
-          <View style={styles.contactsList}>
-            {contacts.map((contact) => (
-              <TrustedContactCard
-                key={contact.id}
-                contact={contact}
-                onPress={() => router.push(`/family/contacts/${contact.id}`)}
-              />
-            ))}
-            {/* Add button below list */}
-            {showAddContact && (
+          ) : isOwnPlanViewOnly ? (
+            /* Locked state — view-only on own plan, upgrade to add contacts */
+            <View style={styles.emptyState}>
+              <View style={styles.lockedIcon}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={28}
+                  color={colors.textTertiary}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>Trusted Contacts</Text>
+              <Text style={styles.emptyDescription}>
+                Upgrade your plan to invite trusted contacts and share access to
+                your legacy information.
+              </Text>
+              <Pressable
+                onPress={() => setShowUpgradePrompt(true)}
+                style={({ pressed }) => [
+                  styles.learnMoreButton,
+                  pressed && styles.learnMoreButtonPressed,
+                ]}
+              >
+                <Text style={styles.learnMoreText}>Learn More</Text>
+              </Pressable>
+            </View>
+          ) : hasContacts ? (
+            <View style={styles.contactsList}>
+              {contacts.map((contact) => (
+                <TrustedContactCard
+                  key={contact.id}
+                  contact={contact}
+                  onPress={() => router.push(`/family/contacts/${contact.id}`)}
+                />
+              ))}
+              {/* Add button below list */}
+              {showAddContact && (
+                <Pressable
+                  onPress={() => router.push("/family/contacts/new")}
+                  style={({ pressed }) => [
+                    styles.addButton,
+                    pressed && styles.addButtonPressed,
+                  ]}
+                >
+                  <Ionicons name="add" size={20} color={colors.featureFamily} />
+                  <Text style={styles.addButtonText}>Add Trusted Contact</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            /* Empty State */
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons
+                  name="people-outline"
+                  size={36}
+                  color={colors.featureFamily}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
+              <Text style={styles.emptyDescription}>{t.emptyDescription}</Text>
               <Pressable
                 onPress={() => router.push("/family/contacts/new")}
                 style={({ pressed }) => [
-                  styles.addButton,
-                  pressed && styles.addButtonPressed,
+                  styles.emptyButton,
+                  pressed && styles.emptyButtonPressed,
                 ]}
               >
-                <Ionicons name="add" size={20} color={colors.featureFamily} />
-                <Text style={styles.addButtonText}>Add Trusted Contact</Text>
+                <Text style={styles.emptyButtonText}>{t.emptyButton}</Text>
               </Pressable>
-            )}
-          </View>
-        ) : (
-          /* Empty State */
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons
-                name="people-outline"
-                size={36}
-                color={colors.featureFamily}
-              />
             </View>
-            <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
-            <Text style={styles.emptyDescription}>{t.emptyDescription}</Text>
-            <Pressable
-              onPress={() => router.push("/family/contacts/new")}
-              style={({ pressed }) => [
-                styles.emptyButton,
-                pressed && styles.emptyButtonPressed,
-              ]}
-            >
-              <Text style={styles.emptyButtonText}>{t.emptyButton}</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-
-      {/* Shared With Me Section — only shown on user's own plan */}
-      {!isViewingSharedPlan && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t.sharedWithMeHeader}</Text>
-          {isLoadingSharedPlans ? (
-            <View style={styles.skeletons}>
-              <SkeletonCard />
-            </View>
-          ) : hasSharedPlans ? (
-            <View style={styles.contactsList}>
-              {sortedSharedPlans.map((sp) => (
-                <SharedPlanCard
-                  key={sp.planId}
-                  sharedPlan={sp}
-                  onPress={() => {
-                    switchToSharedPlan(sp);
-                  }}
-                  onAccept={
-                    sp.accessStatus === "pending"
-                      ? () => handleAcceptInvitation(sp.planId)
-                      : undefined
-                  }
-                  onDecline={
-                    sp.accessStatus === "pending"
-                      ? () => handleDeclineInvitation(sp.planId)
-                      : undefined
-                  }
-                  isActioning={actioningPlanId === sp.planId}
-                />
-              ))}
-            </View>
-          ) : (
-            <EmptyState
-              icon="heart-half-outline"
-              iconColor={colors.featureFamily}
-              title="No shared plans yet"
-              description={t.sharedWithMeEmpty}
-            />
           )}
         </View>
-      )}
-    </ScrollView>
 
-    {isOwnPlanViewOnly && (
-      <UpgradePrompt
-        visible={showUpgradePrompt}
-        onClose={() => setShowUpgradePrompt(false)}
-        title="Unlock Trusted Contacts"
-        message="Upgrade your plan to invite trusted contacts and share access to your legacy information."
-      />
-    )}
-  </>
+        {/* Shared With Me Section — only shown on user's own plan */}
+        {!isViewingSharedPlan && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t.sharedWithMeHeader}</Text>
+            {isLoadingSharedPlans ? (
+              <View style={styles.skeletons}>
+                <SkeletonCard />
+              </View>
+            ) : hasSharedPlans ? (
+              <View style={styles.contactsList}>
+                {sortedSharedPlans.map((sp) => (
+                  <SharedPlanCard
+                    key={sp.planId}
+                    sharedPlan={sp}
+                    onPress={() => {
+                      switchToSharedPlan(sp);
+                    }}
+                    onAccept={
+                      sp.accessStatus === "pending"
+                        ? () => handleAcceptInvitation(sp.planId)
+                        : undefined
+                    }
+                    onDecline={
+                      sp.accessStatus === "pending"
+                        ? () => handleDeclineInvitation(sp.planId)
+                        : undefined
+                    }
+                    isActioning={actioningPlanId === sp.planId}
+                  />
+                ))}
+              </View>
+            ) : (
+              <EmptyState
+                icon="heart-half-outline"
+                iconColor={colors.featureFamily}
+                title="No shared plans yet"
+                description={t.sharedWithMeEmpty}
+              />
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {isOwnPlanViewOnly && (
+        <UpgradePrompt
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          title="Unlock Trusted Contacts"
+          message="Upgrade your plan to invite trusted contacts and share access to your legacy information."
+        />
+      )}
+    </>
   );
 }
 

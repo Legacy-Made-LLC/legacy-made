@@ -29,6 +29,8 @@ interface UpgradePromptProps {
   message?: string;
   /** Optional callback when upgrade is opened */
   onUpgrade?: () => void;
+  /** When true, hides the upgrade button (e.g., for shared plan limits) */
+  hideUpgradeAction?: boolean;
 }
 
 export function UpgradePrompt({
@@ -37,6 +39,7 @@ export function UpgradePrompt({
   title = "Unlock More Features",
   message = "You've made great progress organizing your legacy. Upgrade to continue adding more and unlock additional features.",
   onUpgrade,
+  hideUpgradeAction = false,
 }: UpgradePromptProps) {
   const insets = useSafeAreaInsets();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -116,26 +119,30 @@ export function UpgradePrompt({
         {/* Message */}
         <Text style={styles.message}>{message}</Text>
 
-        {/* Upgrade button */}
-        <Pressable
-          onPress={handleUpgrade}
-          style={({ pressed }) => [
-            styles.upgradeButton,
-            pressed && styles.upgradeButtonPressed,
-          ]}
-        >
-          <Text style={styles.upgradeButtonText}>Upgrade Your Plan</Text>
-        </Pressable>
+        {/* Upgrade button — hidden for shared plan limits */}
+        {!hideUpgradeAction && (
+          <Pressable
+            onPress={handleUpgrade}
+            style={({ pressed }) => [
+              styles.upgradeButton,
+              pressed && styles.upgradeButtonPressed,
+            ]}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrade Your Plan</Text>
+          </Pressable>
+        )}
 
         {/* Dismiss option */}
         <Pressable
           onPress={handleDismiss}
           style={({ pressed }) => [
-            styles.dismissButton,
-            pressed && styles.dismissButtonPressed,
+            hideUpgradeAction ? styles.upgradeButton : styles.dismissButton,
+            pressed && (hideUpgradeAction ? styles.upgradeButtonPressed : styles.dismissButtonPressed),
           ]}
         >
-          <Text style={styles.dismissButtonText}>Maybe Later</Text>
+          <Text style={hideUpgradeAction ? styles.upgradeButtonText : styles.dismissButtonText}>
+            {hideUpgradeAction ? "OK" : "Maybe Later"}
+          </Text>
         </Pressable>
       </BottomSheetView>
     </BottomSheetModal>

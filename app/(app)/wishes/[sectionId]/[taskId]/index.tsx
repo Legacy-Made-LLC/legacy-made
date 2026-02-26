@@ -62,7 +62,7 @@ export default function WishesTaskScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { planId, isReadOnly } = usePlan();
+  const { planId, isReadOnly, isViewingSharedPlan, sharedPlanInfo } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
@@ -540,14 +540,24 @@ export default function WishesTaskScreen() {
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
-        title="You've Reached Your Limit"
-        message="You've made great progress sharing your wishes. Upgrade your plan to add more and unlock additional features."
+        title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "You've made great progress sharing your wishes. Upgrade your plan to add more and unlock additional features."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
       <UpgradePrompt
         visible={showStorageUpgradePrompt}
         onClose={() => setShowStorageUpgradePrompt(false)}
         title="Storage Limit Reached"
-        message="This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important documents safe."
+        message={
+          isViewingSharedPlan
+            ? `This plan has reached its storage limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+            : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important documents safe."
+        }
+        hideUpgradeAction={isViewingSharedPlan}
       />
     </>
   );

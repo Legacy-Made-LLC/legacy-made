@@ -16,14 +16,21 @@ import { UpgradePrompt } from './UpgradePrompt';
 interface LockedFeatureOverlayProps {
   featureName: string;
   description?: string;
+  /** When true, shows "not available" messaging instead of an upgrade prompt */
+  isSharedPlan?: boolean;
 }
 
 export function LockedFeatureOverlay({
   featureName,
   description,
+  isSharedPlan = false,
 }: LockedFeatureOverlayProps) {
   const insets = useSafeAreaInsets();
   const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const defaultDescription = isSharedPlan
+    ? 'This feature is not included in this plan.'
+    : 'This feature is available with an upgraded plan.';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
@@ -38,19 +45,21 @@ export function LockedFeatureOverlay({
 
         {/* Description */}
         <Text style={styles.description}>
-          {description ?? 'This feature is available with an upgraded plan.'}
+          {description ?? defaultDescription}
         </Text>
 
-        {/* Learn more button */}
-        <Pressable
-          onPress={() => setShowUpgrade(true)}
-          style={({ pressed }) => [
-            styles.learnMoreButton,
-            pressed && styles.learnMoreButtonPressed,
-          ]}
-        >
-          <Text style={styles.learnMoreText}>Learn More</Text>
-        </Pressable>
+        {/* Learn more button — only on own plan */}
+        {!isSharedPlan && (
+          <Pressable
+            onPress={() => setShowUpgrade(true)}
+            style={({ pressed }) => [
+              styles.learnMoreButton,
+              pressed && styles.learnMoreButtonPressed,
+            ]}
+          >
+            <Text style={styles.learnMoreText}>Learn More</Text>
+          </Pressable>
+        )}
       </View>
 
       <UpgradePrompt

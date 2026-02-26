@@ -51,13 +51,13 @@ export function usePillarGuard({
 
   let guardOverlay: React.ReactElement | null = null;
 
-  // Show paywall if pillar is locked, or if view-only on the user's own plan
-  // (view-only on own plan means the tier doesn't grant full access)
-  if (isLocked || (!isViewingSharedPlan && isViewOnly)) {
+  // Show locked overlay if pillar is locked or view-only (plan tier doesn't grant full access)
+  if (isLocked || isViewOnly) {
     guardOverlay = (
       <LockedFeatureOverlay
         featureName={featureName}
         description={lockedDescription}
+        isSharedPlan={isViewingSharedPlan}
       />
     );
   } else if (isViewingSharedPlan && !canAccessPillar(pillar)) {

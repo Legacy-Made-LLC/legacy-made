@@ -68,11 +68,11 @@ export default function TabsLayout() {
   const { canAccessPillar, isViewingSharedPlan } = usePlan();
 
   // Check if each pillar is effectively locked:
-  // - Entitlements: fully locked, OR view-only on the user's own plan (paywall)
+  // - Entitlements: fully locked OR view-only (plan tier doesn't grant full access)
   // - Shared plan: no access to that pillar
   const isEffectivelyLocked = (pillar: Pillar) =>
     isLockedPillar(pillar) ||
-    (!isViewingSharedPlan && isViewOnlyPillar(pillar)) ||
+    isViewOnlyPillar(pillar) ||
     (isViewingSharedPlan && !canAccessPillar(pillar));
 
   const isInfoLocked = isEffectivelyLocked(TAB_TO_PILLAR.information);
