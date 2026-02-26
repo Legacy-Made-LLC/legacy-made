@@ -286,6 +286,20 @@ export interface MetadataSchema {
 }
 
 // ============================================================================
+// Entry Completion Status
+// ============================================================================
+
+export type EntryCompletionStatus = "complete" | "draft";
+
+/**
+ * Returns true if the entry is a draft.
+ * Entries without a completionStatus are treated as complete (backward compat).
+ */
+export function isEntryDraft(entry: Entry): boolean {
+  return entry.completionStatus === "draft";
+}
+
+// ============================================================================
 // Entry Types
 // ============================================================================
 
@@ -302,6 +316,8 @@ export interface Entry<T = Record<string, unknown>> {
   title: string | null;
   notes: string | null;
   sortOrder: number;
+  /** Whether this entry is complete or still a draft */
+  completionStatus?: EntryCompletionStatus;
   metadata: T;
   /** Display schema for rendering metadata (optional for backwards compatibility) */
   metadataSchema?: MetadataSchema;
@@ -325,6 +341,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   title?: string;
   notes?: string | null;
   sortOrder?: number;
+  completionStatus?: EntryCompletionStatus;
   metadata: T;
   metadataSchema: MetadataSchema;
 }
@@ -336,6 +353,7 @@ export interface UpdateEntryRequest<T = Record<string, unknown>> {
   title?: string;
   notes?: string | null;
   sortOrder?: number;
+  completionStatus?: EntryCompletionStatus;
   metadata?: Partial<T>;
   metadataSchema?: MetadataSchema;
 }

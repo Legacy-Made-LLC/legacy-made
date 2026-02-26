@@ -12,6 +12,7 @@ import type {
   CreateEntryRequest,
   EntitlementInfo,
   Entry,
+  EntryCompletionStatus,
   MetadataSchema,
   TaskProgressData,
   UpdateEntryRequest,
@@ -44,6 +45,7 @@ interface CreateEntryData<T = Record<string, unknown>> {
   notes?: string | null;
   metadata: T;
   metadataSchema: MetadataSchema;
+  completionStatus?: EntryCompletionStatus;
 }
 
 interface UpdateEntryData<T = Record<string, unknown>> {
@@ -51,6 +53,7 @@ interface UpdateEntryData<T = Record<string, unknown>> {
   notes?: string | null;
   metadata?: Partial<T>;
   metadataSchema?: MetadataSchema;
+  completionStatus?: EntryCompletionStatus;
 }
 
 /**
@@ -108,6 +111,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
         notes: data.notes,
         metadata: data.metadata,
         metadataSchema: data.metadataSchema,
+        completionStatus: data.completionStatus,
       };
 
       return entries.create<T>(request);
@@ -139,6 +143,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
         title: data.title ?? null,
         notes: data.notes ?? null,
         sortOrder: (previousEntries?.length ?? 0) + 1,
+        completionStatus: data.completionStatus,
         metadata: data.metadata as T,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -233,6 +238,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
         notes: data.notes,
         metadata: data.metadata,
         metadataSchema: data.metadataSchema,
+        completionStatus: data.completionStatus,
       };
 
       return entries.update<T>(planId, entryId, request);
@@ -263,6 +269,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
                   ...(data.metadata && {
                     metadata: { ...entry.metadata, ...data.metadata },
                   }),
+                  ...(data.completionStatus !== undefined && { completionStatus: data.completionStatus }),
                 }
               : entry,
           ),

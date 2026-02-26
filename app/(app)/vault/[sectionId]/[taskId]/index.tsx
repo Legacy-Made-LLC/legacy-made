@@ -104,6 +104,7 @@ export default function TaskScreen() {
           pillarColor={colors.featureInformation}
           pillarTint={colors.featureInformationTint}
           onComeBackLater={() => router.back()}
+          entries={entries}
         />
       )}
     </View>

@@ -2,7 +2,7 @@
  * DigitalForm - Form for creating/editing digital access entries
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import {
   FormInput,
   FormTextArea,
@@ -15,7 +15,7 @@ import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -116,6 +116,7 @@ export function DigitalForm({
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
   const isSocial = taskKey === "digital.social";
   const labels = getLabels(taskKey);
 
@@ -159,6 +160,7 @@ export function DigitalForm({
           notes: value.accessNotes.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: DIGITAL_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -173,6 +175,11 @@ export function DigitalForm({
       title: readOnly ? labels.editTitle.replace("Edit", "View") : isNew ? labels.addTitle : labels.editTitle,
     });
   }, [isNew, readOnly, labels.addTitle, labels.editTitle, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -318,13 +325,22 @@ export function DigitalForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Button
-                  title={buttonTitle}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                />
+                <>
+                  <Button
+                    title={buttonTitle}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
+                  />
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={formStyles.draftLinkContainer}
+                  >
+                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>

@@ -4,7 +4,7 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
-import type { MetadataSchema } from "@/api/types";
+import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
 import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
 import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -12,7 +12,7 @@ import { usePerspective } from "@/contexts/LocaleContext";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Pressable,
@@ -88,6 +88,7 @@ export function ContactForm({
   const { perspective } = usePerspective();
   const t = formText[perspective];
   const isNew = !entryId;
+  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   // Extract initial values from initialData
   const initialMetadata = initialData?.metadata as unknown as
@@ -132,6 +133,7 @@ export function ContactForm({
           notes: value.reason.trim() || null,
           metadata: metadata as unknown as Record<string, unknown>,
           metadataSchema: CONTACT_METADATA_SCHEMA,
+          completionStatus: completionStatusRef.current,
         });
       } catch (err) {
         const message =
@@ -146,6 +148,11 @@ export function ContactForm({
       title: readOnly ? "View Contact" : isNew ? "Add Contact" : "Edit Contact",
     });
   }, [isNew, readOnly, navigation]);
+
+  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+    completionStatusRef.current = status;
+    form.handleSubmit();
+  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -215,26 +222,35 @@ export function ContactForm({
                 ? "Uploading..."
                 : busy
                   ? "Saving..."
-                  : "Save";
+                  : "Finish & Save";
               return (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    pressed && styles.primaryButtonPressed,
-                    (busy || !canSubmit) && styles.primaryButtonDisabled,
-                  ]}
-                  onPress={() => form.handleSubmit()}
-                  disabled={busy || !canSubmit}
-                >
-                  <Text
-                    style={[
-                      styles.primaryButtonText,
-                      busy && styles.primaryButtonTextDisabled,
+                <>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      pressed && styles.primaryButtonPressed,
+                      (busy || !canSubmit) && styles.primaryButtonDisabled,
                     ]}
+                    onPress={() => handleSaveWithStatus("complete")}
+                    disabled={busy || !canSubmit}
                   >
-                    {buttonTitle}
-                  </Text>
-                </Pressable>
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        busy && styles.primaryButtonTextDisabled,
+                      ]}
+                    >
+                      {buttonTitle}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleSaveWithStatus("draft")}
+                    disabled={busy || !canSubmit}
+                    style={styles.draftLinkContainer}
+                  >
+                    <Text style={styles.draftLinkText}>Save as Draft</Text>
+                  </Pressable>
+                </>
               );
             }}
           </form.Subscribe>
@@ -292,6 +308,16 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   primaryButtonTextDisabled: {
+    color: colors.textTertiary,
+  },
+  draftLinkContainer: {
+    marginTop: spacing.sm,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+  },
+  draftLinkText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
   },
   deleteContainer: {

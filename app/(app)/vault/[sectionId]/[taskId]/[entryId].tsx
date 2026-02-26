@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   apiFileToAttachment,
+  type EntryCompletionStatus,
   MetadataSchema,
   type FileAttachment,
 } from "@/api/types";
@@ -265,6 +266,7 @@ export default function EntryScreen() {
       notes?: string | null;
       metadata: Record<string, unknown>;
       metadataSchema: MetadataSchema;
+      completionStatus?: EntryCompletionStatus;
     }) => {
       if (!task || !planId) return;
 
@@ -276,10 +278,16 @@ export default function EntryScreen() {
         const wasNew = isNew;
 
         if (isNew) {
-          const createdEntry = await createMutation.mutateAsync(data);
+          const createdEntry = await createMutation.mutateAsync({
+            ...data,
+            completionStatus: data.completionStatus,
+          });
           savedEntryId = createdEntry.id;
         } else {
-          await updateMutation.mutateAsync({ entryId, data });
+          await updateMutation.mutateAsync({
+            entryId,
+            data: { ...data, completionStatus: data.completionStatus },
+          });
           savedEntryId = entryId;
         }
 
