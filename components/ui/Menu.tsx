@@ -1,10 +1,11 @@
 import { QuotaIndicator, TierBadge } from "@/components/entitlements";
-import { SUPPORT_LINKS } from "@/constants/links";
+import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -156,7 +157,7 @@ function AccountView({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const entriesQuota = getQuotaInfo('entries');
+  const entriesQuota = getQuotaInfo("entries");
 
   // Reset form when user changes or when entering edit mode
   useEffect(() => {
@@ -479,7 +480,9 @@ function AccountView({
                     pressed && styles.upgradeFieldPressed,
                   ]}
                 >
-                  <Text style={styles.upgradeFieldLabel}>Upgrade your plan</Text>
+                  <Text style={styles.upgradeFieldLabel}>
+                    Upgrade your plan
+                  </Text>
                   <Ionicons
                     name="chevron-forward"
                     size={20}
@@ -518,6 +521,7 @@ function AccountView({
 export function Menu({ visible, onClose }: MenuProps) {
   const insets = useSafeAreaInsets();
   const { signOut } = useClerk();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [currentView, setCurrentView] = useState<MenuView>("main");
@@ -553,17 +557,17 @@ export function Menu({ visible, onClose }: MenuProps) {
   const supportItems = [
     {
       label: "Help & FAQ",
-      url: SUPPORT_LINKS.helpFaq,
+      url: EXTERNAL_LINKS.helpFaq,
       icon: "help-circle-outline" as const,
     },
     {
       label: "Contact Support",
-      url: SUPPORT_LINKS.contactSupport,
+      url: EXTERNAL_LINKS.contactSupport,
       icon: "chatbubble-outline" as const,
     },
     {
       label: "Privacy Policy",
-      url: SUPPORT_LINKS.privacyPolicy,
+      url: EXTERNAL_LINKS.privacyPolicy,
       icon: "shield-outline" as const,
     },
   ];
@@ -571,6 +575,7 @@ export function Menu({ visible, onClose }: MenuProps) {
   const handleSignOut = async () => {
     onClose();
     try {
+      queryClient.clear();
       await signOut();
     } catch (err) {
       console.error("Sign out error:", err);

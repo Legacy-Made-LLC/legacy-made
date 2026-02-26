@@ -2,10 +2,10 @@
  * Plans API Service - Get/manage user's plan
  */
 
-import type { ApiClient } from './client';
-import type { Plan } from './types';
+import type { ApiClient } from "./client";
+import type { Plan } from "./types";
 
-const PLANS_PATH = '/plans';
+const PLANS_PATH = "/plans";
 
 /**
  * Create plans service bound to an API client

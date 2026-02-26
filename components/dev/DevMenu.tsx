@@ -62,6 +62,7 @@ export function DevMenu() {
   };
 
   const handleSignOut = async () => {
+    queryClient.clear();
     await signOut();
     setIsOpen(false);
     router.replace("/(auth)");
