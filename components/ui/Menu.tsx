@@ -11,7 +11,7 @@ import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -157,6 +157,19 @@ function AccountView({
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageSuccess, setImageSuccess] = useState(false);
+  const imageSuccessTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const showImageSuccess = useCallback(() => {
+    setImageSuccess(true);
+    clearTimeout(imageSuccessTimer.current);
+    imageSuccessTimer.current = setTimeout(() => setImageSuccess(false), 3000);
+  }, []);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(imageSuccessTimer.current);
+  }, []);
 
   const entriesQuota = getQuotaInfo("entries");
 
@@ -219,6 +232,8 @@ function AccountView({
         const dataUri = `data:${mimeType};base64,${base64}`;
         await user.setProfileImage({ file: dataUri });
       }
+
+      showImageSuccess();
     } catch (err) {
       logger.error("Profile image upload failed", err);
       const clerkError = err as { errors?: { message: string }[] };
@@ -363,6 +378,13 @@ function AccountView({
           </View>
         )}
 
+        {/* Image Upload Success */}
+        {imageSuccess && (
+          <View style={styles.successContainer}>
+            <Text style={styles.successText}>Profile picture updated</Text>
+          </View>
+        )}
+
         {/* User Info Fields */}
         {isEditing ? (
           <View style={styles.editableFields}>
@@ -430,7 +452,7 @@ function AccountView({
                 {isSaving ? (
                   <ActivityIndicator size="small" color={colors.surface} />
                 ) : (
-                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                  <Text style={styles.saveButtonText}>Save</Text>
                 )}
               </Pressable>
             </View>
@@ -1127,6 +1149,21 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     fontFamily: typography.fontFamily.regular,
     color: colors.error,
+    textAlign: "center",
+  },
+  successContainer: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: `${colors.success}15`,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${colors.success}30`,
+  },
+  successText: {
+    fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.success,
     textAlign: "center",
   },
 
