@@ -147,7 +147,7 @@ export function ServicePreferencesForm({
         wishesFormStyles.content,
         { paddingBottom: insets.bottom + spacing.lg },
       ]}
-      bottomOffset={20}
+      bottomOffset={50}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >

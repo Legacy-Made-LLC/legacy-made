@@ -17,6 +17,7 @@ import {
   type FileAttachment,
 } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
+import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { getFormComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useVaultTask } from "@/constants/vault";
@@ -447,6 +448,7 @@ export default function EntryScreen() {
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
         readOnly={isReadOnly}
       />
+      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureInformation} />}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}

@@ -1,14 +1,8 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "expo-router";
 import React, { useCallback } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
@@ -19,6 +13,7 @@ import { AccessLevelSelector } from "@/components/family/AccessLevelSelector";
 import { FormInput } from "@/components/forms/FormInput";
 import { FormTextArea } from "@/components/forms/FormTextArea";
 import { Button } from "@/components/ui/Button";
+import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCreateTrustedContact } from "@/hooks/queries";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
@@ -90,17 +85,14 @@ export default function NewTrustedContactScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={100}
-    >
-      <ScrollView
+    <>
+      <KeyboardAwareScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + spacing.xl },
         ]}
+        bottomOffset={50}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -233,15 +225,13 @@ export default function NewTrustedContactScreen() {
             />
           )}
         </form.Subscribe>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      <KeyboardDoneButton accentColor={colors.featureFamily} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

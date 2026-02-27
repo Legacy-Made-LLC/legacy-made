@@ -20,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { FileAttachment } from "@/api/types";
 import { apiFileToAttachment } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
+import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { SavedIndicator } from "@/components/ui/SavedIndicator";
 import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import {
@@ -537,6 +538,7 @@ export default function WishesTaskScreen() {
           accentColor={colors.featureWishes}
         />
       )}
+      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureWishes} autoSave />}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
