@@ -32,6 +32,12 @@ export const colors = {
   featureLegacyTint: "#ECF2F6", // Soft blue tint
   featureFamilyTint: "#F8F0ED", // Soft blush tint
 
+  // Feature Progress Colors (for in-progress items in progress bars)
+  featureInformationProgress: "#C5D0C1", // Medium sage for progress
+  featureWishesProgress: "#DDD3E5", // Medium lavender for progress
+  featureLegacyProgress: "#D0DEEA", // Medium blue for progress
+  featureFamilyProgress: "#EDD5CC", // Medium blush for progress
+
   // Feature Dark variants (for headings on tinted backgrounds)
   featureInformationDark: "#3F4A3F", // Dark sage
   featureWishesDark: "#5A4B6B", // Dark lavender

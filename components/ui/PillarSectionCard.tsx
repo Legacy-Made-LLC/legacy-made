@@ -47,27 +47,31 @@ const PROGRESS_ANIMATION_DURATION = 400;
 // Color mappings for each pillar
 const pillarColors: Record<
   PillarType,
-  { accent: string; tint: string; icon: string }
+  { accent: string; tint: string; icon: string; progress: string }
 > = {
   information: {
     accent: colors.featureInformation,
     tint: colors.featureInformationTint,
     icon: colors.textTertiary,
+    progress: colors.featureInformationProgress,
   },
   wishes: {
     accent: colors.featureWishes,
     tint: colors.featureWishesTint,
     icon: colors.featureWishes,
+    progress: colors.featureWishesProgress,
   },
   legacy: {
     accent: colors.featureLegacy,
     tint: colors.featureLegacyTint,
     icon: colors.featureLegacy,
+    progress: colors.featureLegacyProgress,
   },
   family: {
     accent: colors.featureFamily,
     tint: colors.featureFamilyTint,
     icon: colors.featureFamily,
+    progress: colors.featureFamilyProgress,
   },
 };
 
@@ -86,6 +90,7 @@ export function PillarSectionCard({
 }: PillarSectionCardProps) {
   const router = useRouter();
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const inProgressAnim = useRef(new Animated.Value(0)).current;
 
   const pillarColor = pillarColors[pillar];
   const routePrefix = pillarRoutes[pillar];
@@ -94,22 +99,35 @@ export function PillarSectionCard({
     router.push(`/${routePrefix}/${section.id}` as never);
   };
 
-  // Calculate completion for this section
-  // A task is complete when the user explicitly marks it so
+  // Calculate completion and in-progress for this section
   const completedTasks = section.tasks.filter(
     (task) => progress[task.taskKey]?.status === "complete",
   ).length;
+  
+  const inProgressTasks = section.tasks.filter(
+    (task) => progress[task.taskKey]?.status === "in_progress",
+  ).length;
+  
   const goalCount = section.tasks.length;
-  const progressRatio = goalCount > 0 ? completedTasks / goalCount : 0;
+  const completedRatio = goalCount > 0 ? completedTasks / goalCount : 0;
+  const inProgressRatio = goalCount > 0 ? inProgressTasks / goalCount : 0;
+  const totalProgressRatio = completedRatio + inProgressRatio;
 
-  // Animate progress bar when progress changes
+  // Animate progress bars when progress changes
   useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: progressRatio,
-      duration: PROGRESS_ANIMATION_DURATION,
-      useNativeDriver: false, // width animation can't use native driver
-    }).start();
-  }, [progressRatio, progressAnim]);
+    Animated.parallel([
+      Animated.timing(progressAnim, {
+        toValue: completedRatio,
+        duration: PROGRESS_ANIMATION_DURATION,
+        useNativeDriver: false, // width animation can't use native driver
+      }),
+      Animated.timing(inProgressAnim, {
+        toValue: totalProgressRatio,
+        duration: PROGRESS_ANIMATION_DURATION,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [completedRatio, totalProgressRatio, progressAnim, inProgressAnim]);
 
   return (
     <PressableCard onPress={handlePress} style={styles.card}>
@@ -137,6 +155,24 @@ export function PillarSectionCard({
           </View>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
+              {/* In-progress tasks shown in progress color (behind) */}
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    backgroundColor: pillarColor.progress,
+                    width: inProgressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0%", "100%"],
+                    }),
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                  },
+                ]}
+              />
+              {/* Completed tasks shown in accent color (on top) */}
               <Animated.View
                 style={[
                   styles.progressFill,
@@ -212,6 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     borderRadius: 2,
     overflow: "hidden",
+    position: "relative",
   },
   progressFill: {
     height: "100%",
