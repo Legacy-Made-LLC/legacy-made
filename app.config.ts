@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
     },
     appleTeamId: "LQ7UL43SY2",
-    associatedDomains: ["applinks:app.legacymade.com"],
+    associatedDomains: ["applinks:app.mylegacymade.com"],
   },
   android: {
     adaptiveIcon: {
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         data: [
           {
             scheme: "https",
-            host: "app.legacymade.com",
+            host: "app.mylegacymade.com",
             pathPrefix: "/invitations",
           },
         ],
@@ -58,9 +58,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
-        resizeMode: "contain",
+        image: "./assets/images/splash.png",
+        resizeMode: "cover",
         backgroundColor: "#8a9785",
       },
     ],

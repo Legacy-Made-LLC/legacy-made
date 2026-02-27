@@ -1,7 +1,7 @@
 /**
  * Invitation Deep Link Screen
  *
- * Handles: https://app.legacymade.com/invitations/{token}
+ * Handles: https://app.mylegacymade.com/invitations/{token}
  *          legacymade://invitations/{token}
  *
  * This screen lives outside the (app) group because the recipient
