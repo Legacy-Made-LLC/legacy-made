@@ -61,7 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#FAF9F7",
+        backgroundColor: "#8a9785",
       },
     ],
     "expo-font",
@@ -74,6 +74,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         ios: {
           deploymentTarget: "16.0",
+        },
+        android: {
+          // Permanent fix for OOM errors - increase Java heap size
+          gradleJavaMaxHeapSize: "2048m",
+          // Optional: Additional memory optimizations
+          kotlinOptions: {
+            jvmTarget: "17",
+          },
         },
       },
     ],
