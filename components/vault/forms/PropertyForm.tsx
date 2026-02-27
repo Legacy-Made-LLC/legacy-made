@@ -124,6 +124,7 @@ export function PropertyForm({
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
+  onFormReady,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -203,6 +204,11 @@ export function PropertyForm({
       }
     },
   });
+
+  // Report form instance to parent for unsaved-changes guard
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
 
   // Contextual header title
   useEffect(() => {

@@ -8,6 +8,7 @@
  * entryId = <uuid> for editing an existing entry
  */
 
+import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -36,10 +37,10 @@ import {
   isStorageQuotaError,
 } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { toast } from "@/hooks/useToast";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
 export default function EntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -48,9 +49,18 @@ export default function EntryScreen() {
     entryId: string;
   }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { planId, isReadOnly, isViewingSharedPlan, sharedPlanInfo } = usePlan();
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+
+  // Unsaved-changes guard refs
+  const formRef = useRef<AnyFormApi | null>(null);
+  const allowNavigationRef = useRef(false);
+
+  const handleFormReady = useCallback((form: AnyFormApi) => {
+    formRef.current = form;
+  }, []);
 
   const task = useVaultTask(sectionId, taskId);
   const isNew = entryId === "new";
@@ -61,6 +71,36 @@ export default function EntryScreen() {
       router.back();
     }
   }, [isReadOnly, isNew, router]);
+
+  // Warn user about unsaved changes when navigating away
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      // Allow navigation if intentionally navigating (save/delete)
+      if (allowNavigationRef.current) return;
+      // Skip guard in read-only mode
+      if (isReadOnly) return;
+      // Allow navigation if form has no unsaved changes
+      if (!formRef.current?.state.isDirty) return;
+
+      e.preventDefault();
+
+      Alert.alert(
+        "Unsaved Changes",
+        "You have unsaved changes. Are you sure you want to leave?",
+        [
+          { text: "Keep Editing", style: "cancel" },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, isReadOnly]);
+
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
 
@@ -352,6 +392,7 @@ export default function EntryScreen() {
           }
         }
 
+        allowNavigationRef.current = true;
         router.back();
       } catch (error) {
         // Check for storage quota exceeded error
@@ -394,6 +435,7 @@ export default function EntryScreen() {
     if (!entryId || isNew) return;
 
     await deleteMutation.mutateAsync(entryId);
+    allowNavigationRef.current = true;
     router.back();
   }, [entryId, isNew, deleteMutation, router]);
 
@@ -447,6 +489,7 @@ export default function EntryScreen() {
         deletingFileIds={deletingFileIds}
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
         readOnly={isReadOnly}
+        onFormReady={handleFormReady}
       />
       {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureInformation} />}
       <UpgradePrompt

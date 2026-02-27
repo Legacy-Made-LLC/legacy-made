@@ -69,6 +69,7 @@ export function FinancialForm({
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
+  onFormReady,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -128,6 +129,11 @@ export function FinancialForm({
       }
     },
   });
+
+  // Report form instance to parent for unsaved-changes guard
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
 
   useEffect(() => {
     navigation.setOptions({

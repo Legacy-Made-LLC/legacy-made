@@ -6,6 +6,7 @@
  */
 
 import type { Entry, EntryCompletionStatus, FileAttachment, MetadataSchema } from "@/api/types";
+import type { AnyFormApi } from "@tanstack/form-core";
 import type { ComponentType } from "react";
 
 // ============================================================================
@@ -88,6 +89,8 @@ export interface EntryFormProps {
   onStorageUpgradeRequired?: () => void;
   /** Whether the plan is read-only (viewing a shared plan) */
   readOnly?: boolean;
+  /** Callback to expose the form instance to the parent (for unsaved-changes guard) */
+  onFormReady?: (form: AnyFormApi) => void;
 }
 
 export const listRegistry: Record<string, ComponentType<EntryListProps>> = {

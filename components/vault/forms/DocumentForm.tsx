@@ -86,6 +86,7 @@ export function DocumentForm({
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
+  onFormReady,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -148,6 +149,11 @@ export function DocumentForm({
       }
     },
   });
+
+  // Report form instance to parent for unsaved-changes guard
+  useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
 
   useEffect(() => {
     const docLabel = isLegalDocs ? "Legal Document" : "Document";
