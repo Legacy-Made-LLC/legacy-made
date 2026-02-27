@@ -82,7 +82,7 @@ export function useCreateTrustedContact() {
         queryKey: queryKeys.trustedContacts.all(planId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
     },
   });
@@ -200,7 +200,7 @@ export function useDeleteTrustedContact() {
         queryKey: queryKeys.trustedContacts.all(planId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
     },
   });

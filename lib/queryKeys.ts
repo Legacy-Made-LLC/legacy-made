@@ -29,6 +29,8 @@ export const queryKeys = {
     single: (fileId: string) => ['files', 'detail', fileId] as const,
   },
   entitlements: {
+    // All entitlements queries (use for invalidation to refresh both current + plan)
+    all: () => ['entitlements'] as const,
     // Current user's entitlements
     current: () => ['entitlements', 'current'] as const,
     // Entitlements for a specific plan (plan owner's entitlements)

@@ -234,9 +234,9 @@ export function useCreateWish<T = Record<string, unknown>>(
     onSettled: (_data, error) => {
       if (!planId || !taskKey) return;
 
-      // Background refresh to ensure everything is in sync
+      // Background refresh to ensure everything is in sync (includes plan entitlements)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
 
       // Auto-set progress to "in_progress" on first wish creation (fire-and-forget)
@@ -482,9 +482,9 @@ export function useDeleteWish<T = Record<string, unknown>>(
     onSettled: () => {
       if (!planId || !taskKey) return;
 
-      // Background refresh entitlements to ensure quota is accurate
+      // Background refresh entitlements to ensure quota is accurate (includes plan)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
     },
   });

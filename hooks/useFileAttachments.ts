@@ -145,9 +145,9 @@ export function useFileAttachments(
         );
         setAttachments(finalAttachments);
 
-        // Invalidate entitlements cache (storage usage may have changed)
+        // Invalidate all entitlements (storage indicators read from plan entitlements)
         queryClient.invalidateQueries({
-          queryKey: queryKeys.entitlements.current(),
+          queryKey: queryKeys.entitlements.all(),
         });
 
         // Notify caller that files were deleted

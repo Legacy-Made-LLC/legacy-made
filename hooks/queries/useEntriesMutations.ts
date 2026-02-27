@@ -195,9 +195,9 @@ export function useCreateEntry<T = Record<string, unknown>>(
       queryClient.invalidateQueries({
         queryKey: queryKeys.entries.all(planId),
       });
-      // Refresh entitlements to update quota counts
+      // Refresh all entitlements to update quota counts (includes plan entitlements)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
 
       // Auto-set progress to "in_progress" on first entry creation (fire-and-forget)
@@ -422,9 +422,9 @@ export function useDeleteEntry<T = Record<string, unknown>>(
       queryClient.invalidateQueries({
         queryKey: queryKeys.entries.all(planId),
       });
-      // Refresh entitlements to update quota counts
+      // Refresh all entitlements to update quota counts (includes plan entitlements)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
 
       // If last entry was deleted successfully, delete the progress record

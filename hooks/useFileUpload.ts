@@ -415,9 +415,10 @@ export function useFileUpload(
         });
       }
 
-      // Invalidate entitlements to refresh storage quota after uploads
+      // Invalidate all entitlements to refresh storage quota after uploads
+      // (must include plan entitlements since storage indicators read from those)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
 
       onAllComplete?.(results);
