@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Select } from '@/components/ui/Select';
 import { spacing } from '@/constants/theme';
-import { formatPhoneNumber } from './form-utils';
+import { formatPhoneNumber, getErrorMessage } from './form-utils';
 import { FormInput } from './FormInput';
 import { FormTextArea } from './FormTextArea';
 
@@ -103,16 +103,22 @@ export function ContactFormFieldsWithForm({
 
       {/* Relationship */}
       <form.Field name="relationship">
-        {(field: Parameters<typeof FormInput>[0]['field']) => (
-          <Select
-            label="Relationship"
-            value={field.state.value}
-            onValueChange={field.handleChange}
-            options={RELATIONSHIP_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
-            placeholder="Select relationship"
-            disabled={disabled}
-          />
-        )}
+        {(field: Parameters<typeof FormInput>[0]['field']) => {
+          const hasError = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+          const errorMsg = hasError ? getErrorMessage(field.state.meta.errors[0]) : null;
+          return (
+            <Select
+              label="Relationship"
+              value={field.state.value}
+              onValueChange={field.handleChange}
+              onBlur={field.handleBlur}
+              options={RELATIONSHIP_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+              placeholder="Select relationship"
+              disabled={disabled}
+              errorMessage={errorMsg}
+            />
+          );
+        }}
       </form.Field>
 
       {/* Phone */}

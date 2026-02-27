@@ -48,6 +48,10 @@ interface SelectProps {
   /** When true, the select is non-interactive (view-only) */
   disabled?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Validation error message to display below the select */
+  errorMessage?: string | null;
+  /** Called when the modal closes — use to mark a form field as touched */
+  onBlur?: () => void;
 }
 
 export function Select({
@@ -59,9 +63,12 @@ export function Select({
   clearable = false,
   disabled,
   containerStyle,
+  errorMessage,
+  onBlur,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const borderColor = useSharedValue(colors.border);
+  const hasError = !!errorMessage;
+  const borderColor = useSharedValue(hasError ? colors.error : colors.border);
 
   const selectedOption = options.find((opt) => opt.value === value);
   const displayText = selectedOption?.label ?? placeholder;
@@ -70,15 +77,29 @@ export function Select({
     borderColor: borderColor.value,
   }));
 
+  // Keep border color in sync with error state when not open
+  React.useEffect(() => {
+    if (!isOpen) {
+      borderColor.value = withTiming(hasError ? colors.error : colors.border, {
+        duration: 200,
+      });
+    }
+  }, [hasError, isOpen, borderColor]);
+
   const handleOpen = useCallback(() => {
-    borderColor.value = withTiming(colors.primary, { duration: 200 });
+    borderColor.value = withTiming(hasError ? colors.error : colors.primary, {
+      duration: 200,
+    });
     setIsOpen(true);
-  }, [borderColor]);
+  }, [borderColor, hasError]);
 
   const handleClose = useCallback(() => {
-    borderColor.value = withTiming(colors.border, { duration: 200 });
+    borderColor.value = withTiming(hasError ? colors.error : colors.border, {
+      duration: 200,
+    });
     setIsOpen(false);
-  }, [borderColor]);
+    onBlur?.();
+  }, [borderColor, hasError, onBlur]);
 
   const handleSelect = useCallback(
     (optionValue: string) => {
@@ -127,6 +148,7 @@ export function Select({
           <Ionicons name="chevron-down" size={20} color={colors.textTertiary} />
         )}
       </AnimatedPressable>
+      {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
       <Modal
         visible={isOpen}
@@ -221,6 +243,11 @@ const styles = StyleSheet.create({
   },
   selectButtonDisabled: {
     backgroundColor: colors.surfaceSecondary,
+  },
+  errorText: {
+    fontSize: typography.sizes.caption,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
   selectText: {
     fontSize: typography.sizes.body,
