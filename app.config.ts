@@ -68,6 +68,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-image-picker",
     "expo-video",
     "expo-document-picker",
+    ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     [
       "expo-build-properties",
       {
