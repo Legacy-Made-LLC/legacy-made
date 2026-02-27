@@ -72,6 +72,7 @@ export function ExpandableGuidanceCard({
   accentTint = DEFAULT_TINT,
   accentDark = DEFAULT_DARK,
 }: ExpandableGuidanceCardProps) {
+  const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [isTipsExpanded, setIsTipsExpanded] = useState(false);
   const [collapsedHeight, setCollapsedHeight] = useState(MIN_COLLAPSED_HEIGHT);
   const [expandedHeight, setExpandedHeight] = useState(300); // Initial estimate
@@ -83,6 +84,7 @@ export function ExpandableGuidanceCard({
   const tipsArrowRotation = useSharedValue(0);
 
   const handleExpand = useCallback(() => {
+    setIsExpanded(true);
     expandProgress.value = withTiming(1, {
       duration: ANIMATION_DURATION,
       easing: EASING,
@@ -90,6 +92,7 @@ export function ExpandableGuidanceCard({
   }, [expandProgress]);
 
   const handleCollapse = useCallback(() => {
+    setIsExpanded(false);
     expandProgress.value = withTiming(0, {
       duration: ANIMATION_DURATION,
       easing: EASING,
@@ -196,7 +199,10 @@ export function ExpandableGuidanceCard({
   return (
     <Animated.View style={[styles.wrapper, wrapperStyle]}>
       {/* Collapsed state - question row */}
-      <Animated.View style={[styles.collapsedContainer, collapsedStyle]}>
+      <Animated.View
+        pointerEvents={isExpanded ? "none" : "auto"}
+        style={[styles.collapsedContainer, collapsedStyle]}
+      >
         <Pressable
           onPress={handleExpand}
           onLayout={onCollapsedLayout}
@@ -214,7 +220,10 @@ export function ExpandableGuidanceCard({
       </Animated.View>
 
       {/* Expanded state - card overlaid on top */}
-      <Animated.View style={[styles.expandedContainer, expandedStyle]}>
+      <Animated.View
+        pointerEvents={isExpanded ? "auto" : "none"}
+        style={[styles.expandedContainer, expandedStyle]}
+      >
         <View
           onLayout={onExpandedLayout}
           style={[styles.expandedCard, { backgroundColor: accentTint }]}
