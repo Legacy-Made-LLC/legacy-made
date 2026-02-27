@@ -2,6 +2,8 @@ import { useClerk } from '@clerk/clerk-expo'
 import * as Linking from 'expo-linking'
 import { Text, TouchableOpacity } from 'react-native'
 
+import { logger } from '@/lib/logger'
+
 export const SignOutButton = () => {
   // Use `useClerk()` to access the `signOut()` function
   const { signOut } = useClerk()
@@ -13,7 +15,7 @@ export const SignOutButton = () => {
     } catch (err) {
       // See Clerk docs: custom flows error handling
       // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      logger.error("Sign-out failed", err)
     }
   }
   return (

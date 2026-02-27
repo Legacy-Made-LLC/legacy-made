@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { colors, spacing, typography } from "@/constants/theme";
+import { logger } from "@/lib/logger";
 
 export default function VerifyPasswordScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -55,7 +56,7 @@ export default function VerifyPasswordScreen() {
       } else {
         setError("Invalid password. Please try again.");
       }
-      console.error(JSON.stringify(err, null, 2));
+      logger.error("Password verification failed", err);
     } finally {
       setIsLoading(false);
     }

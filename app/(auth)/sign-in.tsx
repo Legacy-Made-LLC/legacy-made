@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FormInput, signInSchema } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { colors, spacing, typography } from "@/constants/theme";
+import { logger } from "@/lib/logger";
 import { isReviewerEmail } from "@/utils/reviewAuth";
 
 export default function SignInScreen() {
@@ -76,7 +77,7 @@ export default function SignInScreen() {
         } else {
           setError("An error occurred. Please try again.");
         }
-        console.error(JSON.stringify(err, null, 2));
+        logger.error("Sign-in failed", err);
       } finally {
         setIsLoading(false);
       }

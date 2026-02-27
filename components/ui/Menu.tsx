@@ -3,6 +3,7 @@ import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
+import { logger } from "@/lib/logger";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -219,7 +220,7 @@ function AccountView({
         await user.setProfileImage({ file: dataUri });
       }
     } catch (err) {
-      console.error("Profile image upload error:", err);
+      logger.error("Profile image upload failed", err);
       const clerkError = err as { errors?: { message: string }[] };
       if (clerkError.errors && clerkError.errors.length > 0) {
         setError(clerkError.errors[0].message);
@@ -578,7 +579,7 @@ export function Menu({ visible, onClose }: MenuProps) {
       queryClient.clear();
       await signOut();
     } catch (err) {
-      console.error("Sign out error:", err);
+      logger.error("Sign-out failed", err);
     }
   };
 

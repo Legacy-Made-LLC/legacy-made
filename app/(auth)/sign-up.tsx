@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FormInput, signUpSchema } from '@/components/forms';
 import { Button } from '@/components/ui/Button';
 import { colors, spacing, typography } from '@/constants/theme';
+import { logger } from '@/lib/logger';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SignUpScreen() {
@@ -62,7 +63,7 @@ export default function SignUpScreen() {
         } else {
           setError('An error occurred. Please try again.');
         }
-        console.error(JSON.stringify(err, null, 2));
+        logger.error("Sign-up failed", err);
       } finally {
         setIsLoading(false);
       }

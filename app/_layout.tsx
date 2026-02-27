@@ -14,7 +14,7 @@ import {
   LibreBaskerville_700Bold,
 } from "@expo-google-fonts/libre-baskerville";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { Stack } from "expo-router";
+import { Stack, useNavigationContainerRef } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -36,6 +36,8 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import * as Sentry from "@sentry/react-native";
 import Constants from "expo-constants";
 
+const navigationIntegration = Sentry.reactNavigationIntegration();
+
 Sentry.init({
   dsn: "https://bc0cf3ca18817776fc04823498d95d4c@o4510902712401920.ingest.us.sentry.io/4510902721380352",
 
@@ -52,7 +54,18 @@ Sentry.init({
   integrations: [
     Sentry.mobileReplayIntegration(),
     Sentry.feedbackIntegration(),
+    navigationIntegration,
+    // Safety net: capture console.warn/error from third-party libs as Sentry logs
+    Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
   ],
+
+  // Filter out noisy trace/debug logs in production
+  beforeSendLog(log) {
+    if (!__DEV__ && (log.level === "trace" || log.level === "debug")) {
+      return null;
+    }
+    return log;
+  },
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   spotlight: __DEV__,
@@ -63,6 +76,8 @@ SplashScreen.preventAutoHideAsync();
 const CLERK_PUBLISHABLE_KEY = Constants.expoConfig?.extra?.clerkPublishableKey;
 
 export default Sentry.wrap(function RootLayout() {
+  const navigationRef = useNavigationContainerRef();
+
   const [fontsLoaded] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
@@ -73,6 +88,12 @@ export default Sentry.wrap(function RootLayout() {
     LibreBaskerville_600SemiBold,
     LibreBaskerville_700Bold,
   });
+
+  useEffect(() => {
+    if (navigationRef.current) {
+      navigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
 
   useEffect(() => {
     if (fontsLoaded) {

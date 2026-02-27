@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { colors, spacing, typography } from '@/constants/theme';
+import { logger } from '@/lib/logger';
 
 export default function VerifyOtpScreen() {
   const { signIn, setActive: setSignInActive, isLoaded: isSignInLoaded } = useSignIn();
@@ -72,7 +73,7 @@ export default function VerifyOtpScreen() {
       } else {
         setError('Invalid code. Please try again.');
       }
-      console.error(JSON.stringify(err, null, 2));
+      logger.error("OTP verification failed", err);
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +102,7 @@ export default function VerifyOtpScreen() {
       setCode('');
     } catch (err) {
       setError('Could not resend code. Please try again.');
-      console.error(err);
+      logger.error("OTP resend failed", err);
     } finally {
       setIsLoading(false);
     }

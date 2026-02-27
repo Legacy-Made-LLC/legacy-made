@@ -4,7 +4,7 @@
  * Configures the QueryClient with appropriate defaults for a mobile app.
  */
 
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryClient } from '@tanstack/react-query';
 import * as Sentry from '@sentry/react-native';
 
 import { ApiClientError } from '@/api/errors';
@@ -22,6 +22,28 @@ function shouldRetry(failureCount: number, error: Error, maxRetries: number): bo
 
 export function createQueryClient() {
   return new QueryClient({
+    mutationCache: new MutationCache({
+      onMutate(_variables, mutation) {
+        const key = mutation.options.mutationKey;
+        Sentry.addBreadcrumb({
+          category: "mutation",
+          message: `Mutation started${key ? `: ${JSON.stringify(key)}` : ""}`,
+          level: "info",
+        });
+      },
+      onError(error, _variables, _context, mutation) {
+        const key = mutation.options.mutationKey;
+        Sentry.addBreadcrumb({
+          category: "mutation",
+          message: `Mutation failed${key ? `: ${JSON.stringify(key)}` : ""}`,
+          level: "error",
+          data: {
+            error: error.message,
+          },
+        });
+        Sentry.captureException(error);
+      },
+    }),
     defaultOptions: {
       queries: {
         // Data considered fresh for 5 minutes
@@ -38,10 +60,6 @@ export function createQueryClient() {
       mutations: {
         // Retry mutations once, but skip 401/403
         retry: (failureCount, error) => shouldRetry(failureCount, error, 1),
-        // Report all mutation errors to Sentry
-        onError: (error) => {
-          Sentry.captureException(error);
-        },
       },
     },
   });

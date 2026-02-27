@@ -7,6 +7,8 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { logger } from "@/lib/logger";
+
 const ONBOARDING_COMPLETE_KEY = "legacy_made_onboarding_complete";
 
 export interface PendingContact {
@@ -82,7 +84,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
           setHasCompletedInitialOnboardingState(true);
         }
       } catch (error) {
-        console.error("Failed to load onboarding state:", error);
+        logger.error("Failed to load onboarding state", error);
       } finally {
         setIsOnboardingStateLoaded(true);
       }
@@ -100,7 +102,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       );
       setHasCompletedInitialOnboardingState(value);
     } catch (error) {
-      console.error("Failed to save onboarding state:", error);
+      logger.error("Failed to save onboarding state", error);
       // Still update state even if persistence fails
       setHasCompletedInitialOnboardingState(value);
     }

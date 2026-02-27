@@ -3,6 +3,7 @@
  */
 
 import { colors, spacing, typography } from '@/constants/theme';
+import { logger } from '@/lib/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -159,7 +160,7 @@ export function VideoPlayer({ visible, uri, playbackId, tokens, onClose }: Video
         await player.replaceAsync({ uri: finalUri });
 
       } catch (err) {
-        console.error('Failed to prepare video for playback:', err);
+        logger.error("Failed to prepare video for playback", err);
         if (isMounted) {
           setError('Unable to load video. The file may be unavailable.');
           setIsLoading(false);
