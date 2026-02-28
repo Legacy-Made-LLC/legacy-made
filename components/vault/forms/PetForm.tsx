@@ -91,38 +91,40 @@ export function PetForm({
     [initialData, initialMetadata],
   );
 
+  const submitForm = async (value: typeof defaultValues) => {
+    const metadata: PetMetadata = {
+      species: value.species as SpeciesType,
+      breed: value.breed.trim() || null,
+      veterinarian: value.veterinarian.trim() || null,
+      vetPhone: value.vetPhone.trim() || null,
+      designatedCaretaker: value.designatedCaretaker.trim() || null,
+      careInstructions: value.careInstructions.trim() || null,
+    };
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title: value.name.trim() || "Draft",
+        notes: value.careInstructions.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: PET_METADATA_SCHEMA,
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save pet";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: petSchema,
     },
-    onSubmit: async ({ value }) => {
-      const metadata: PetMetadata = {
-        species: value.species as SpeciesType,
-        breed: value.breed.trim() || null,
-        veterinarian: value.veterinarian.trim() || null,
-        vetPhone: value.vetPhone.trim() || null,
-        designatedCaretaker: value.designatedCaretaker.trim() || null,
-        careInstructions: value.careInstructions.trim() || null,
-      };
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title: value.name.trim(),
-          notes: value.careInstructions.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: PET_METADATA_SCHEMA,
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save pet";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -136,9 +138,13 @@ export function PetForm({
     });
   }, [isNew, readOnly, navigation]);
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -323,7 +329,7 @@ export function PetForm({
                   />
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={formStyles.draftLinkContainer}
                   >
                     <Text style={formStyles.draftLinkText}>Save as Draft</Text>

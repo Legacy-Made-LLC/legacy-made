@@ -97,42 +97,44 @@ export function InsuranceForm({
     [initialData, initialMetadata],
   );
 
+  const submitForm = async (value: typeof defaultValues) => {
+    const metadata: InsuranceMetadata = {
+      provider: value.provider.trim(),
+      policyType: value.policyType as PolicyType,
+      policyNumber: value.policyNumber.trim() || null,
+      coverageDetails: value.coverageDetails.trim() || null,
+      beneficiaries: value.beneficiaries.trim() || null,
+      agentName: value.agentName.trim() || null,
+      agentPhone: value.agentPhone.trim() || null,
+    };
+
+    const title =
+      `${value.provider.trim()} ${value.policyType}`.trim() || "Draft";
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title,
+        notes: value.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: INSURANCE_METADATA_SCHEMA,
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save policy";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: insuranceSchema,
     },
-    onSubmit: async ({ value }) => {
-      const metadata: InsuranceMetadata = {
-        provider: value.provider.trim(),
-        policyType: value.policyType as PolicyType,
-        policyNumber: value.policyNumber.trim() || null,
-        coverageDetails: value.coverageDetails.trim() || null,
-        beneficiaries: value.beneficiaries.trim() || null,
-        agentName: value.agentName.trim() || null,
-        agentPhone: value.agentPhone.trim() || null,
-      };
-
-      // Generate title from provider + policy type
-      const title = `${value.provider.trim()} ${value.policyType}`.trim();
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title,
-          notes: value.notes.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: INSURANCE_METADATA_SCHEMA,
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save policy";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -146,9 +148,13 @@ export function InsuranceForm({
     });
   }, [isNew, readOnly, navigation]);
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -345,7 +351,7 @@ export function InsuranceForm({
                   />
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={formStyles.draftLinkContainer}
                   >
                     <Text style={formStyles.draftLinkText}>Save as Draft</Text>

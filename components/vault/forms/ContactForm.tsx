@@ -108,40 +108,43 @@ export function ContactForm({
     [initialMetadata, initialData?.notes],
   );
 
+  const submitForm = async (value: ContactFormValues) => {
+    const title =
+      `${value.firstName.trim()} ${value.lastName.trim()}`.trim() || "Draft";
+    const metadata: ContactMetadata = {
+      firstName: value.firstName.trim(),
+      lastName: value.lastName.trim(),
+      relationship: value.relationship.trim(),
+      phone: value.phone.trim(),
+      email: value.email.trim() || null,
+      reason: value.reason.trim() || null,
+      isPrimary: taskKey === "contacts.primary",
+    };
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title,
+        notes: value.reason.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: CONTACT_METADATA_SCHEMA,
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save contact";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: contactSchemaWithRequiredPhone,
     },
-    onSubmit: async ({ value }) => {
-      const title = `${value.firstName.trim()} ${value.lastName.trim()}`.trim();
-      const metadata: ContactMetadata = {
-        firstName: value.firstName.trim(),
-        lastName: value.lastName.trim(),
-        relationship: value.relationship.trim(),
-        phone: value.phone.trim(),
-        email: value.email.trim() || null,
-        reason: value.reason.trim() || null,
-        isPrimary: taskKey === "contacts.primary",
-      };
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title,
-          notes: value.reason.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: CONTACT_METADATA_SCHEMA,
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save contact";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -155,9 +158,13 @@ export function ContactForm({
     });
   }, [isNew, readOnly, navigation]);
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -251,7 +258,7 @@ export function ContactForm({
                   </Pressable>
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={styles.draftLinkContainer}
                   >
                     <Text style={styles.draftLinkText}>Save as Draft</Text>

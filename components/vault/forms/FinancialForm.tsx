@@ -92,42 +92,44 @@ export function FinancialForm({
     [initialData, initialMetadata],
   );
 
+  const submitForm = async (value: typeof defaultValues) => {
+    const metadata: FinancialMetadata = {
+      institution: value.institution.trim(),
+      accountType: value.accountType as AccountType,
+      accountOwners: value.accountOwners.trim() || null,
+      accountNumber: value.accountNumber.trim() || null,
+      notes: value.notes.trim() || null,
+    };
+
+    const title =
+      value.accountName.trim() ||
+      `${value.institution.trim()} ${value.accountType}`.trim() ||
+      "Draft";
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title,
+        notes: value.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: FINANCIAL_METADATA_SCHEMA,
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save account";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: financialSchema,
     },
-    onSubmit: async ({ value }) => {
-      const metadata: FinancialMetadata = {
-        institution: value.institution.trim(),
-        accountType: value.accountType as AccountType,
-        accountOwners: value.accountOwners.trim() || null,
-        accountNumber: value.accountNumber.trim() || null,
-        notes: value.notes.trim() || null,
-      };
-
-      // Use account name if provided, otherwise generate from institution + type
-      const title =
-        value.accountName.trim() ||
-        `${value.institution.trim()} ${value.accountType}`.trim();
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title,
-          notes: value.notes.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: FINANCIAL_METADATA_SCHEMA,
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save account";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -141,9 +143,13 @@ export function FinancialForm({
     });
   }, [isNew, readOnly, navigation]);
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -307,7 +313,7 @@ export function FinancialForm({
                   />
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={formStyles.draftLinkContainer}
                   >
                     <Text style={formStyles.draftLinkText}>Save as Draft</Text>

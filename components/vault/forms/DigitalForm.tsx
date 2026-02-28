@@ -134,41 +134,42 @@ export function DigitalForm({
     [initialData, initialMetadata],
   );
 
+  const submitForm = async (value: typeof defaultValues) => {
+    const metadata: DigitalMetadata = {
+      service: value.service.trim(),
+      username: value.username.trim() || null,
+      importance: value.importance as ImportanceLevel,
+      notes: value.accessNotes.trim() || null,
+    };
+
+    const title = isSocial
+      ? value.service.trim() || "Draft"
+      : value.accountName.trim() || "Draft";
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title,
+        notes: value.accessNotes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: DIGITAL_METADATA_SCHEMA,
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save account";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: isSocial ? digitalSocialSchema : digitalSchema,
     },
-    onSubmit: async ({ value }) => {
-      const metadata: DigitalMetadata = {
-        service: value.service.trim(),
-        username: value.username.trim() || null,
-        importance: value.importance as ImportanceLevel,
-        notes: value.accessNotes.trim() || null,
-      };
-
-      // For social accounts, use the service/platform as the title
-      const title = isSocial
-        ? value.service.trim()
-        : value.accountName.trim();
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title,
-          notes: value.accessNotes.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: DIGITAL_METADATA_SCHEMA,
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save account";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -182,9 +183,13 @@ export function DigitalForm({
     });
   }, [isNew, readOnly, labels.addTitle, labels.editTitle, navigation]);
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -341,7 +346,7 @@ export function DigitalForm({
                   />
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={formStyles.draftLinkContainer}
                   >
                     <Text style={formStyles.draftLinkText}>Save as Draft</Text>

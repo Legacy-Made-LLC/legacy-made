@@ -112,42 +112,42 @@ export function DocumentForm({
     [initialData, initialMetadata, defaultDocType],
   );
 
+  const submitForm = async (value: typeof defaultValues) => {
+    const metadata: DocumentMetadata = {
+      documentType: value.documentType as DocumentType,
+      location: value.location.trim(),
+      holder: value.holder.trim() || null,
+      preparer: value.preparer.trim() || null,
+      preparerPhone: value.preparerPhone.trim() || null,
+      notes: value.notes.trim() || null,
+    };
+
+    const title = value.documentType || "Draft";
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title,
+        notes: value.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: DOCUMENT_METADATA_SCHEMA,
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save document";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: documentSchema,
     },
-    onSubmit: async ({ value }) => {
-      const metadata: DocumentMetadata = {
-        documentType: value.documentType as DocumentType,
-        location: value.location.trim(),
-        holder: value.holder.trim() || null,
-        preparer: value.preparer.trim() || null,
-        preparerPhone: value.preparerPhone.trim() || null,
-        notes: value.notes.trim() || null,
-      };
-      // Note: Files are uploaded separately via file API, not stored in metadata
-
-      // Use document type as the title
-      const title = value.documentType;
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title,
-          notes: value.notes.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: DOCUMENT_METADATA_SCHEMA,
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save document";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -162,9 +162,13 @@ export function DocumentForm({
     });
   }, [isNew, readOnly, isLegalDocs, navigation]);
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -338,7 +342,7 @@ export function DocumentForm({
                   />
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={formStyles.draftLinkContainer}
                   >
                     <Text style={formStyles.draftLinkText}>Save as Draft</Text>

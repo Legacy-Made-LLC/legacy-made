@@ -163,46 +163,47 @@ export function PropertyForm({
     [initialData, initialMetadata],
   );
 
+  const submitForm = async (value: typeof defaultValues) => {
+    const vehicleEntry = value.propertyType === "Vehicle";
+
+    const metadata: PropertyMetadata = {
+      responsibilityType: value.propertyType as ResponsibilityType,
+      ownership: value.ownership as OwnershipType,
+      addressDescription: value.addressDescription.trim() || null,
+      lienHolder: value.lienHolder.trim() || null,
+      documentsLocation: value.documentsLocation.trim() || null,
+      keyLocation: value.keyLocation.trim() || null,
+      notes: value.notes.trim() || null,
+    };
+
+    const title = vehicleEntry
+      ? value.addressDescription.trim() || "Draft"
+      : value.propertyType || "Draft";
+
+    if (toast.isOffline()) return;
+
+    try {
+      await onSave({
+        title,
+        notes: value.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: buildMetadataSchema(vehicleEntry),
+        completionStatus: completionStatusRef.current,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save";
+      toast.error({ message });
+    }
+  };
+
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: propertySchema,
     },
-    onSubmit: async ({ value }) => {
-      const vehicleEntry = value.propertyType === "Vehicle";
-
-      const metadata: PropertyMetadata = {
-        responsibilityType: value.propertyType as ResponsibilityType,
-        ownership: value.ownership as OwnershipType,
-        addressDescription: value.addressDescription.trim() || null,
-        lienHolder: value.lienHolder.trim() || null,
-        documentsLocation: value.documentsLocation.trim() || null,
-        keyLocation: value.keyLocation.trim() || null,
-        notes: value.notes.trim() || null,
-      };
-
-      // Generate title: vehicle description for vehicles, sub-type for properties
-      const title = vehicleEntry
-        ? value.addressDescription.trim()
-        : value.propertyType;
-
-      if (toast.isOffline()) return;
-
-      try {
-        await onSave({
-          title,
-          notes: value.notes.trim() || null,
-          metadata: metadata as unknown as Record<string, unknown>,
-          metadataSchema: buildMetadataSchema(vehicleEntry),
-          completionStatus: completionStatusRef.current,
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save";
-        toast.error({ message });
-      }
-    },
+    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -234,9 +235,13 @@ export function PropertyForm({
     }
   };
 
-  const handleSaveWithStatus = (status: EntryCompletionStatus) => {
+  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
     completionStatusRef.current = status;
-    form.handleSubmit();
+    if (status === "draft") {
+      await submitForm(form.state.values);
+    } else {
+      form.handleSubmit();
+    }
   };
 
   const handleDelete = () => {
@@ -463,7 +468,7 @@ export function PropertyForm({
                   />
                   <Pressable
                     onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy || !canSubmit}
+                    disabled={busy}
                     style={formStyles.draftLinkContainer}
                   >
                     <Text style={formStyles.draftLinkText}>Save as Draft</Text>
