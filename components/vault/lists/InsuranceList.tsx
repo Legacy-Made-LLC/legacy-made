@@ -34,6 +34,8 @@ export function InsuranceList({
   onEntryPress,
   onAddPress,
   readOnly,
+  emptySecondaryLabel,
+  onEmptySecondaryAction,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -99,6 +101,8 @@ export function InsuranceList({
           description="Add your insurance policies so your loved ones know what coverage exists."
           buttonTitle={readOnly ? undefined : "Add Policy"}
           onButtonPress={readOnly ? undefined : onAddPress}
+          secondaryActionLabel={emptySecondaryLabel}
+          onSecondaryAction={onEmptySecondaryAction}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>

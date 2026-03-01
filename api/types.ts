@@ -798,10 +798,12 @@ export interface HardSituationsMetadata {
  * Data stored in a progress record for a task
  */
 export interface TaskProgressData {
-  /** Whether the task is in progress or explicitly completed */
-  status: "in_progress" | "complete";
+  /** Whether the task is in progress, explicitly completed, or marked not applicable */
+  status: "in_progress" | "complete" | "not_applicable";
   /** ISO date when the user marked the task complete */
   completedAt?: string;
+  /** ISO date when the user marked the task as not applicable */
+  notApplicableAt?: string;
 }
 
 /**

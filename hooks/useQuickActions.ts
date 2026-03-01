@@ -55,7 +55,8 @@ function getSectionStatus(
     const entry = progress[task.taskKey];
     if (entry) {
       touched++;
-      if (entry.status === "complete") completed++;
+      if (entry.status === "complete" || entry.status === "not_applicable")
+        completed++;
     }
   }
 

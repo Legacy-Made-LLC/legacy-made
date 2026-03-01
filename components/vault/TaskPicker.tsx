@@ -22,7 +22,10 @@ interface TaskPickerProps {
   progress?: Record<string, TaskProgressData>;
 }
 
-export function TaskPicker({ section, progress = {} }: TaskPickerProps) {
+export function TaskPicker({
+  section,
+  progress = {},
+}: TaskPickerProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 

@@ -95,12 +95,12 @@ export function useHomeGuidance(): HomeGuidanceResult {
       s.tasks.map((t) => t.taskKey),
     );
 
-    const vaultCompleted = vaultTaskKeys.filter(
-      (k) => progress[k]?.status === "complete",
-    ).length;
-    const wishesCompleted = wishesTaskKeys.filter(
-      (k) => progress[k]?.status === "complete",
-    ).length;
+    const isComplete = (k: string) =>
+      progress[k]?.status === "complete" ||
+      progress[k]?.status === "not_applicable";
+
+    const vaultCompleted = vaultTaskKeys.filter(isComplete).length;
+    const wishesCompleted = wishesTaskKeys.filter(isComplete).length;
     // "Touched" = any self-reported progress (complete or in_progress/come back later)
     const vaultTouched = vaultTaskKeys.filter((k) => progress[k]).length;
     const wishesTouched = wishesTaskKeys.filter((k) => progress[k]).length;
@@ -159,7 +159,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
     if (totalCompleted >= 5) {
       // Find first incomplete section to direct the user
       const firstIncompleteVault = vaultSections.find((s) =>
-        s.tasks.some((t) => progress[t.taskKey]?.status !== "complete"),
+        s.tasks.some((t) => !isComplete(t.taskKey)),
       );
       const route = firstIncompleteVault
         ? (`/(app)/vault/${firstIncompleteVault.id}` as Href)

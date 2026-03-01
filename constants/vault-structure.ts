@@ -21,12 +21,15 @@ export interface VaultSection {
   ionIcon: string;
   /** Tasks within this section */
   tasks: VaultTask[];
+  /** Whether this section can be marked "not applicable". Defaults to true; false for contacts. */
+  skippable?: boolean;
 }
 
 export const vaultSections: VaultSection[] = [
   {
     id: "contacts",
     ionIcon: "call-outline",
+    skippable: false,
     tasks: [
       {
         id: "primary",
@@ -183,4 +186,13 @@ export function getDefaultTask(sectionId: string): VaultTask | undefined {
  */
 export function getAllTaskKeys(): string[] {
   return vaultSections.flatMap((s) => s.tasks.map((t) => t.taskKey));
+}
+
+/**
+ * Check if a vault section can be marked "not applicable".
+ * Returns true for all sections except contacts (which is universally relevant).
+ */
+export function isSectionSkippable(sectionId: string): boolean {
+  const section = getSection(sectionId);
+  return section?.skippable !== false;
 }

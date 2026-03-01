@@ -28,6 +28,14 @@ export function TaskStatusIndicator({
 }: TaskStatusIndicatorProps) {
   const status = progress?.status;
 
+  if (status === "not_applicable") {
+    return (
+      <View style={[styles.base, styles.notApplicable]}>
+        <Ionicons name="remove" size={16} color={colors.textTertiary} />
+      </View>
+    );
+  }
+
   if (status === "complete") {
     return (
       <View style={[styles.base, styles.complete, { backgroundColor: pillarColor }]}>
@@ -72,6 +80,11 @@ const styles = StyleSheet.create({
     width: "50%",
   },
   complete: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notApplicable: {
+    backgroundColor: colors.surfaceSecondary,
     justifyContent: "center",
     alignItems: "center",
   },

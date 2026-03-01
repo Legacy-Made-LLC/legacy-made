@@ -140,5 +140,17 @@ export interface Translations {
       itemsAdded: (count: number) => string;
       completed: string;
     };
+    notApplicable: {
+      /** "Doesn't apply to me" */
+      button: string;
+      /** "Change my mind" */
+      changeMyMind: string;
+      /** "You've marked this as not applicable" */
+      title: string;
+      /** "If things change, you can always come back." */
+      description: string;
+      /** "Marked as not applicable" */
+      marked: string;
+    };
   };
 }

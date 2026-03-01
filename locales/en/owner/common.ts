@@ -72,4 +72,12 @@ export const ownerCommon: Translations["common"] = {
       `${count} ${count === 1 ? "item" : "items"} added`,
     completed: "Completed",
   },
+
+  notApplicable: {
+    button: "Doesn't apply to me",
+    changeMyMind: "Change my mind",
+    title: "You've marked this as not applicable",
+    description: "If things change, you can always come back.",
+    marked: "Marked as not applicable",
+  },
 };

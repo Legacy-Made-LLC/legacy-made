@@ -33,6 +33,8 @@ export function PetList({
   onEntryPress,
   onAddPress,
   readOnly,
+  emptySecondaryLabel,
+  onEmptySecondaryAction,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -95,6 +97,8 @@ export function PetList({
           description="Add your pets so your family knows how to care for them."
           buttonTitle={readOnly ? undefined : "Add Pet"}
           onButtonPress={readOnly ? undefined : onAddPress}
+          secondaryActionLabel={emptySecondaryLabel}
+          onSecondaryAction={onEmptySecondaryAction}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>

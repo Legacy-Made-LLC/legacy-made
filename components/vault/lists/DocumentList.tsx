@@ -33,6 +33,8 @@ export function DocumentList({
   onEntryPress,
   onAddPress,
   readOnly,
+  emptySecondaryLabel,
+  onEmptySecondaryAction,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -95,6 +97,8 @@ export function DocumentList({
           description="Add your important legal documents so your family knows where to find them."
           buttonTitle={readOnly ? undefined : "Add Document"}
           onButtonPress={readOnly ? undefined : onAddPress}
+          secondaryActionLabel={emptySecondaryLabel}
+          onSecondaryAction={onEmptySecondaryAction}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>

@@ -5,7 +5,7 @@
 import { colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Button } from "./Button";
 
 interface EmptyStateProps {
@@ -17,6 +17,10 @@ interface EmptyStateProps {
   icon?: keyof typeof Ionicons.glyphMap;
   /** Override the icon color */
   iconColor?: string;
+  /** Optional secondary text link displayed below the primary button */
+  secondaryActionLabel?: string;
+  /** Callback when secondary action is tapped */
+  onSecondaryAction?: () => void;
   style?: ViewStyle;
 }
 
@@ -27,8 +31,13 @@ export function EmptyState({
   onButtonPress,
   icon = "add-circle-outline",
   iconColor = colors.textTertiary,
+  secondaryActionLabel,
+  onSecondaryAction,
   style,
 }: EmptyStateProps) {
+  const hasButton = buttonTitle && onButtonPress;
+  const hasSecondary = secondaryActionLabel && onSecondaryAction;
+
   return (
     <View style={[styles.container, style]}>
       <Ionicons
@@ -38,13 +47,18 @@ export function EmptyState({
         style={styles.icon}
       />
       <Text style={styles.title}>{title}</Text>
-      <Text style={[styles.description, !buttonTitle && styles.descriptionNoButton]}>{description}</Text>
-      {buttonTitle && onButtonPress && (
+      <Text style={[styles.description, !hasButton && !hasSecondary && styles.descriptionNoButton]}>{description}</Text>
+      {hasButton && (
         <Button
           title={buttonTitle}
           onPress={onButtonPress}
           style={styles.button}
         />
+      )}
+      {hasSecondary && (
+        <Pressable onPress={onSecondaryAction} hitSlop={8} style={styles.secondaryAction}>
+          <Text style={styles.secondaryActionText}>{secondaryActionLabel}</Text>
+        </Pressable>
       )}
     </View>
   );
@@ -82,5 +96,15 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 200,
+  },
+  secondaryAction: {
+    marginTop: spacing.md,
+    minHeight: 44,
+    justifyContent: "center" as const,
+  },
+  secondaryActionText: {
+    fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.textTertiary,
   },
 });

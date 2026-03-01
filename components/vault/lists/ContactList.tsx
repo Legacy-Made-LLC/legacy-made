@@ -37,6 +37,8 @@ export function ContactList({
   onEntryPress,
   onAddPress,
   readOnly,
+  emptySecondaryLabel,
+  onEmptySecondaryAction,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -102,6 +104,8 @@ export function ContactList({
           description="Add the first person your loved ones should reach out to."
           buttonTitle={readOnly ? undefined : "Add Contact"}
           onButtonPress={readOnly ? undefined : onAddPress}
+          secondaryActionLabel={emptySecondaryLabel}
+          onSecondaryAction={onEmptySecondaryAction}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>

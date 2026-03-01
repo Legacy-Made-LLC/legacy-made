@@ -112,6 +112,103 @@ export function useMarkTaskComplete(taskKey: string | undefined) {
 }
 
 /**
+ * Mark a single task as "not applicable".
+ * Upserts { status: "not_applicable", notApplicableAt: ISO } and optimistically updates cache.
+ */
+export function useMarkTaskNotApplicable(taskKey: string | undefined) {
+  const mutation = useUpsertProgress(taskKey);
+
+  return {
+    ...mutation,
+    mutate: () => {
+      const data: TaskProgressData = {
+        status: "not_applicable",
+        notApplicableAt: new Date().toISOString(),
+      };
+      mutation.mutate(data);
+    },
+  };
+}
+
+/**
+ * Delete progress for a single task (return to "not started").
+ * Used to undo "not applicable" on an individual task.
+ */
+export function useDeleteTaskProgress(taskKey: string | undefined) {
+  const queryClient = useQueryClient();
+  const { planId } = usePlan();
+  const { progress } = useApi();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!planId || !taskKey) {
+        throw new Error("Plan ID and task key are required");
+      }
+      return progress.delete(planId, taskKey);
+    },
+    onMutate: async () => {
+      if (!planId || !taskKey) return;
+
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.progress.all(planId),
+      });
+
+      const previousAll = queryClient.getQueryData<
+        Record<string, TaskProgressData>
+      >(queryKeys.progress.all(planId));
+
+      const previousByKey = queryClient.getQueryData<TaskProgressData | null>(
+        queryKeys.progress.byKey(planId, taskKey),
+      );
+
+      // Optimistically remove from all-progress cache
+      queryClient.setQueryData<Record<string, TaskProgressData>>(
+        queryKeys.progress.all(planId),
+        (old) => {
+          if (!old) return old;
+          const updated = { ...old };
+          delete updated[taskKey];
+          return updated;
+        },
+      );
+
+      queryClient.setQueryData(
+        queryKeys.progress.byKey(planId, taskKey),
+        null,
+      );
+
+      return { previousAll, previousByKey };
+    },
+    onError: (_err, _vars, context) => {
+      if (!planId || !taskKey) return;
+
+      if (context?.previousAll !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.progress.all(planId),
+          context.previousAll,
+        );
+      }
+      if (context?.previousByKey !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.progress.byKey(planId, taskKey),
+          context.previousByKey,
+        );
+      }
+    },
+    onSettled: () => {
+      if (!planId || !taskKey) return;
+
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.progress.all(planId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.progress.byKey(planId, taskKey),
+      });
+    },
+  });
+}
+
+/**
  * Mark a task as in-progress (undo completion).
  * Upserts { status: "in_progress" } and optimistically updates cache.
  */

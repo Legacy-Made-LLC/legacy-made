@@ -33,6 +33,8 @@ export function PropertyList({
   onEntryPress,
   onAddPress,
   readOnly,
+  emptySecondaryLabel,
+  onEmptySecondaryAction,
 }: EntryListProps) {
   const insets = useSafeAreaInsets();
   const task = getTaskByKey(taskKey);
@@ -95,6 +97,8 @@ export function PropertyList({
           description="Add your property, vehicles, and other physical assets."
           buttonTitle={readOnly ? undefined : "Add Property or Vehicle"}
           onButtonPress={readOnly ? undefined : onAddPress}
+          secondaryActionLabel={emptySecondaryLabel}
+          onSecondaryAction={onEmptySecondaryAction}
           style={{ marginTop: spacing.sm }}
         />
       </ScrollView>

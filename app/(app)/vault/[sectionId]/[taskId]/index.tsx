@@ -5,15 +5,23 @@
  * list component for that task type.
  */
 
+import { SectionSkippedState } from "@/components/ui/SectionSkippedState";
 import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import { getListComponent } from "@/components/vault/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useVaultSection, useVaultTask } from "@/constants/vault";
+import { isSectionSkippable } from "@/constants/vault-structure";
+import { useTranslations } from "@/contexts/LocaleContext";
 import { usePlan } from "@/data/PlanProvider";
-import { useEntriesQuery, useTaskProgressQuery } from "@/hooks/queries";
+import {
+  useDeleteTaskProgress,
+  useEntriesQuery,
+  useMarkTaskNotApplicable,
+  useTaskProgressQuery,
+} from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useEffect, useLayoutEffect } from "react";
+import React, { useCallback, useEffect, useLayoutEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function TaskScreen() {
@@ -23,10 +31,13 @@ export default function TaskScreen() {
   }>();
   const router = useRouter();
   const navigation = useNavigation();
+  const t = useTranslations();
 
   const { isReadOnly } = usePlan();
   const section = useVaultSection(sectionId);
   const task = useVaultTask(sectionId, taskId);
+  const markNotApplicable = useMarkTaskNotApplicable(task?.taskKey);
+  const deleteProgress = useDeleteTaskProgress(task?.taskKey);
 
   // Set the header title before first render
   useLayoutEffect(() => {
@@ -47,6 +58,18 @@ export default function TaskScreen() {
   // Check if task is already marked complete (for footer visibility)
   const { data: progressData } = useTaskProgressQuery(task?.taskKey);
   const isTaskComplete = progressData?.status === "complete";
+  const isNotApplicable = progressData?.status === "not_applicable";
+
+  // Section skip logic
+  const skippable = isSectionSkippable(sectionId);
+
+  const handleSkipTask = useCallback(() => {
+    markNotApplicable.mutate();
+  }, [markNotApplicable]);
+
+  const handleUndoSkip = useCallback(() => {
+    deleteProgress.mutate();
+  }, [deleteProgress]);
 
   // Backwards compatibility: auto-set progress to "in_progress" when entries
   // exist but no progress record has been created yet (pre-progress-feature data)
@@ -86,6 +109,21 @@ export default function TaskScreen() {
     );
   }
 
+  // Show skipped state when task is marked not applicable
+  if (isNotApplicable) {
+    return (
+      <View style={styles.wrapper}>
+        <SectionSkippedState
+          onChangeMyMind={handleUndoSkip}
+          readOnly={isReadOnly}
+        />
+      </View>
+    );
+  }
+
+  // Show "Doesn't apply to me" in empty state when section is skippable
+  const showSkipInEmptyState = skippable && !isReadOnly && !isTaskComplete;
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.listContainer}>
@@ -96,6 +134,14 @@ export default function TaskScreen() {
           onEntryPress={handleEntryPress}
           onAddPress={handleAddPress}
           readOnly={isReadOnly}
+          emptySecondaryLabel={
+            showSkipInEmptyState
+              ? t.common.notApplicable.button
+              : undefined
+          }
+          onEmptySecondaryAction={
+            showSkipInEmptyState ? handleSkipTask : undefined
+          }
         />
       </View>
       {(entries.length > 0 || isTaskComplete) && !isReadOnly && (

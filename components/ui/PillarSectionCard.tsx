@@ -101,7 +101,9 @@ export function PillarSectionCard({
 
   // Calculate completion and in-progress for this section
   const completedTasks = section.tasks.filter(
-    (task) => progress[task.taskKey]?.status === "complete",
+    (task) =>
+      progress[task.taskKey]?.status === "complete" ||
+      progress[task.taskKey]?.status === "not_applicable",
   ).length;
   
   const inProgressTasks = section.tasks.filter(

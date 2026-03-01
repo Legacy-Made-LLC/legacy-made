@@ -50,6 +50,10 @@ export interface EntryListProps {
   onAddPress: () => void;
   /** Whether the plan is read-only (viewing a shared plan) */
   readOnly?: boolean;
+  /** Optional secondary action label for empty state (e.g. "Doesn't apply to me") */
+  emptySecondaryLabel?: string;
+  /** Callback for secondary action in empty state */
+  onEmptySecondaryAction?: () => void;
 }
 
 // ============================================================================

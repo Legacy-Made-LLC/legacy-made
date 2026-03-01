@@ -50,6 +50,8 @@ export {
 
 export {
   useMarkTaskComplete,
+  useMarkTaskNotApplicable,
+  useDeleteTaskProgress,
   useMarkTaskInProgress,
   useSetProgressIfNew,
 } from './useProgressMutations';

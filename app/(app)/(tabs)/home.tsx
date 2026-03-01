@@ -202,7 +202,11 @@ function countCompleted(
   taskKeys: string[],
   progress: Record<string, TaskProgressData>,
 ): number {
-  return taskKeys.filter((k) => progress[k]?.status === "complete").length;
+  return taskKeys.filter(
+    (k) =>
+      progress[k]?.status === "complete" ||
+      progress[k]?.status === "not_applicable",
+  ).length;
 }
 
 export default function HomeScreen() {

@@ -31,8 +31,7 @@ export const familyCommon: Translations["common"] = {
     },
     people: {
       title: "No people listed",
-      description:
-        "They haven't added information about important people yet.",
+      description: "They haven't added information about important people yet.",
     },
     financial: {
       title: "No accounts listed",
@@ -56,13 +55,11 @@ export const familyCommon: Translations["common"] = {
     },
     pets: {
       title: "No pets listed",
-      description:
-        "They haven't added information about pets yet.",
+      description: "They haven't added information about pets yet.",
     },
     digital: {
       title: "No accounts listed",
-      description:
-        "They haven't added information about digital access yet.",
+      description: "They haven't added information about digital access yet.",
     },
   },
 
@@ -71,5 +68,13 @@ export const familyCommon: Translations["common"] = {
     itemsAdded: (count: number) =>
       `${count} ${count === 1 ? "item" : "items"} added`,
     completed: "Completed",
+  },
+
+  notApplicable: {
+    button: "Doesn't apply",
+    changeMyMind: "Change back",
+    title: "They've marked this as not applicable",
+    description: "If things change, they can always come back.",
+    marked: "Marked as not applicable",
   },
 };
