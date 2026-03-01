@@ -15,6 +15,71 @@ export const familyPages: Translations["pages"] = {
     wishes: "Their healthcare values and end-of-life preferences.",
     legacy: "Letters, videos, and memories for the people they love.",
     family: "Shared access and keeping loved ones in the loop.",
+    pillarActions: {
+      information: "Their accounts and contacts",
+      wishes: "Their wishes and values",
+      family: "Shared access and trusted contacts",
+      comingSoon: "Coming soon",
+    },
+    quickActions: {
+      contacts: "View contacts",
+      people: "View people",
+      finances: "View accounts",
+      insurance: "View policies",
+      documents: "View documents",
+      property: "View property",
+      pets: "View pets",
+      digital: "View digital access",
+      carePrefs: "View care preferences",
+      endOfLife: "View end-of-life wishes",
+      values: "View their values",
+    },
+    guidance: {
+      allComplete: {
+        title: "Everything is covered",
+        body: "Their plan is complete.",
+        cta: "Review their plan",
+      },
+      vaultComplete: {
+        title: "Their information is organized",
+        body: "Their wishes and values are also available.",
+        cta: "View Wishes",
+      },
+      wishesComplete: {
+        title: "Their wishes are recorded",
+        body: "Their accounts and contacts are also available.",
+        cta: "View Information",
+      },
+      makingProgress: {
+        title: "Good progress so far",
+        body: "They\u2019ve been organizing important information.",
+        cta: "See details",
+      },
+      continue: {
+        title: "Recent activity",
+        body: "They were working on {sectionTitle}",
+        cta: "View",
+      },
+      startedVault: {
+        title: "Information is in progress",
+        body: "They\u2019ve started organizing their information.",
+        cta: "View Wishes",
+      },
+      startedWishes: {
+        title: "Wishes are in progress",
+        body: "They\u2019ve started recording their wishes.",
+        cta: "View Information",
+      },
+      brandNew: {
+        title: "Just getting started",
+        body: "They haven\u2019t added any information yet. Check back later.",
+        cta: "View contacts",
+      },
+      sharedPlan: {
+        title: "{name}\u2019s Progress",
+        body: "Here is what they\u2019ve organized so far.",
+      },
+    },
   },
   information: {
     description:

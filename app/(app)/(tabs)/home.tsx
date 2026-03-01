@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useUser } from "@clerk/clerk-expo";
 import { type Href, useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import {
-  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -12,24 +12,24 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { TaskProgressData } from "@/api/types";
+import { GuidanceSection } from "@/components/home/GuidanceSection";
+import { QuickActions } from "@/components/home/QuickActions";
 import { PressableCard } from "@/components/ui/Card";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import {
   borderRadius,
   colors,
-  shadows,
   spacing,
   typography,
 } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
 import { useWishesSections } from "@/constants/wishes";
 import { useTranslations } from "@/contexts/LocaleContext";
+import { usePlan } from "@/data/PlanProvider";
 import { useAllProgressQuery } from "@/hooks/queries";
+import { useHomeGuidance } from "@/hooks/useHomeGuidance";
+import { useQuickActions } from "@/hooks/useQuickActions";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_GAP = spacing.md;
-const HORIZONTAL_PADDING = spacing.lg;
-const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
 /** Build pillar definitions using current section data */
 function usePillars() {
@@ -51,54 +51,58 @@ function usePillars() {
       {
         id: "information",
         title: "Information",
-        description: t.information,
+        description: t.pillarActions.information,
         icon: "document-text-outline" as const,
         totalItems: informationTaskKeys.length,
         taskKeys: informationTaskKeys,
         route: "/(app)/(tabs)/information" as Href,
         color: colors.featureInformation,
         tint: colors.featureInformationTint,
+        comingSoon: false,
       },
       {
         id: "wishes",
         title: "Wishes",
-        description: t.wishes,
+        description: t.pillarActions.wishes,
         icon: "heart-outline" as const,
         totalItems: wishesTaskKeys.length,
         taskKeys: wishesTaskKeys,
         route: "/(app)/(tabs)/wishes" as Href,
         color: colors.featureWishes,
         tint: colors.featureWishesTint,
+        comingSoon: false,
       },
       {
         id: "legacy",
         title: "Legacy",
-        description: t.legacy,
+        description: t.pillarActions.comingSoon,
         icon: "videocam-outline" as const,
         totalItems: 0,
         taskKeys: [] as string[],
         route: "/(app)/(tabs)/legacy" as Href,
         color: colors.featureLegacy,
         tint: colors.featureLegacyTint,
+        comingSoon: true,
       },
       {
         id: "family",
         title: "Family",
-        description: t.family,
+        description: t.pillarActions.family,
         icon: "people-outline" as const,
         totalItems: 0,
         taskKeys: [] as string[],
         route: "/(app)/(tabs)/family" as Href,
         color: colors.featureFamily,
         tint: colors.featureFamilyTint,
+        comingSoon: false,
       },
     ];
   }, [vaultSections, wishesSections, translations]);
 }
 
 // Circular progress configuration
-const CIRCLE_SIZE = 64;
-const CIRCLE_STROKE_WIDTH = 4;
+const CIRCLE_SIZE = 40;
+const CIRCLE_STROKE_WIDTH = 3;
 
 interface PillarDef {
   id: string;
@@ -110,54 +114,84 @@ interface PillarDef {
   route: Href;
   color: string;
   tint: string;
+  comingSoon: boolean;
 }
 
 interface PillarCardProps {
   pillar: PillarDef;
   currentProgress: number;
   onPress: () => void;
+  comingSoonLabel: string;
 }
 
-function PillarCard({ pillar, currentProgress, onPress }: PillarCardProps) {
-  const progressPercent = Math.min(currentProgress / pillar.totalItems, 1);
+function PillarCard({
+  pillar,
+  currentProgress,
+  onPress,
+  comingSoonLabel,
+}: PillarCardProps) {
+  const progressPercent =
+    pillar.totalItems > 0
+      ? Math.min(currentProgress / pillar.totalItems, 1)
+      : 0;
 
   return (
     <PressableCard
       onPress={onPress}
-      style={[styles.pillarCard, { backgroundColor: pillar.tint }]}
+      style={[
+        styles.pillarCard,
+        pillar.comingSoon && styles.pillarCardUnavailable,
+      ]}
     >
       <View style={styles.pillarContent}>
         {/* Icon with circular progress */}
-        <View style={styles.pillarIconWrapper}>
-          <CircularProgress
-            progress={progressPercent}
-            size={CIRCLE_SIZE}
-            strokeWidth={CIRCLE_STROKE_WIDTH}
-            progressColor={pillar.color}
-            trackColor={colors.surface}
-            backgroundColor={pillar.tint}
+        <CircularProgress
+          progress={progressPercent}
+          size={CIRCLE_SIZE}
+          strokeWidth={CIRCLE_STROKE_WIDTH}
+          progressColor={pillar.color}
+          trackColor={pillar.tint}
+          backgroundColor={colors.surface}
+        >
+          <View
+            style={[
+              styles.pillarIconContainer,
+              { backgroundColor: pillar.tint },
+            ]}
           >
-            <View
-              style={[
-                styles.pillarIconContainer,
-                { backgroundColor: pillar.tint },
-              ]}
-            >
-              <Ionicons name={pillar.icon} size={24} color={pillar.color} />
-            </View>
-          </CircularProgress>
+            <Ionicons name={pillar.icon} size={18} color={pillar.color} />
+          </View>
+        </CircularProgress>
+
+        {/* Title and description */}
+        <View style={styles.pillarTextContent}>
+          <View style={styles.pillarTitleRow}>
+            <Text style={styles.pillarTitle}>{pillar.title}</Text>
+            {currentProgress > 0 && (
+              <Text style={styles.progressText}>
+                {currentProgress}/{pillar.totalItems}
+              </Text>
+            )}
+          </View>
+          {!pillar.comingSoon && (
+            <Text style={styles.pillarDescription}>
+              {pillar.description}
+            </Text>
+          )}
         </View>
 
-        {/* Title and description at bottom */}
-        <View style={styles.pillarTextContent}>
-          <Text style={styles.pillarTitle}>{pillar.title}</Text>
-          <Text style={styles.pillarDescription} numberOfLines={2}>
-            {pillar.description}
-          </Text>
-          <Text style={styles.progressText}>
-            {currentProgress} of {pillar.totalItems}
-          </Text>
-        </View>
+        {/* Coming soon badge or chevron */}
+        {pillar.comingSoon ? (
+          <View style={styles.comingSoonBadge}>
+            <Text style={styles.comingSoonText}>{comingSoonLabel}</Text>
+          </View>
+        ) : (
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={colors.textTertiary}
+          />
+        )}
       </View>
     </PressableCard>
   );
@@ -174,9 +208,17 @@ function countCompleted(
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useUser();
   const pillars = usePillars();
   const { data: progress = {} } = useAllProgressQuery();
+  const { isViewingSharedPlan } = usePlan();
   const t = useTranslations();
+  const { guidance, isLoading: guidanceLoading } = useHomeGuidance();
+  const quickActions = useQuickActions();
+
+  const firstName = user?.firstName;
+  const showQuickActions =
+    quickActions.length > 0 && !isViewingSharedPlan;
 
   // Get completed task count for each pillar
   const getPillarProgress = (pillar: PillarDef) => {
@@ -202,41 +244,18 @@ export default function HomeScreen() {
           />
         </View>
         <Text style={styles.pageTitle}>
-          {t.pages.home.pageTitle}
+          {firstName ? `Hi, ${firstName}` : t.pages.home.pageTitle}
         </Text>
         <Text style={styles.greeting}>{t.pages.home.greeting}</Text>
       </View>
 
-      {/* TODO: Add guidance card */}
-      {/* Guidance Card */}
-      {/* TODO: Implement after other app pillars are implemented. */}
-      {/* <View style={styles.guidanceCard}>
-        <Text style={styles.guidanceTitle}>Not sure where to begin?</Text>
+      {/* Adaptive Guidance Section */}
+      <GuidanceSection guidance={guidance} isLoading={guidanceLoading} />
 
-        <Pressable style={styles.guidanceOption}>
-          <Text style={styles.guidanceOptionText}>How prepared am I?</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={colors.textTertiary}
-          />
-        </Pressable>
-
-        <Pressable style={styles.guidanceOption}>
-          <Text style={styles.guidanceOptionText}>Where do I start?</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={colors.textTertiary}
-          />
-        </Pressable>
-
-        <Pressable style={styles.exploreLink}>
-          <Text style={styles.exploreLinkText}>
-            I&apos;ll explore on my own
-          </Text>
-        </Pressable>
-      </View> */}
+      {/* Quick Actions */}
+      {showQuickActions && (
+        <QuickActions actions={quickActions} isLoading={guidanceLoading} />
+      )}
 
       {/* Pillar Cards */}
       <View style={styles.pillars}>
@@ -246,6 +265,7 @@ export default function HomeScreen() {
             pillar={pillar}
             currentProgress={getPillarProgress(pillar)}
             onPress={() => router.push(pillar.route)}
+            comingSoonLabel={t.pages.home.pillarActions.comingSoon}
           />
         ))}
       </View>
@@ -289,91 +309,61 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: "center",
   },
-  // Guidance Card
-  guidanceCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    ...shadows.card,
-  },
-  guidanceTitle: {
-    fontFamily: typography.fontFamily.semibold,
-    fontSize: typography.sizes.titleMedium,
-    color: colors.textPrimary,
-    textAlign: "center",
-    marginBottom: spacing.md,
-  },
-  guidanceOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  guidanceOptionText: {
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-  },
-  exploreLink: {
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  exploreLinkText: {
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textTertiary,
-  },
-  // Pillar Cards - Two column grid
+  // Pillar Cards - Vertical stack
   pillars: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: CARD_GAP,
+    gap: spacing.sm,
   },
   pillarCard: {
-    width: CARD_WIDTH,
     marginBottom: 0,
   },
-  pillarContent: {
-    alignItems: "center",
-    paddingVertical: spacing.sm,
+  pillarCardUnavailable: {
+    opacity: 0.6,
   },
-  pillarIconWrapper: {
-    marginBottom: spacing.md,
+  pillarContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
   pillarIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.surfaceSecondary,
     justifyContent: "center",
     alignItems: "center",
   },
   pillarTextContent: {
+    flex: 1,
+  },
+  pillarTitleRow: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
   },
   pillarTitle: {
     fontFamily: typography.fontFamily.semibold,
-    fontSize: typography.sizes.titleMedium,
+    fontSize: typography.sizes.body,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
-    textAlign: "center",
+  },
+  progressText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
   },
   pillarDescription: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
-    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
-    textAlign: "center",
-    marginBottom: spacing.sm,
+    marginTop: 1,
   },
-  progressText: {
-    fontFamily: typography.fontFamily.regular,
+  comingSoonBadge: {
+    backgroundColor: colors.surfaceSecondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  comingSoonText: {
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
   },

@@ -9,11 +9,77 @@ import type { Translations } from "../../types";
 export const ownerPages: Translations["pages"] = {
   home: {
     pageTitle: "Your Progress",
-    greeting: "You\u2019ve started something meaningful.",
-    information: "Accounts, documents, and key contacts \u2014 all in one place.",
+    greeting: "One step at a time.",
+    information:
+      "Accounts, documents, and key contacts \u2014 all in one place.",
     wishes: "Your healthcare values and end-of-life preferences.",
     legacy: "Letters, videos, and memories for the people you love.",
     family: "Share access and keep loved ones in the loop.",
+    pillarActions: {
+      information: "Organize your accounts and contacts",
+      wishes: "Record your wishes and values",
+      family: "Share access with loved ones",
+      comingSoon: "Coming soon",
+    },
+    quickActions: {
+      contacts: "Add a contact",
+      people: "Add a person",
+      finances: "Add an account",
+      insurance: "Add a policy",
+      documents: "Add a document",
+      property: "Add property",
+      pets: "Add a pet",
+      digital: "Add digital access",
+      carePrefs: "Record care preferences",
+      endOfLife: "Record end-of-life wishes",
+      values: "Record your values",
+    },
+    guidance: {
+      allComplete: {
+        title: "You\u2019ve covered everything",
+        body: "Your plan is complete. Your loved ones will never be left guessing.",
+        cta: "Review your plan",
+      },
+      vaultComplete: {
+        title: "Your information is organized",
+        body: "Ready to record your wishes and values?",
+        cta: "Explore Wishes",
+      },
+      wishesComplete: {
+        title: "Your wishes are recorded",
+        body: "Want to make sure your accounts and contacts are organized too?",
+        cta: "Explore Information",
+      },
+      makingProgress: {
+        title: "You\u2019re making real progress",
+        body: "Every section you complete is one less thing your family has to figure out.",
+        cta: "Keep going",
+      },
+      continue: {
+        title: "Continue where you left off",
+        body: "You were working on {sectionTitle}",
+        cta: "Continue",
+      },
+      startedVault: {
+        title: "Good start on your information",
+        body: "When you\u2019re ready, your wishes and values are here too.",
+        cta: "Explore Wishes",
+      },
+      startedWishes: {
+        title: "Your wishes are taking shape",
+        body: "Adding your accounts and contacts helps complete the picture.",
+        cta: "Explore Information",
+      },
+      brandNew: {
+        title: "A good place to start",
+        body: "Most people begin by adding a key contact or a financial account. There\u2019s no wrong place to start.",
+        cta: "Start with contacts",
+      },
+      sharedPlan: {
+        title: "{name}\u2019s Progress",
+        body: "Here is what they\u2019ve organized so far.",
+      },
+    },
   },
   information: {
     description:

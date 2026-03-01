@@ -4,23 +4,21 @@
  * This file merges the structural data (IDs, icons) with translated text
  * based on the current locale and perspective.
  *
- * DEPRECATED INTERFACES: VaultTask and VaultSection with text fields are
- * maintained for backward compatibility but should be migrated to use
- * the new translation system.
+ * These "combined" types (VaultSection, VaultTask) include both structural
+ * fields and translated text. For structure-only access (no text needed),
+ * use vault-structure.ts directly.
  */
 
 import { useMemo } from "react";
 
-import {
-  vaultSections as structuralSections,
-  type VaultSection as StructuralVaultSection,
-  type VaultTask as StructuralVaultTask,
-} from "./vault-structure";
 import { useTranslations } from "@/contexts/LocaleContext";
+import { ownerTranslations } from "@/locales/en";
 import type { Translations } from "@/locales/types";
+import { vaultSections as structuralSections } from "./vault-structure";
 
 /**
- * @deprecated Use vault-structure.ts + useTranslations() instead
+ * Vault task with translated text fields merged in.
+ * For structure-only access, use VaultTask from vault-structure.ts.
  */
 export interface VaultTask {
   /** Unique identifier within the section */
@@ -44,7 +42,8 @@ export interface VaultTask {
 }
 
 /**
- * @deprecated Use vault-structure.ts + useTranslations() instead
+ * Vault section with translated text fields merged in.
+ * For structure-only access, use VaultSection from vault-structure.ts.
  */
 export interface VaultSection {
   /** Unique identifier for the section */
@@ -60,69 +59,68 @@ export interface VaultSection {
 }
 
 /**
- * Get vault sections with translations merged in
+ * Get vault sections with translations merged in.
  *
- * This function is for backward compatibility. New code should use
- * vault-structure.ts for structure and useTranslations() for text.
- *
- * @param translations - Optional translations object. If not provided, uses English owner perspective
+ * @param translations - Optional translations object. If not provided, uses English owner perspective.
  */
+type VaultTranslations = Translations["vault"];
+type VaultSectionKey = keyof VaultTranslations;
+
 function getVaultSectionsWithText(
-  translations?: Translations["vault"],
+  translations?: VaultTranslations,
 ): VaultSection[] {
   // If no translations provided, use default English owner perspective
-  let vaultTranslations = translations;
-  if (!vaultTranslations) {
-    // Lazy load to avoid circular dependencies
-    const { ownerTranslations } = require("@/locales/en");
-    vaultTranslations = ownerTranslations.vault;
-  }
+  const vaultTranslations: VaultTranslations =
+    translations ?? ownerTranslations.vault;
 
-  return structuralSections.map((section) => ({
-    id: section.id,
-    ionIcon: section.ionIcon,
-    title: vaultTranslations[section.id]?.title || section.id,
-    description: vaultTranslations[section.id]?.description || "",
-    tasks: section.tasks.map((task) => {
-      const taskText = vaultTranslations[section.id]?.tasks[task.id];
-      return {
-        id: task.id,
-        taskKey: task.taskKey,
-        title: taskText?.title || task.id,
-        description: taskText?.description || "",
-        guidanceHeading: taskText?.guidanceHeading,
-        guidance: taskText?.guidance || "",
-        triggerText: taskText?.triggerText,
-        tips: taskText?.tips,
-        pacingNote: taskText?.pacingNote,
-      };
-    }),
-  }));
+  return structuralSections.map((section) => {
+    const sectionKey = section.id as VaultSectionKey;
+    const sectionText = vaultTranslations[sectionKey];
+
+    return {
+      id: section.id,
+      ionIcon: section.ionIcon,
+      title: sectionText?.title || section.id,
+      description: sectionText?.description || "",
+      tasks: section.tasks.map((task) => {
+        const taskText = sectionText?.tasks[task.id];
+        return {
+          id: task.id,
+          taskKey: task.taskKey,
+          title: taskText?.title || task.id,
+          description: taskText?.description || "",
+          guidanceHeading: taskText?.guidanceHeading,
+          guidance: taskText?.guidance || "",
+          triggerText: taskText?.triggerText,
+          tips: taskText?.tips,
+          pacingNote: taskText?.pacingNote,
+        };
+      }),
+    };
+  });
 }
 
 /**
- * @deprecated Use getVaultSectionsWithText() or vault-structure.ts + useTranslations()
- *
- * Legacy constant maintained for backward compatibility.
- * Returns vault sections with English owner perspective text.
+ * Vault sections with English owner perspective text.
+ * For reactive, perspective-aware access, use the useVaultSections() hook instead.
  */
 export const vaultSections: VaultSection[] = getVaultSectionsWithText();
 
 // ============================================================================
-// Helper Functions (Backward Compatible)
+// Helper Functions
 // ============================================================================
 
 /**
- * Get a section by its ID (with text)
- * @deprecated Use vault-structure.ts + useTranslations() instead
+ * Get a section by its ID (with text).
+ * Note: Uses the static English owner constant. For perspective-aware access, use useVaultSection().
  */
 export function getSection(sectionId: string): VaultSection | undefined {
   return vaultSections.find((s) => s.id === sectionId);
 }
 
 /**
- * Get a task by section ID and task ID (with text)
- * @deprecated Use vault-structure.ts + useTranslations() instead
+ * Get a task by section ID and task ID (with text).
+ * Note: Uses the static English owner constant. For perspective-aware access, use useVaultTask().
  */
 export function getTask(
   sectionId: string,
@@ -131,36 +129,25 @@ export function getTask(
   return getSection(sectionId)?.tasks.find((t) => t.id === taskId);
 }
 
-/**
- * Get a task by its taskKey (with text)
- * @deprecated Use vault-structure.ts + useTranslations() instead
- */
+/** Get a task by its taskKey (with text). */
 export function getTaskByKey(taskKey: string): VaultTask | undefined {
   return vaultSections
     .flatMap((s) => s.tasks)
     .find((t) => t.taskKey === taskKey);
 }
 
-/**
- * Get the section that contains a given task key (with text)
- * @deprecated Use vault-structure.ts + useTranslations() instead
- */
+/** Get the section that contains a given task key (with text). */
 export function getSectionByTaskKey(taskKey: string): VaultSection | undefined {
   return vaultSections.find((s) => s.tasks.some((t) => t.taskKey === taskKey));
 }
 
-/**
- * Check if a section has multiple tasks (requires task picker screen)
- */
+/** Check if a section has multiple tasks (requires task picker screen). */
 export function sectionHasMultipleTasks(sectionId: string): boolean {
   const section = getSection(sectionId);
   return section ? section.tasks.length > 1 : false;
 }
 
-/**
- * Get the default task for a section (first task, used for single-task sections)
- * @deprecated Use vault-structure.ts + useTranslations() instead
- */
+/** Get the default task for a section (first task, used for single-task sections). */
 export function getDefaultTask(sectionId: string): VaultTask | undefined {
   return getSection(sectionId)?.tasks[0];
 }

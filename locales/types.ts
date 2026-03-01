@@ -58,6 +58,39 @@ export interface Translations {
       wishes: string;
       legacy: string;
       family: string;
+      /** Action-oriented short descriptions for pillar cards */
+      pillarActions: {
+        information: string;
+        wishes: string;
+        family: string;
+        comingSoon: string;
+      };
+      /** Action-oriented labels for quick action pills */
+      quickActions: {
+        contacts: string;
+        people: string;
+        finances: string;
+        insurance: string;
+        documents: string;
+        property: string;
+        pets: string;
+        digital: string;
+        carePrefs: string;
+        endOfLife: string;
+        values: string;
+      };
+      /** Adaptive guidance section strings */
+      guidance: {
+        allComplete: { title: string; body: string; cta: string };
+        vaultComplete: { title: string; body: string; cta: string };
+        wishesComplete: { title: string; body: string; cta: string };
+        makingProgress: { title: string; body: string; cta: string };
+        continue: { title: string; body: string; cta: string };
+        startedVault: { title: string; body: string; cta: string };
+        startedWishes: { title: string; body: string; cta: string };
+        brandNew: { title: string; body: string; cta: string };
+        sharedPlan: { title: string; body: string };
+      };
     };
     information: {
       description: string;

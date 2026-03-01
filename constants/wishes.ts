@@ -4,9 +4,9 @@
  * This file merges the structural data (IDs, icons) with translated text
  * based on the current locale and perspective.
  *
- * DEPRECATED INTERFACES: WishesTask and WishesSection with text fields are
- * maintained for backward compatibility but should be migrated to use
- * the new translation system.
+ * These "combined" types (WishesSection, WishesTask) include both structural
+ * fields and translated text. For structure-only access (no text needed),
+ * use wishes-structure.ts directly.
  */
 
 import { useMemo } from "react";
@@ -17,10 +17,12 @@ import {
   type WishesTask as StructuralWishesTask,
 } from "./wishes-structure";
 import { useTranslations } from "@/contexts/LocaleContext";
+import { ownerTranslations } from "@/locales/en";
 import type { Translations } from "@/locales/types";
 
 /**
- * @deprecated Use wishes-structure.ts + useTranslations() instead
+ * Wishes task with translated text fields merged in.
+ * For structure-only access, use WishesTask from wishes-structure.ts.
  */
 export interface WishesTask {
   /** Unique identifier within the section */
@@ -46,7 +48,8 @@ export interface WishesTask {
 }
 
 /**
- * @deprecated Use wishes-structure.ts + useTranslations() instead
+ * Wishes section with translated text fields merged in.
+ * For structure-only access, use WishesSection from wishes-structure.ts.
  */
 export interface WishesSection {
   /** Unique identifier for the section */
@@ -62,70 +65,69 @@ export interface WishesSection {
 }
 
 /**
- * Get wishes sections with translations merged in
+ * Get wishes sections with translations merged in.
  *
- * This function is for backward compatibility. New code should use
- * wishes-structure.ts for structure and useTranslations() for text.
- *
- * @param translations - Optional translations object. If not provided, uses English owner perspective
+ * @param translations - Optional translations object. If not provided, uses English owner perspective.
  */
+type WishesTranslations = Translations["wishes"];
+type WishesSectionKey = keyof WishesTranslations;
+
 function getWishesSectionsWithText(
-  translations?: Translations["wishes"],
+  translations?: WishesTranslations,
 ): WishesSection[] {
   // If no translations provided, use default English owner perspective
-  let wishesTranslations = translations;
-  if (!wishesTranslations) {
-    // Lazy load to avoid circular dependencies
-    const { ownerTranslations } = require("@/locales/en");
-    wishesTranslations = ownerTranslations.wishes;
-  }
+  const wishesTranslations: WishesTranslations =
+    translations ?? ownerTranslations.wishes;
 
-  return structuralSections.map((section) => ({
-    id: section.id,
-    ionIcon: section.ionIcon,
-    title: wishesTranslations[section.id]?.title || section.id,
-    description: wishesTranslations[section.id]?.description || "",
-    tasks: section.tasks.map((task) => {
-      const taskText = wishesTranslations[section.id]?.tasks[task.id];
-      return {
-        id: task.id,
-        taskKey: task.taskKey,
-        ionIcon: task.ionIcon,
-        title: taskText?.title || task.id,
-        description: taskText?.description || "",
-        guidanceHeading: taskText?.guidanceHeading,
-        guidance: taskText?.guidance || "",
-        triggerText: taskText?.triggerText,
-        tips: taskText?.tips,
-        pacingNote: taskText?.pacingNote,
-      };
-    }),
-  }));
+  return structuralSections.map((section) => {
+    const sectionKey = section.id as WishesSectionKey;
+    const sectionText = wishesTranslations[sectionKey];
+
+    return {
+      id: section.id,
+      ionIcon: section.ionIcon,
+      title: sectionText?.title || section.id,
+      description: sectionText?.description || "",
+      tasks: section.tasks.map((task) => {
+        const taskText = sectionText?.tasks[task.id];
+        return {
+          id: task.id,
+          taskKey: task.taskKey,
+          ionIcon: task.ionIcon,
+          title: taskText?.title || task.id,
+          description: taskText?.description || "",
+          guidanceHeading: taskText?.guidanceHeading,
+          guidance: taskText?.guidance || "",
+          triggerText: taskText?.triggerText,
+          tips: taskText?.tips,
+          pacingNote: taskText?.pacingNote,
+        };
+      }),
+    };
+  });
 }
 
 /**
- * @deprecated Use getWishesSectionsWithText() or wishes-structure.ts + useTranslations()
- *
- * Legacy constant maintained for backward compatibility.
- * Returns wishes sections with English owner perspective text.
+ * Wishes sections with English owner perspective text.
+ * For reactive, perspective-aware access, use the useWishesSections() hook instead.
  */
 export const wishesSections: WishesSection[] = getWishesSectionsWithText();
 
 // ============================================================================
-// Helper Functions (Backward Compatible)
+// Helper Functions
 // ============================================================================
 
 /**
- * Get a section by its ID (with text)
- * @deprecated Use wishes-structure.ts + useTranslations() instead
+ * Get a section by its ID (with text).
+ * Note: Uses the static English owner constant. For perspective-aware access, use useWishesSection().
  */
 export function getWishesSection(sectionId: string): WishesSection | undefined {
   return wishesSections.find((s) => s.id === sectionId);
 }
 
 /**
- * Get a task by section ID and task ID (with text)
- * @deprecated Use wishes-structure.ts + useTranslations() instead
+ * Get a task by section ID and task ID (with text).
+ * Note: Uses the static English owner constant. For perspective-aware access, use useWishesTask().
  */
 export function getWishesTask(
   sectionId: string,
@@ -134,38 +136,27 @@ export function getWishesTask(
   return getWishesSection(sectionId)?.tasks.find((t) => t.id === taskId);
 }
 
-/**
- * Get a task by its taskKey (with text)
- * @deprecated Use wishes-structure.ts + useTranslations() instead
- */
+/** Get a task by its taskKey (with text). */
 export function getWishesTaskByKey(taskKey: string): WishesTask | undefined {
   return wishesSections
     .flatMap((s) => s.tasks)
     .find((t) => t.taskKey === taskKey);
 }
 
-/**
- * Get the section that contains a given task key (with text)
- * @deprecated Use wishes-structure.ts + useTranslations() instead
- */
+/** Get the section that contains a given task key (with text). */
 export function getWishesSectionByTaskKey(
   taskKey: string,
 ): WishesSection | undefined {
   return wishesSections.find((s) => s.tasks.some((t) => t.taskKey === taskKey));
 }
 
-/**
- * Check if a section has multiple tasks (requires task picker screen)
- */
+/** Check if a section has multiple tasks (requires task picker screen). */
 export function wishesSectionHasMultipleTasks(sectionId: string): boolean {
   const section = getWishesSection(sectionId);
   return section ? section.tasks.length > 1 : false;
 }
 
-/**
- * Get the default task for a section (first task, used for single-task sections)
- * @deprecated Use wishes-structure.ts + useTranslations() instead
- */
+/** Get the default task for a section (first task, used for single-task sections). */
 export function getDefaultWishesTask(
   sectionId: string,
 ): WishesTask | undefined {

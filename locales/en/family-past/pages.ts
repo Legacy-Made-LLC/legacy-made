@@ -15,6 +15,71 @@ export const familyPastPages: Translations["pages"] = {
     wishes: "Their healthcare values and end-of-life preferences.",
     legacy: "Letters, videos, and memories for the people they loved.",
     family: "Shared access and who was in the loop.",
+    pillarActions: {
+      information: "Their accounts and contacts",
+      wishes: "Their wishes and values",
+      family: "Shared access and trusted contacts",
+      comingSoon: "Coming soon",
+    },
+    quickActions: {
+      contacts: "View contacts",
+      people: "View people",
+      finances: "View accounts",
+      insurance: "View policies",
+      documents: "View documents",
+      property: "View property",
+      pets: "View pets",
+      digital: "View digital access",
+      carePrefs: "View care preferences",
+      endOfLife: "View end-of-life wishes",
+      values: "View their values",
+    },
+    guidance: {
+      allComplete: {
+        title: "Everything is here",
+        body: "They organized everything for you.",
+        cta: "Review their plan",
+      },
+      vaultComplete: {
+        title: "Their information is here",
+        body: "Their wishes and values are also available.",
+        cta: "View Wishes",
+      },
+      wishesComplete: {
+        title: "Their wishes are here",
+        body: "Their accounts and contacts are also available.",
+        cta: "View Information",
+      },
+      makingProgress: {
+        title: "They made good progress",
+        body: "They organized important information for you.",
+        cta: "See details",
+      },
+      continue: {
+        title: "Recent activity",
+        body: "They were working on {sectionTitle}",
+        cta: "View",
+      },
+      startedVault: {
+        title: "Some information is here",
+        body: "They started organizing their information.",
+        cta: "View Wishes",
+      },
+      startedWishes: {
+        title: "Some wishes are here",
+        body: "They started recording their wishes.",
+        cta: "View Information",
+      },
+      brandNew: {
+        title: "Nothing was added",
+        body: "They hadn\u2019t started organizing their information yet.",
+        cta: "View contacts",
+      },
+      sharedPlan: {
+        title: "{name}\u2019s Legacy",
+        body: "Everything they organized is here.",
+      },
+    },
   },
   information: {
     description:

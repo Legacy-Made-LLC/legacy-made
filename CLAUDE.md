@@ -117,46 +117,21 @@ nvm use
 nvm use && open -a /Applications/Android\ Studio.app
 ```
 
-#### 2. Gradle Memory Configuration (PERMANENT FIX APPLIED)
-
-**Problem:** Android builds fail with OutOfMemoryError using default 512MB heap.
-
-**Permanent Solution (Already configured in app.config.ts):**
-```typescript
-// In expo-build-properties plugin:
-android: {
-  gradleJavaMaxHeapSize: "2048m",  // Increased from default 512m
-  kotlinOptions: {
-    jvmTarget: "17",
-  },
-}
-```
-
-**Temporary workaround if needed:**
-```bash
-export GRADLE_OPTS="-Xmx2048m"
-npx expo run:android
-```
-
-#### 3. Android Development Commands
+#### 2. Android Development Commands
 
 ```bash
 # Clean prebuild and run Android
 npx expo prebuild --clean --platform android && npx expo run:android
 
-# If memory issues persist
-GRADLE_OPTS='-Xmx2048m' npx expo run:android
-
 # Clean gradle cache if build issues occur
 cd android && ./gradlew clean && cd ..
 ```
 
-#### 4. Troubleshooting
+#### 3. Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
 | Node version error | Run `nvm use` before any command |
-| Out of memory | Already fixed in app.config.ts, but can use `export GRADLE_OPTS="-Xmx2048m"` |
 | Build cache issues | `cd android && ./gradlew clean` |
 | Android Studio can't find Node | Launch from terminal: `nvm use && open -a /Applications/Android\ Studio.app` |
 

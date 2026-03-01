@@ -26,6 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     associatedDomains: ["applinks:app.mylegacymade.com"],
   },
   android: {
+    versionCode: 3,
     adaptiveIcon: {
       backgroundColor: "#8a9785",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -76,8 +77,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           deploymentTarget: "16.0",
         },
         android: {
-          // Permanent fix for OOM errors - increase Java heap size
-          gradleJavaMaxHeapSize: "2048m",
           // Optional: Additional memory optimizations
           kotlinOptions: {
             jvmTarget: "17",
