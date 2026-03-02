@@ -217,7 +217,11 @@ export default function HomeScreen() {
   const { data: progress = {} } = useAllProgressQuery();
   const { isViewingSharedPlan } = usePlan();
   const t = useTranslations();
-  const { guidance, isLoading: guidanceLoading } = useHomeGuidance();
+  const {
+    guidance,
+    isLoading: guidanceLoading,
+    onDismissContactGuidance,
+  } = useHomeGuidance();
   const quickActions = useQuickActions();
 
   const firstName = user?.firstName;
@@ -254,7 +258,15 @@ export default function HomeScreen() {
       </View>
 
       {/* Adaptive Guidance Section */}
-      <GuidanceSection guidance={guidance} isLoading={guidanceLoading} />
+      <GuidanceSection
+        guidance={guidance}
+        isLoading={guidanceLoading}
+        onSecondaryCta={
+          guidance.type === "add_trusted_contact"
+            ? onDismissContactGuidance
+            : undefined
+        }
+      />
 
       {/* Quick Actions */}
       {showQuickActions && (

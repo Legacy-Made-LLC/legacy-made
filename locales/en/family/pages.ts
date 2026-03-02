@@ -33,6 +33,7 @@ export const familyPages: Translations["pages"] = {
       carePrefs: "View care preferences",
       endOfLife: "View end-of-life wishes",
       values: "View their values",
+      addTrustedContact: "Share your plan",
     },
     guidance: {
       allComplete: {
@@ -54,6 +55,12 @@ export const familyPages: Translations["pages"] = {
         title: "Good progress so far",
         body: "They\u2019ve been organizing important information.",
         cta: "See details",
+      },
+      addTrustedContact: {
+        title: "Share their plan with someone they trust",
+        body: "Adding a trusted contact means the right person can access their plan when it matters most.",
+        cta: "Add Trusted Contact",
+        secondaryCta: "Not now",
       },
       continue: {
         title: "Recent activity",

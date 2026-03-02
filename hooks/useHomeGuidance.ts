@@ -13,12 +13,15 @@ import { colors } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
 import { useWishesSections } from "@/constants/wishes";
 import { useTranslations } from "@/contexts/LocaleContext";
+import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import {
   useAllEntriesQuery,
   useAllProgressQuery,
   useAllWishesQuery,
+  useTrustedContactsQuery,
 } from "@/hooks/queries";
+import { useContactGuidanceDismissed } from "@/hooks/useGuidanceDismissals";
 import type { Translations } from "@/locales/types";
 
 export type GuidanceType =
@@ -26,6 +29,7 @@ export type GuidanceType =
   | "vault_complete"
   | "wishes_complete"
   | "making_progress"
+  | "add_trusted_contact"
   | "continue"
   | "started_vault"
   | "started_wishes"
@@ -39,6 +43,8 @@ export interface GuidanceState {
   cta?: string;
   /** Route to navigate when CTA is tapped */
   ctaRoute?: Href;
+  /** Label for a secondary action (e.g. "Not now" to dismiss) */
+  secondaryCta?: string;
   /** Background tint color for the guidance card */
   tintColor: string;
   /** Accent color for icon/CTA */
@@ -52,16 +58,25 @@ type GuidanceStrings = Translations["pages"]["home"]["guidance"];
 export interface HomeGuidanceResult {
   guidance: GuidanceState;
   isLoading: boolean;
+  /** Callback to dismiss the "add trusted contact" guidance card */
+  onDismissContactGuidance: () => void;
 }
 
 export function useHomeGuidance(): HomeGuidanceResult {
   const translations = useTranslations();
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
-  const { isViewingSharedPlan, sharedPlanInfo } = usePlan();
+  const { isViewingSharedPlan, sharedPlanInfo, planId } = usePlan();
   const progressQuery = useAllProgressQuery();
   const entriesQuery = useAllEntriesQuery();
   const wishesQuery = useAllWishesQuery();
+  const contactsQuery = useTrustedContactsQuery();
+  const { isLockedPillar } = useEntitlements();
+  const {
+    isDismissed: isContactGuidanceDismissed,
+    dismiss: dismissContactGuidance,
+    isLoading: dismissalLoading,
+  } = useContactGuidanceDismissed(planId ?? undefined);
 
   const progress = useMemo(
     () => progressQuery.data ?? {},
@@ -69,8 +84,17 @@ export function useHomeGuidance(): HomeGuidanceResult {
   );
   const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
   const wishes = useMemo(() => wishesQuery.data ?? [], [wishesQuery.data]);
+  const trustedContacts = useMemo(
+    () => contactsQuery.data ?? [],
+    [contactsQuery.data],
+  );
+  const isLockedFamily = isLockedPillar("family_access");
   const isLoading =
-    progressQuery.isLoading || entriesQuery.isLoading || wishesQuery.isLoading;
+    progressQuery.isLoading ||
+    entriesQuery.isLoading ||
+    wishesQuery.isLoading ||
+    contactsQuery.isLoading ||
+    dismissalLoading;
 
   const guidance = useMemo((): GuidanceState => {
     const g: GuidanceStrings = translations.pages.home.guidance;
@@ -101,8 +125,20 @@ export function useHomeGuidance(): HomeGuidanceResult {
 
     const vaultCompleted = vaultTaskKeys.filter(isComplete).length;
     const wishesCompleted = wishesTaskKeys.filter(isComplete).length;
-    // "Touched" = any self-reported progress (complete or in_progress/come back later)
-    const vaultTouched = vaultTaskKeys.filter((k) => progress[k]).length;
+    // "Touched" = any self-reported progress (complete or in_progress/come back later).
+    // Exclude the onboarding contact (contacts.primary with only "in_progress" and
+    // a single entry) so a brand-new user still sees "brand new" guidance. Once the
+    // user manually adds more contacts, the filter stops applying.
+    const onboardingContactEntries = entries.filter(
+      (e) => e.taskKey === "contacts.primary",
+    ).length;
+    const isOnboardingOnly = (k: string) =>
+      k === "contacts.primary" &&
+      progress[k]?.status === "in_progress" &&
+      onboardingContactEntries <= 1;
+    const vaultTouched = vaultTaskKeys.filter(
+      (k) => progress[k] && !isOnboardingOnly(k),
+    ).length;
     const wishesTouched = wishesTaskKeys.filter((k) => progress[k]).length;
     const totalTouched = vaultTouched + wishesTouched;
 
@@ -113,7 +149,28 @@ export function useHomeGuidance(): HomeGuidanceResult {
     const allVaultDone = vaultTotal > 0 && vaultCompleted === vaultTotal;
     const allWishesDone = wishesTotal > 0 && wishesCompleted === wishesTotal;
 
-    // Priority 1: All complete
+    // Priority 1: Nudge to add a trusted contact (dismissable)
+    if (
+      totalTouched > 0 &&
+      totalCompleted >= 3 &&
+      !isLockedFamily &&
+      trustedContacts.length === 0 &&
+      !isContactGuidanceDismissed
+    ) {
+      return {
+        type: "add_trusted_contact",
+        title: g.addTrustedContact.title,
+        body: g.addTrustedContact.body,
+        cta: g.addTrustedContact.cta,
+        ctaRoute: "/(app)/family/contacts/new" as Href,
+        secondaryCta: g.addTrustedContact.secondaryCta,
+        tintColor: colors.featureFamilyTint,
+        accentColor: colors.featureFamily,
+        icon: "people-outline",
+      };
+    }
+
+    // Priority 2: All complete
     if (allVaultDone && allWishesDone) {
       return {
         type: "all_complete",
@@ -127,7 +184,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
       };
     }
 
-    // Priority 2: Vault complete, wishes incomplete
+    // Priority 3: Vault complete, wishes incomplete
     if (allVaultDone && !allWishesDone) {
       return {
         type: "vault_complete",
@@ -141,7 +198,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
       };
     }
 
-    // Priority 3: Wishes complete, vault incomplete
+    // Priority 4: Wishes complete, vault incomplete
     if (allWishesDone && !allVaultDone) {
       return {
         type: "wishes_complete",
@@ -155,87 +212,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
       };
     }
 
-    // Priority 4: Making progress (5+ total tasks complete)
-    if (totalCompleted >= 5) {
-      // Find first incomplete section to direct the user
-      const firstIncompleteVault = vaultSections.find((s) =>
-        s.tasks.some((t) => !isComplete(t.taskKey)),
-      );
-      const route = firstIncompleteVault
-        ? (`/(app)/vault/${firstIncompleteVault.id}` as Href)
-        : ("/(app)/(tabs)/wishes" as Href);
-
-      return {
-        type: "making_progress",
-        title: g.makingProgress.title,
-        body: g.makingProgress.body,
-        cta: g.makingProgress.cta,
-        ctaRoute: route,
-        tintColor: colors.featureInformationTint,
-        accentColor: colors.featureInformation,
-        icon: "trending-up-outline",
-      };
-    }
-
-    // Priority 5: Continue where you left off
-    // Only triggers when the user has self-reported progress on at least one task.
-    // Raw entries alone (e.g. the onboarding contact) don't count — the user
-    // should still see the "brand new" guidance on their first real visit.
-    const allItems = [
-      ...entries.map((e) => ({
-        updatedAt: e.updatedAt,
-        taskKey: e.taskKey,
-        source: "vault" as const,
-      })),
-      ...wishes.map((w) => ({
-        updatedAt: w.updatedAt,
-        taskKey: w.taskKey,
-        source: "wishes" as const,
-      })),
-    ];
-
-    if (totalTouched > 0 && allItems.length > 0) {
-      const mostRecent = allItems.reduce((latest, item) =>
-        new Date(item.updatedAt) > new Date(latest.updatedAt) ? item : latest,
-      );
-
-      let sectionTitle = "";
-      let sectionIcon = "document-text-outline";
-      let route: Href;
-      let tintColor = colors.featureInformationTint;
-      let accentColor = colors.featureInformation;
-
-      if (mostRecent.source === "vault") {
-        const section = vaultSections.find((s) =>
-          s.tasks.some((t) => t.taskKey === mostRecent.taskKey),
-        );
-        sectionTitle = section?.title ?? "";
-        sectionIcon = section?.ionIcon ?? "document-text-outline";
-        route = `/(app)/vault/${section?.id ?? "contacts"}` as Href;
-      } else {
-        const section = wishesSections.find((s) =>
-          s.tasks.some((t) => t.taskKey === mostRecent.taskKey),
-        );
-        sectionTitle = section?.title ?? "";
-        sectionIcon = section?.ionIcon ?? "heart-outline";
-        route = `/(app)/wishes/${section?.id ?? "carePrefs"}` as Href;
-        tintColor = colors.featureWishesTint;
-        accentColor = colors.featureWishes;
-      }
-
-      return {
-        type: "continue",
-        title: g.continue.title,
-        body: g.continue.body.replace("{sectionTitle}", sectionTitle),
-        cta: g.continue.cta,
-        ctaRoute: route,
-        tintColor,
-        accentColor,
-        icon: sectionIcon,
-      };
-    }
-
-    // Priority 6: Started vault, no wishes progress
+    // Priority 5: Started vault only — nudge toward wishes
     if (vaultTouched > 0 && wishesTouched === 0) {
       return {
         type: "started_vault",
@@ -249,7 +226,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
       };
     }
 
-    // Priority 7: Started wishes, no vault progress
+    // Priority 6: Started wishes only — nudge toward vault
     if (wishesTouched > 0 && vaultTouched === 0) {
       return {
         type: "started_wishes",
@@ -263,7 +240,98 @@ export function useHomeGuidance(): HomeGuidanceResult {
       };
     }
 
-    // Priority 8: Brand new (default)
+    // Build a list of all items so we can find the most recently worked-on
+    // section that still has incomplete tasks.
+    const allItems = [
+      ...entries.map((e) => ({
+        updatedAt: e.updatedAt,
+        taskKey: e.taskKey,
+        source: "vault" as const,
+      })),
+      ...wishes.map((w) => ({
+        updatedAt: w.updatedAt,
+        taskKey: w.taskKey,
+        source: "wishes" as const,
+      })),
+    ];
+
+    // Find the section for an item and whether it's incomplete
+    const findIncompleteSection = (item: (typeof allItems)[number]) => {
+      if (item.source === "vault") {
+        const section = vaultSections.find((s) =>
+          s.tasks.some((t) => t.taskKey === item.taskKey),
+        );
+        if (section && section.tasks.some((t) => !isComplete(t.taskKey))) {
+          return { section, source: item.source };
+        }
+      } else {
+        const section = wishesSections.find((s) =>
+          s.tasks.some((t) => t.taskKey === item.taskKey),
+        );
+        if (section && section.tasks.some((t) => !isComplete(t.taskKey))) {
+          return { section, source: item.source };
+        }
+      }
+      return null;
+    };
+
+    // Sort items by most recent first, then find the first one whose section
+    // still has incomplete tasks.
+    const sortedItems = [...allItems].sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+    const recentIncomplete = sortedItems.reduce<
+      ReturnType<typeof findIncompleteSection>
+    >((found, item) => found ?? findIncompleteSection(item), null);
+
+    if (totalTouched > 0) {
+      if (recentIncomplete) {
+        // Priority 7: Continue where you left off (most recent incomplete section)
+        const { section, source } = recentIncomplete;
+        const sectionTitle = section.title;
+        const sectionIcon = section.ionIcon ?? "document-text-outline";
+        const isVault = source === "vault";
+
+        return {
+          type: "continue",
+          title: g.continue.title,
+          body: g.continue.body.replace("{sectionTitle}", sectionTitle),
+          cta: g.continue.cta,
+          ctaRoute: (isVault
+            ? `/(app)/vault/${section.id}`
+            : `/(app)/wishes/${section.id}`) as Href,
+          tintColor: isVault
+            ? colors.featureInformationTint
+            : colors.featureWishesTint,
+          accentColor: isVault
+            ? colors.featureInformation
+            : colors.featureWishes,
+          icon: sectionIcon,
+        };
+      } else {
+        // Priority 8: Making progress (5+ tasks complete, everything touched is done)
+        const firstIncompleteVault = vaultSections.find((s) =>
+          s.tasks.some((t) => !isComplete(t.taskKey)),
+        );
+        const route = firstIncompleteVault
+          ? (`/(app)/vault/${firstIncompleteVault.id}` as Href)
+          : ("/(app)/(tabs)/wishes" as Href);
+
+        return {
+          type: "making_progress",
+          title: g.makingProgress.title,
+          body: g.makingProgress.body,
+          cta: g.makingProgress.cta,
+          ctaRoute: route,
+          tintColor: colors.featureInformationTint,
+          accentColor: colors.featureInformation,
+          icon: "trending-up-outline",
+        };
+      }
+    }
+
+    // Priority 9: Brand new (default)
     return {
       type: "brand_new",
       title: g.brandNew.title,
@@ -282,8 +350,11 @@ export function useHomeGuidance(): HomeGuidanceResult {
     progress,
     entries,
     wishes,
+    trustedContacts,
+    isLockedFamily,
+    isContactGuidanceDismissed,
     translations,
   ]);
 
-  return { guidance, isLoading };
+  return { guidance, isLoading, onDismissContactGuidance: dismissContactGuidance };
 }

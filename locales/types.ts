@@ -78,6 +78,7 @@ export interface Translations {
         carePrefs: string;
         endOfLife: string;
         values: string;
+        addTrustedContact: string;
       };
       /** Adaptive guidance section strings */
       guidance: {
@@ -85,6 +86,12 @@ export interface Translations {
         vaultComplete: { title: string; body: string; cta: string };
         wishesComplete: { title: string; body: string; cta: string };
         makingProgress: { title: string; body: string; cta: string };
+        addTrustedContact: {
+          title: string;
+          body: string;
+          cta: string;
+          secondaryCta: string;
+        };
         continue: { title: string; body: string; cta: string };
         startedVault: { title: string; body: string; cta: string };
         startedWishes: { title: string; body: string; cta: string };
