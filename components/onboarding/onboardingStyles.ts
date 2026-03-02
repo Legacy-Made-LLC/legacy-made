@@ -410,7 +410,7 @@ export const onboardingStyles = StyleSheet.create({
 
 // Intro messages for the animated intro screen
 export const INTRO_MESSAGES = [
-  "If something happened, would the people you love know what to do next?",
+  "If something happened to you, would the people you love know what to do next?",
   "Most of us mean to get organized, but life gets busy.",
   "Legacy Made helps you put the important pieces in one calm place.",
 ];

@@ -263,11 +263,10 @@ export function useSetProgressIfNew() {
         data,
       );
 
-      // Fire-and-forget API call — roll back cache on failure
+      // Fire-and-forget API call — invalidate on completion to sync with server
       try {
         await progress.upsert(planId, taskKey, data);
-      } catch {
-        // Roll back optimistic updates so next visit retries
+      } finally {
         queryClient.invalidateQueries({
           queryKey: queryKeys.progress.all(planId),
         });
