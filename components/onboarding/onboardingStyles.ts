@@ -374,6 +374,13 @@ export const onboardingStyles = StyleSheet.create({
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
   },
+  spamHint: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.md,
+  },
   resendContainer: {
     alignItems: "center",
     paddingTop: spacing.lg,
