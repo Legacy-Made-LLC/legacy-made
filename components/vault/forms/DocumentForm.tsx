@@ -124,8 +124,6 @@ export function DocumentForm({
 
     const title = value.documentType || "Draft";
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title,
@@ -184,7 +182,6 @@ export function DocumentForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {

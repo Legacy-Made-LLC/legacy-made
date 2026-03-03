@@ -104,8 +104,6 @@ export default function TrustedContactDetailScreen() {
   };
 
   const handleResendInvitation = async () => {
-    if (toast.isOffline()) return;
-
     try {
       await resendMutation.mutateAsync(contact.id);
       toast.success({
@@ -151,7 +149,6 @@ export default function TrustedContactDetailScreen() {
         {
           text: "Restore",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await createMutation.mutateAsync({
                 email: contact.email,

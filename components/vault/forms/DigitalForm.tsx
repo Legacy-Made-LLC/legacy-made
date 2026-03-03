@@ -146,8 +146,6 @@ export function DigitalForm({
       ? value.service.trim() || "Draft"
       : value.accountName.trim() || "Draft";
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title,
@@ -207,7 +205,6 @@ export function DigitalForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {

@@ -1,10 +1,9 @@
 /**
  * useToast - Convenience hook for showing toast notifications
  *
- * Wraps react-native-toast-message with typed methods and an offline check.
+ * Wraps react-native-toast-message with typed methods.
  */
 
-import { onlineManager } from "@tanstack/react-query";
 import ToastMessage from "react-native-toast-message";
 
 interface ToastOptions {
@@ -43,29 +42,10 @@ function showInfo({ title, message, duration }: ToastOptions) {
   });
 }
 
-/**
- * Check if the device is offline and show a toast if so.
- * Returns true if offline (caller should abort the operation).
- */
-function showOfflineErrorIfNeeded(): boolean {
-  if (!onlineManager.isOnline()) {
-    ToastMessage.show({
-      type: "error",
-      text1: "You're offline",
-      text2: "Connect to the internet to save your changes.",
-      visibilityTime: 4000,
-    });
-    return true;
-  }
-  return false;
-}
-
 export const toast = {
   success: showSuccess,
   error: showError,
   info: showInfo,
-  /** Returns true if offline (and shows toast). Caller should abort. */
-  isOffline: showOfflineErrorIfNeeded,
 };
 
 /**

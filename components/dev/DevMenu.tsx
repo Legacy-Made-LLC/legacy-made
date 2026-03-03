@@ -2,10 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import {
+  onlineManager,
+  useIsFetching,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   borderRadius,
@@ -40,12 +44,25 @@ export function DevMenu() {
   const isLoading = isFetching > 0;
   const { planId } = usePlan();
 
+  const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
+
+  // Keep local state in sync with onlineManager (e.g. real network events)
+  useEffect(() => {
+    return onlineManager.subscribe((isOnlineNow) => {
+      setIsOnline(isOnlineNow);
+    });
+  }, []);
+
   const insets = useSafeAreaInsets();
 
   // Only render in development
   if (!__DEV__) {
     return null;
   }
+
+  const handleToggleOnline = () => {
+    onlineManager.setOnline(!onlineManager.isOnline());
+  };
 
   const handleSkipOnboarding = () => {
     setHasCompletedInitialOnboarding(true);
@@ -102,6 +119,12 @@ export function DevMenu() {
       label: isLoading ? "Refreshing..." : "Refresh Data",
       icon: "sync-outline",
       onPress: handleRefreshData,
+    },
+    {
+      id: "toggle-online",
+      label: isOnline ? "Simulate Offline" : "Go Back Online",
+      icon: isOnline ? "cloud-offline-outline" : "cloud-done-outline",
+      onPress: handleToggleOnline,
     },
     {
       id: "test-error",
@@ -161,6 +184,20 @@ export function DevMenu() {
                     {hasCompletedInitialOnboarding
                       ? "Complete"
                       : "Not complete"}
+                  </Text>
+                </View>
+
+                <View style={styles.statusRow}>
+                  <Text style={styles.statusLabel}>Network:</Text>
+                  <Text
+                    style={[
+                      styles.statusValue,
+                      isOnline
+                        ? styles.statusComplete
+                        : styles.statusIncomplete,
+                    ]}
+                  >
+                    {isOnline ? "Online" : "Simulated offline"}
                   </Text>
                 </View>
 

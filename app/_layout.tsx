@@ -25,6 +25,7 @@ import "react-native-reanimated";
 import { DevMenu } from "@/components/dev/DevMenu";
 import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
+import { PausedMutationBanner } from "@/components/ui/PausedMutationBanner";
 import { Toast } from "@/components/ui/Toast";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { PlanTransitionProvider } from "@/contexts/PlanTransitionContext";
@@ -144,6 +145,7 @@ export default Sentry.wrap(function RootLayout() {
                           </Stack>
                           <StatusBar style="dark" />
                           <Toast />
+                          <PausedMutationBanner />
                           <DevMenu />
                         </PlanTransitionProvider>
                       </EntitlementsProvider>

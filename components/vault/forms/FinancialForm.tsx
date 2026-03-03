@@ -106,8 +106,6 @@ export function FinancialForm({
       `${value.institution.trim()} ${value.accountType}`.trim() ||
       "Draft";
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title,
@@ -165,7 +163,6 @@ export function FinancialForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
