@@ -45,7 +45,7 @@ export const colors = {
   featureFamilyDark: "#6B4A3F", // Dark blush
 
   // Semantic
-  success: "#4A7C59", // Muted green
+  success: "#4e594c", // Muted green
   warning: "#C17817", // Warm amber
   error: "#A63D40", // Muted red
 

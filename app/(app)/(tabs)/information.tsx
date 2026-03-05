@@ -54,6 +54,10 @@ export default function InformationScreen() {
           />
         ))}
       </View>
+
+      <Text style={styles.pacingNote}>
+        No need to finish everything today.{"\n"}A little at a time goes a long way.
+      </Text>
     </ScrollView>
   );
 }
@@ -87,5 +91,14 @@ const styles = StyleSheet.create({
   },
   categories: {
     gap: spacing.xs,
+  },
+  pacingNote: {
+    fontFamily: typography.fontFamily.regular,
+    fontStyle: "italic",
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.xl,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
 });

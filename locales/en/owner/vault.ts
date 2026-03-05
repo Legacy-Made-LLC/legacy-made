@@ -15,9 +15,9 @@ export const ownerVault: Translations["vault"] = {
         title: "Primary Contacts",
         description: "The people to call first",
         triggerText: "Who should be contacted first?",
-        guidanceHeading: "This is usually the first call your family will make.",
+        guidanceHeading: "The primary point of contact.",
         guidance:
-          "Choose someone who stays calm under pressure and can help coordinate what comes next.",
+          "Choose someone you trust to help coordinate and guide others when it matters most.",
         tips: [
           "Pick someone who lives nearby or can travel quickly if needed.",
           "Make sure they know they're your primary contact — don't surprise them.",
@@ -89,7 +89,8 @@ export const ownerVault: Translations["vault"] = {
         title: "Insurance Policies",
         description: "Coverage your family should know about",
         triggerText: "What policies should you include?",
-        guidanceHeading: "Insurance benefits only help if your family knows they exist.",
+        guidanceHeading:
+          "Insurance benefits only help if your family knows they exist.",
         guidance:
           "Many families miss out on coverage they're entitled to simply because they didn't know about it.",
         tips: [
@@ -110,7 +111,8 @@ export const ownerVault: Translations["vault"] = {
         title: "Legal Documents",
         description: "Wills, trusts, and powers of attorney",
         triggerText: "Which documents matter most?",
-        guidanceHeading: "These documents give your family the authority to act.",
+        guidanceHeading:
+          "These documents give your family the authority to act.",
         guidance:
           "When the time comes, they'll need to find these quickly. Note where each one is stored.",
         tips: [
@@ -119,7 +121,8 @@ export const ownerVault: Translations["vault"] = {
           "Make sure your executor knows where to find these.",
           "Consider giving your attorney a copy as well.",
         ],
-        pacingNote: "These can be emotional to think about. It's okay to take breaks.",
+        pacingNote:
+          "These can be emotional to think about. It's okay to take breaks.",
       },
       other: {
         title: "Other Documents",
@@ -145,7 +148,8 @@ export const ownerVault: Translations["vault"] = {
         title: "Property & Vehicles",
         description: "Real estate, vehicles, and physical assets",
         triggerText: "What property should you include?",
-        guidanceHeading: "Your family won't know what exists unless you tell them.",
+        guidanceHeading:
+          "Your family won't know what exists unless you tell them.",
         guidance:
           "Properties, vehicles, storage units — if there's a key, a title, or a code, note it here.",
         tips: [
@@ -201,7 +205,8 @@ export const ownerVault: Translations["vault"] = {
         title: "Passwords & Access",
         description: "Password managers and access methods",
         triggerText: "How should you share access info?",
-        guidanceHeading: "Don't store passwords here — just explain how to find them.",
+        guidanceHeading:
+          "Don't store passwords here — just explain how to find them.",
         guidance:
           "Note where passwords are stored (password manager, written down, etc.) and how to access them. Don't store actual passwords here — just explain how to find them.",
         tips: [

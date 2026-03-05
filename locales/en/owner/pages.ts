@@ -9,14 +9,22 @@ import type { Translations } from "../../types";
 export const ownerPages: Translations["pages"] = {
   home: {
     pageTitle: "Your Progress",
-    greeting: "One step at a time.",
+    greeting: [
+      "One step at a time.",
+      "There\u2019s no rush. You\u2019re doing something meaningful.",
+      "A little progress today is more than enough.",
+      "You\u2019re taking care of the people you love.",
+      "Every small step makes a difference.",
+      "This can wait until you\u2019re ready. But you\u2019re here.",
+      "What matters is that you\u2019ve started.",
+    ],
     information:
       "Accounts, documents, and key contacts \u2014 all in one place.",
     wishes: "Your healthcare values and end-of-life preferences.",
     legacy: "Letters, videos, and memories for the people you love.",
     family: "Share access and keep loved ones in the loop.",
     pillarActions: {
-      information: "Organize your accounts and contacts",
+      information: "Organize accounts and contacts",
       wishes: "Record your wishes and values",
       legacy: "Leave messages for loved ones",
       family: "Share access with loved ones",
@@ -111,8 +119,7 @@ export const ownerPages: Translations["pages"] = {
       "Your values, preferences, and words\nfor those who matter most",
   },
   legacy: {
-    description:
-      "Letters, videos, and memories\nfor the people you love",
+    description: "Letters, videos, and memories\nfor the people you love",
   },
   family: {
     title: "Family Access",

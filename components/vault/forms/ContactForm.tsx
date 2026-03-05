@@ -10,6 +10,7 @@ import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields"
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePerspective } from "@/contexts/LocaleContext";
 import { toast } from "@/hooks/useToast";
+import { Ionicons } from "@expo/vector-icons";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
@@ -44,7 +45,7 @@ export const CONTACT_METADATA_SCHEMA: MetadataSchema = {
     email: { label: "Email", order: 5 },
     reason: { label: "Why This Person?", order: 6 },
     isPrimary: {
-      label: "Primary Contact",
+      label: "Contact First",
       order: 7,
       valueLabels: { true: "Yes", false: "No" },
     },
@@ -68,6 +69,7 @@ interface ContactFormValues {
   phone: string;
   email: string;
   reason: string;
+  isPrimary: boolean;
 }
 
 export function ContactForm({
@@ -96,6 +98,8 @@ export function ContactForm({
     | ContactMetadata
     | undefined;
 
+  const showPriorityToggle = taskKey === "contacts.primary";
+
   const defaultValues = useMemo<ContactFormValues>(
     () => ({
       firstName: initialMetadata?.firstName ?? "",
@@ -104,6 +108,7 @@ export function ContactForm({
       phone: initialMetadata?.phone ?? "",
       email: initialMetadata?.email ?? "",
       reason: initialMetadata?.reason ?? initialData?.notes ?? "",
+      isPrimary: initialMetadata?.isPrimary ?? false,
     }),
     [initialMetadata, initialData?.notes],
   );
@@ -118,7 +123,7 @@ export function ContactForm({
       phone: value.phone.trim(),
       email: value.email.trim() || null,
       reason: value.reason.trim() || null,
-      isPrimary: taskKey === "contacts.primary",
+      isPrimary: showPriorityToggle ? value.isPrimary : false,
     };
 
     try {
@@ -206,6 +211,46 @@ export function ContactForm({
           phoneRequired={true}
           disabled={readOnly}
         />
+
+        {showPriorityToggle && (
+          <form.Field name="isPrimary">
+            {(field: { state: { value: boolean }; handleChange: (v: boolean) => void }) => {
+              const isSelected = field.state.value;
+              return (
+                <Pressable
+                  style={[
+                    styles.priorityCard,
+                    isSelected && styles.priorityCardSelected,
+                  ]}
+                  onPress={() => !readOnly && field.handleChange(!isSelected)}
+                  disabled={readOnly}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: isSelected }}
+                  accessibilityLabel="Mark as first contact"
+                >
+                  <View style={styles.priorityHeader}>
+                    <View style={styles.priorityLeft}>
+                      <Ionicons
+                        name={isSelected ? "star" : "star-outline"}
+                        size={20}
+                        color={isSelected ? colors.primary : colors.textTertiary}
+                      />
+                      <Text style={[styles.priorityLabel, isSelected && styles.priorityLabelSelected]}>
+                        Contact first
+                      </Text>
+                    </View>
+                    <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                      {isSelected && <View style={styles.radioInner} />}
+                    </View>
+                  </View>
+                  <Text style={styles.priorityDescription}>
+                    This person should be reached out to before others
+                  </Text>
+                </Pressable>
+              );
+            }}
+          </form.Field>
+        )}
 
         {!readOnly && onAttachmentsChange && (
           <FilePicker
@@ -345,5 +390,61 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.body,
     color: colors.error,
+  },
+  priorityCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  priorityCardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.featureInformationTint,
+  },
+  priorityHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs,
+  },
+  priorityLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  priorityLabel: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
+  },
+  priorityLabelSelected: {
+    color: colors.featureInformationDark,
+  },
+  priorityDescription: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
+    paddingLeft: 28,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  radioSelected: {
+    borderColor: colors.primary,
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
   },
 });

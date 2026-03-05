@@ -4,12 +4,12 @@
  * Provides translation loading and type-safe access to translated content.
  */
 
-import type { FamilyTense, Locale, Perspective, Translations } from "./types";
 import {
   familyPastTranslations,
   familyTranslations,
   ownerTranslations,
 } from "./en";
+import type { FamilyTense, Locale, Perspective, Translations } from "./types";
 
 /**
  * Get translations for a specific locale, perspective, and family tense

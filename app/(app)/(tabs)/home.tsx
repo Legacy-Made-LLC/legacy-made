@@ -1,14 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
-import React, { useMemo } from "react";
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useMemo, useRef } from "react";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { TaskProgressData } from "@/api/types";
@@ -16,13 +10,8 @@ import { GuidanceSection } from "@/components/home/GuidanceSection";
 import { QuickActions } from "@/components/home/QuickActions";
 import { PressableCard } from "@/components/ui/Card";
 import { CircularProgress } from "@/components/ui/CircularProgress";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "@/constants/theme";
 import { useLegacySections } from "@/constants/legacy";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
 import { useWishesSections } from "@/constants/wishes";
 import { useTranslations } from "@/contexts/LocaleContext";
@@ -30,7 +19,6 @@ import { usePlan } from "@/data/PlanProvider";
 import { useAllProgressQuery } from "@/hooks/queries";
 import { useHomeGuidance } from "@/hooks/useHomeGuidance";
 import { useQuickActions } from "@/hooks/useQuickActions";
-
 
 /** Build pillar definitions using current section data */
 function usePillars() {
@@ -179,9 +167,7 @@ function PillarCard({
             )}
           </View>
           {!pillar.comingSoon && (
-            <Text style={styles.pillarDescription}>
-              {pillar.description}
-            </Text>
+            <Text style={styles.pillarDescription}>{pillar.description}</Text>
           )}
         </View>
 
@@ -230,8 +216,22 @@ export default function HomeScreen() {
   const quickActions = useQuickActions();
 
   const firstName = user?.firstName;
-  const showQuickActions =
-    quickActions.length > 0 && !isViewingSharedPlan;
+
+  const greetingIdxRef = useRef<number | null>(null);
+  const greeting = useMemo(() => {
+    const g = t.pages.home.greeting;
+    if (Array.isArray(g)) {
+      if (
+        greetingIdxRef.current === null ||
+        greetingIdxRef.current >= g.length
+      ) {
+        greetingIdxRef.current = Math.floor(Math.random() * g.length);
+      }
+      return g[greetingIdxRef.current];
+    }
+    return g;
+  }, [t.pages.home.greeting]);
+  const showQuickActions = quickActions.length > 0 && !isViewingSharedPlan;
 
   // Get completed task count for each pillar
   const getPillarProgress = (pillar: PillarDef) => {
@@ -259,7 +259,7 @@ export default function HomeScreen() {
         <Text style={styles.pageTitle}>
           {firstName ? `Hi, ${firstName}` : t.pages.home.pageTitle}
         </Text>
-        <Text style={styles.greeting}>{t.pages.home.greeting}</Text>
+        <Text style={styles.greeting}>{greeting}</Text>
       </View>
 
       {/* Adaptive Guidance Section */}
@@ -322,6 +322,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     marginBottom: 2,
+    marginTop: spacing.xs,
     textAlign: "center",
   },
   pageTitle: {

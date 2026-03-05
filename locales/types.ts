@@ -58,7 +58,7 @@ export interface Translations {
   pages: {
     home: {
       pageTitle: string;
-      greeting: string;
+      greeting: string | string[];
       information: string;
       wishes: string;
       legacy: string;

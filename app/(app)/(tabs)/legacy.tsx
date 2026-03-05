@@ -78,6 +78,10 @@ export default function LegacyScreen() {
           />
         ))}
       </View>
+
+      <Text style={styles.pacingNote}>
+        No need to finish everything today.{"\n"}The right words will find you.
+      </Text>
     </ScrollView>
   );
 }
@@ -111,5 +115,14 @@ const styles = StyleSheet.create({
   },
   sections: {
     gap: spacing.xs,
+  },
+  pacingNote: {
+    fontFamily: typography.fontFamily.regular,
+    fontStyle: "italic",
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.xl,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
 });

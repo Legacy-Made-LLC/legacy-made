@@ -5,10 +5,10 @@
  */
 
 import { type Entry, isEntryDraft } from "@/api/types";
-import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { SortControl } from "@/components/ui/SortControl";
@@ -28,6 +28,7 @@ interface ContactMetadata {
   relationship?: string;
   phone?: string;
   email?: string;
+  isPrimary?: boolean;
 }
 
 export function ContactList({
@@ -52,11 +53,8 @@ export function ContactList({
     );
   }, []);
 
-  const { sortedEntries, sortMode, setSortMode, searchQuery, setSearchQuery } = useSortedEntries(
-    entries,
-    getDisplayTitle,
-    taskKey,
-  );
+  const { sortedEntries, sortMode, setSortMode, searchQuery, setSearchQuery } =
+    useSortedEntries(entries, getDisplayTitle, taskKey);
 
   const renderGuidanceCard = () => {
     if (!task?.guidance || !task?.triggerText) return null;
@@ -100,9 +98,25 @@ export function ContactList({
       >
         {renderGuidanceCard()}
         <EmptyState
-          title="No contacts added yet"
-          description="Add the first person your loved ones should reach out to."
-          buttonTitle={readOnly ? undefined : "Add Contact"}
+          title={
+            taskKey === "people"
+              ? "No people added yet"
+              : "No contacts added yet"
+          }
+          description={
+            taskKey === "people"
+              ? "Who else plays an important role in your life?"
+              : taskKey === "contacts.backup"
+                ? "Additional people your loved ones should reach out to."
+                : "Add the first person your loved ones should reach out to."
+          }
+          buttonTitle={
+            readOnly
+              ? undefined
+              : taskKey === "people"
+                ? "Add someone"
+                : "Add Contact"
+          }
           onButtonPress={readOnly ? undefined : onAddPress}
           secondaryActionLabel={emptySecondaryLabel}
           onSecondaryAction={onEmptySecondaryAction}
@@ -125,7 +139,12 @@ export function ContactList({
 
       {entries.length >= 2 && (
         <View style={listStyles.sortRow}>
-          <SortControl sortMode={sortMode} onSortModeChange={setSortMode} searchQuery={searchQuery} onSearchQueryChange={setSearchQuery} />
+          <SortControl
+            sortMode={sortMode}
+            onSortModeChange={setSortMode}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+          />
         </View>
       )}
 
@@ -141,19 +160,50 @@ export function ContactList({
               style={[
                 listStyles.card,
                 {
-                  marginTop:
-                    index === 0 && entries.length < 2 ? spacing.sm : 0,
+                  marginTop: index === 0 && entries.length < 2 ? spacing.sm : 0,
                 },
               ]}
             >
               <View style={listStyles.cardContent}>
                 <View style={listStyles.cardText}>
-                  <Text style={listStyles.cardTitle}>{name}</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={listStyles.cardTitle}>{name}</Text>
+                    {metadata.isPrimary && (
+                      <View
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          backgroundColor: colors.featureInformationTint,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          marginBottom: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="star"
+                          size={11}
+                          color={colors.featureInformation}
+                        />
+                      </View>
+                    )}
+                  </View>
                   {subtitle && (
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
-                {isEntryDraft(entry) && <EntryDraftBadge color={colors.featureInformation} backgroundColor={colors.featureInformationTint} />}
+                {isEntryDraft(entry) && (
+                  <EntryDraftBadge
+                    color={colors.featureInformation}
+                    backgroundColor={colors.featureInformationTint}
+                  />
+                )}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>
@@ -164,7 +214,9 @@ export function ContactList({
       {!readOnly && (
         <AnimatedListItem index={sortedEntries.length}>
           <PressableCard onPress={onAddPress} style={listStyles.addCard}>
-            <Text style={listStyles.addText}>+ Add Contact</Text>
+            <Text style={listStyles.addText}>
+              {taskKey === "people" ? "+ Add someone" : "+ Add Contact"}
+            </Text>
           </PressableCard>
         </AnimatedListItem>
       )}

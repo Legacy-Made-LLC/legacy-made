@@ -78,6 +78,10 @@ export default function WishesScreen() {
           />
         ))}
       </View>
+
+      <Text style={styles.pacingNote}>
+        No need to finish everything today.{"\n"}Your thoughts will come when they{"\u2019"}re ready.
+      </Text>
     </ScrollView>
   );
 }
@@ -111,5 +115,14 @@ const styles = StyleSheet.create({
   },
   sections: {
     gap: spacing.xs,
+  },
+  pacingNote: {
+    fontFamily: typography.fontFamily.regular,
+    fontStyle: "italic",
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.xl,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
 });

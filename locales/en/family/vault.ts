@@ -15,9 +15,9 @@ export const familyVault: Translations["vault"] = {
         title: "Primary Contacts",
         description: "The people to call first",
         triggerText: "Who should be contacted first?",
-        guidanceHeading: "These are the first calls to make.",
+        guidanceHeading: "The primary point of contact.",
         guidance:
-          "These are the people they've chosen to call first in an emergency — people who can help coordinate what comes next.",
+          "These are the people they trust to help coordinate and guide others when it matters most.",
         tips: [
           "They picked someone who lives nearby or can travel quickly if needed.",
           "These contacts know they're the primary people to call.",
@@ -201,7 +201,8 @@ export const familyVault: Translations["vault"] = {
         title: "Passwords & Access",
         description: "Password managers and access methods",
         triggerText: "How can access be found?",
-        guidanceHeading: "Passwords aren't stored here — but access methods are explained.",
+        guidanceHeading:
+          "Passwords aren't stored here — but access methods are explained.",
         guidance:
           "They've noted where passwords are stored (password manager, written down, etc.) and how to access them. Actual passwords aren't stored here — just instructions on how to find them.",
         tips: [
