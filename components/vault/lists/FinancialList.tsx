@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { SortControl } from "@/components/ui/SortControl";
-import { spacing } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
 import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
 import { useSortedEntries } from "@/hooks/useSortedEntries";
 import { Ionicons } from "@expo/vector-icons";
@@ -48,7 +48,7 @@ export function FinancialList({
     );
   }, []);
 
-  const { sortedEntries, sortMode, setSortMode } = useSortedEntries(
+  const { sortedEntries, sortMode, setSortMode, searchQuery, setSearchQuery } = useSortedEntries(
     entries,
     getDisplayTitle,
     taskKey,
@@ -121,7 +121,7 @@ export function FinancialList({
 
       {entries.length >= 2 && (
         <View style={listStyles.sortRow}>
-          <SortControl sortMode={sortMode} onSortModeChange={setSortMode} />
+          <SortControl sortMode={sortMode} onSortModeChange={setSortMode} searchQuery={searchQuery} onSearchQueryChange={setSearchQuery} />
         </View>
       )}
 
@@ -165,7 +165,7 @@ export function FinancialList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
-                {isEntryDraft(entry) && <EntryDraftBadge />}
+                {isEntryDraft(entry) && <EntryDraftBadge color={colors.featureInformation} backgroundColor={colors.featureInformationTint} />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>

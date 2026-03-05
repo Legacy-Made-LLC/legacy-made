@@ -1,5 +1,5 @@
 /**
- * useSortedEntries - Sorts entries alphabetically or by most recent
+ * useSortedEntries - Sorts and optionally filters entries
  * Persists the user's sort preference per list via AsyncStorage.
  */
 
@@ -17,6 +17,7 @@ export function useSortedEntries<T = Record<string, unknown>>(
   storageKey?: string,
 ) {
   const [sortMode, setSortMode] = useState<SortMode>("alphabetical");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Load persisted sort preference on mount
   useEffect(() => {
@@ -29,7 +30,16 @@ export function useSortedEntries<T = Record<string, unknown>>(
   }, [storageKey]);
 
   const sortedEntries = useMemo(() => {
-    const copy = [...entries];
+    let copy = [...entries];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      copy = copy.filter((entry) =>
+        getDisplayTitle(entry).toLowerCase().includes(query),
+      );
+    }
+
     if (sortMode === "alphabetical") {
       copy.sort((a, b) => {
         const titleA = getDisplayTitle(a).toLowerCase();
@@ -43,7 +53,7 @@ export function useSortedEntries<T = Record<string, unknown>>(
       );
     }
     return copy;
-  }, [entries, sortMode, getDisplayTitle]);
+  }, [entries, sortMode, searchQuery, getDisplayTitle]);
 
   const handleSetSortMode = useCallback(
     (mode: SortMode) => {
@@ -55,5 +65,11 @@ export function useSortedEntries<T = Record<string, unknown>>(
     [storageKey],
   );
 
-  return { sortedEntries, sortMode, setSortMode: handleSetSortMode };
+  return {
+    sortedEntries,
+    sortMode,
+    setSortMode: handleSetSortMode,
+    searchQuery,
+    setSearchQuery,
+  };
 }
