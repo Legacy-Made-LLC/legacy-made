@@ -212,7 +212,7 @@ export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
     // If there's a matched thumbnail from a separate file, use it
     const thumbnailUrl = thumbnailsByParent.get(file.id);
     if (thumbnailUrl) {
-      attachment.thumbnailUri = thumbnailUrl;
+      return { ...attachment, thumbnailUri: thumbnailUrl };
     }
     return attachment;
   });

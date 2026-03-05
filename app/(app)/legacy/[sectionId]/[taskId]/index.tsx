@@ -432,8 +432,7 @@ export default function LegacyTaskScreen() {
             const saveData = getSaveData();
             autoSave.triggerSave(saveData, true);
             try {
-              await autoSave.flushSave();
-              messageId = autoSave.recordId;
+              messageId = await autoSave.flushSave();
             } catch {
               toast.error({
                 message: "Could not save before uploading files. Please try again.",

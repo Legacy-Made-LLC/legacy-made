@@ -142,6 +142,7 @@ export function useCreateMessage<T = Record<string, unknown>>(
         title: data.title ?? null,
         notes: data.notes ?? null,
         sortOrder: (previousMessages?.length ?? 0) + 1,
+        completionStatus: data.completionStatus,
         metadata: data.metadata as T,
         metadataSchema: data.metadataSchema,
         createdAt: new Date().toISOString(),

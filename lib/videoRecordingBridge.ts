@@ -19,6 +19,7 @@ import * as VideoThumbnails from "expo-video-thumbnails";
 type VideoRecordedCallback = (attachment: FileAttachment) => void;
 
 let _callback: VideoRecordedCallback | null = null;
+let _isEmitting = false;
 
 /**
  * Set the callback that will receive the recorded video.
@@ -32,49 +33,57 @@ export function setVideoRecordedCallback(cb: VideoRecordedCallback) {
  * Emit the recorded video URI. Creates a FileAttachment and
  * calls the registered callback.
  * Called by the recording screen when the user taps "Use Video".
+ *
+ * Guarded against re-entrancy — concurrent calls are ignored while
+ * a previous emission is still in progress (async thumbnail generation).
  */
 export async function emitVideoRecorded(videoUri: string) {
-  if (!_callback) return;
+  if (!_callback || _isEmitting) return;
 
   const cb = _callback;
   _callback = null;
+  _isEmitting = true;
 
-  // Get file size
-  let fileSize = 0;
   try {
-    const info = new FileSystem.File(videoUri).info();
-    if (info.exists && "size" in info) {
-      fileSize = info.size ?? 0;
-    } else {
-      throw new Error("File does not exist");
+    // Get file size
+    let fileSize = 0;
+    try {
+      const info = new FileSystem.File(videoUri).info();
+      if (info.exists && "size" in info) {
+        fileSize = info.size ?? 0;
+      } else {
+        throw new Error("File does not exist");
+      }
+    } catch (error) {
+      logger.warn("Failed to get video file size", { error: String(error) });
     }
-  } catch (error) {
-    logger.warn("Failed to get video file size", { error: String(error) });
+
+    // Generate thumbnail
+    let thumbnailUri: string | undefined;
+    try {
+      const result = await VideoThumbnails.getThumbnailAsync(videoUri, {
+        time: 1000,
+        quality: 0.7,
+      });
+      thumbnailUri = result.uri;
+    } catch (error) {
+      logger.warn("Failed to generate video thumbnail", { error: String(error) });
+    }
+
+    const attachment: FileAttachment = {
+      uri: videoUri,
+      fileName: `video_${Date.now()}.mp4`,
+      fileSize,
+      mimeType: "video/mp4",
+      type: "video",
+      thumbnailUri,
+      uploadStatus: "pending",
+    };
+
+    cb(attachment);
+  } finally {
+    _isEmitting = false;
   }
-
-  // Generate thumbnail
-  let thumbnailUri: string | undefined;
-  try {
-    const result = await VideoThumbnails.getThumbnailAsync(videoUri, {
-      time: 1000,
-      quality: 0.7,
-    });
-    thumbnailUri = result.uri;
-  } catch (error) {
-    logger.warn("Failed to generate video thumbnail", { error: String(error) });
-  }
-
-  const attachment: FileAttachment = {
-    uri: videoUri,
-    fileName: `video_${Date.now()}.mp4`,
-    fileSize,
-    mimeType: "video/mp4",
-    type: "video",
-    thumbnailUri,
-    uploadStatus: "pending",
-  };
-
-  cb(attachment);
 }
 
 /**

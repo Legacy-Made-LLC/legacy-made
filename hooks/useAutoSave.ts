@@ -36,8 +36,8 @@ export interface UseAutoSaveReturn<T> {
   errorMessage?: string;
   /** Trigger a save with the given data (respects isDirty) */
   triggerSave: (data: T, isDirty: boolean) => void;
-  /** Immediately flush any pending save (for navigation protection) */
-  flushSave: () => Promise<void>;
+  /** Immediately flush any pending save. Returns the current recordId after flush. */
+  flushSave: () => Promise<string | undefined>;
   /** Current record ID (undefined until first save for new records) */
   recordId: string | undefined;
   /** Dismiss error state, returning to idle */
@@ -191,7 +191,7 @@ export function useAutoSave<T>({
   /**
    * Immediately flush any pending save (for navigation protection)
    */
-  const flushSave = useCallback(async (): Promise<void> => {
+  const flushSave = useCallback(async (): Promise<string | undefined> => {
     // Clear debounce timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -208,6 +208,9 @@ export function useAutoSave<T>({
     while (isSavingRef.current) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
+
+    // Return the current recordId from the ref (avoids stale React state)
+    return recordIdRef.current;
   }, [performSave]);
 
   /**

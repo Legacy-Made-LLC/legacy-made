@@ -444,8 +444,7 @@ export default function WishesTaskScreen() {
             const saveData = getSaveData();
             autoSave.triggerSave(saveData, true);
             try {
-              await autoSave.flushSave();
-              wishId = autoSave.recordId;
+              wishId = await autoSave.flushSave();
             } catch {
               toast.error({
                 message: "Could not save your wish before uploading files. Please try again.",
