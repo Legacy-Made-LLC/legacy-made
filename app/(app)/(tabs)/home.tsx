@@ -22,6 +22,7 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
+import { useLegacySections } from "@/constants/legacy";
 import { useVaultSections } from "@/constants/vault";
 import { useWishesSections } from "@/constants/wishes";
 import { useTranslations } from "@/contexts/LocaleContext";
@@ -35,6 +36,7 @@ import { useQuickActions } from "@/hooks/useQuickActions";
 function usePillars() {
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
+  const legacySections = useLegacySections();
   const translations = useTranslations();
 
   return useMemo(() => {
@@ -42,6 +44,9 @@ function usePillars() {
       s.tasks.map((t) => t.taskKey),
     );
     const wishesTaskKeys = wishesSections.flatMap((s) =>
+      s.tasks.map((t) => t.taskKey),
+    );
+    const legacyTaskKeys = legacySections.flatMap((s) =>
       s.tasks.map((t) => t.taskKey),
     );
 
@@ -75,14 +80,14 @@ function usePillars() {
       {
         id: "legacy",
         title: "Legacy",
-        description: t.pillarActions.comingSoon,
+        description: t.pillarActions.legacy,
         icon: "videocam-outline" as const,
-        totalItems: 0,
-        taskKeys: [] as string[],
+        totalItems: legacyTaskKeys.length,
+        taskKeys: legacyTaskKeys,
         route: "/(app)/(tabs)/legacy" as Href,
         color: colors.featureLegacy,
         tint: colors.featureLegacyTint,
-        comingSoon: true,
+        comingSoon: false,
       },
       {
         id: "family",
@@ -97,7 +102,7 @@ function usePillars() {
         comingSoon: false,
       },
     ];
-  }, [vaultSections, wishesSections, translations]);
+  }, [vaultSections, wishesSections, legacySections, translations]);
 }
 
 // Circular progress configuration

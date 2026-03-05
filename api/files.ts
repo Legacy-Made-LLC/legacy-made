@@ -17,12 +17,13 @@ import type {
 } from "./types";
 
 /**
- * Target for file uploads - either an entry or a wish
- * At least one ID must be provided
+ * Target for file uploads - an entry, wish, or message
+ * Exactly one ID must be provided
  */
 export type FileUploadTarget =
-  | { entryId: string; wishId?: never }
-  | { wishId: string; entryId?: never };
+  | { entryId: string; wishId?: never; messageId?: never }
+  | { wishId: string; entryId?: never; messageId?: never }
+  | { messageId: string; entryId?: never; wishId?: never };
 
 /**
  * Get the base path for file operations based on target type
@@ -30,6 +31,9 @@ export type FileUploadTarget =
 function getUploadBasePath(target: FileUploadTarget): string {
   if (target.entryId) {
     return `/entries/${target.entryId}/files`;
+  }
+  if (target.messageId) {
+    return `/messages/${target.messageId}/files`;
   }
   return `/wishes/${target.wishId}/files`;
 }

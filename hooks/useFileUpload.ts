@@ -13,6 +13,7 @@ import {
   isStorageQuotaError,
   parseStorageQuotaError,
 } from "@/lib/entitlementHelpers";
+import { logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/queryKeys";
 import { useUser } from "@clerk/clerk-expo";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,19 +43,21 @@ interface UseFileUploadOptions {
   onFileUploaded?: (
     file: FileAttachment,
     fileId: string,
-    downloadUrl: string | null
+    downloadUrl: string | null,
   ) => void;
   /** Callback when a file upload fails */
   onFileError?: (file: FileAttachment, error: string) => void;
   /** Callback when all uploads complete */
   onAllComplete?: (results: UploadResult[]) => void;
+  /** When true, upload videos via the standard R2 path instead of Mux */
+  useStandardUploadForVideo?: boolean;
 }
 
 interface UseFileUploadReturn {
   /** Upload all pending files to an entry or wish */
   uploadFiles: (
     target: FileUploadTarget,
-    files: FileAttachment[]
+    files: FileAttachment[],
   ) => Promise<UploadResult[]>;
   /** Current upload state for each file (keyed by uri) */
   uploadStates: Record<string, FileUploadState>;
@@ -85,7 +88,7 @@ function uploadToPresignedUrl(
   blob: Blob,
   mimeType: string,
   onProgress: (progress: number) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -126,13 +129,13 @@ function uploadToPresignedUrl(
  * Get the ID from a target for logging/tracking purposes
  */
 function getTargetId(target: FileUploadTarget): string {
-  return target.entryId ?? target.wishId ?? "";
+  return target.entryId ?? target.wishId ?? target.messageId ?? "";
 }
 
 export function useFileUpload(
-  options: UseFileUploadOptions = {}
+  options: UseFileUploadOptions = {},
 ): UseFileUploadReturn {
-  const { onFileUploaded, onFileError, onAllComplete } = options;
+  const { onFileUploaded, onFileError, onAllComplete, useStandardUploadForVideo } = options;
   const { files: filesService } = useApi();
   const queryClient = useQueryClient();
   const { user } = useUser();
@@ -167,7 +170,7 @@ export function useFileUpload(
         },
       }));
     },
-    []
+    [],
   );
 
   /**
@@ -177,7 +180,7 @@ export function useFileUpload(
     async (
       target: FileUploadTarget,
       file: FileAttachment,
-      signal: AbortSignal
+      signal: AbortSignal,
     ): Promise<UploadResult> => {
       const uri = file.uri;
 
@@ -205,7 +208,7 @@ export function useFileUpload(
           blob,
           file.mimeType,
           (progress) => updateFileState(uri, { progress }),
-          signal
+          signal,
         );
 
         if (signal.aborted) {
@@ -213,7 +216,55 @@ export function useFileUpload(
         }
 
         // 3. Complete upload - response includes the download URL
-        const completedFile = await filesService.completeUpload(initResponse.fileId);
+        const completedFile = await filesService.completeUpload(
+          initResponse.fileId,
+        );
+
+        // 4. Upload thumbnail as a separate file for videos (non-fatal)
+        if (file.type === "video") {
+          if (file.thumbnailUri && file.thumbnailUri.startsWith("file://")) {
+            try {
+              logger.info("Uploading video thumbnail", {
+                videoFileId: initResponse.fileId,
+                thumbnailUri: file.thumbnailUri,
+              });
+              const thumbBlob = await readFileAsBlob(file.thumbnailUri);
+              const thumbInit = await filesService.initUpload(target, {
+                filename: `thumb_${file.fileName.replace(/\.\w+$/, ".jpg")}`,
+                mimeType: "image/jpeg",
+                sizeBytes: thumbBlob.size,
+                role: "thumbnail",
+                parentFileId: initResponse.fileId,
+              });
+              await uploadToPresignedUrl(
+                thumbInit.uploadUrl,
+                thumbBlob,
+                "image/jpeg",
+                () => {},
+                signal,
+              );
+              await filesService.completeUpload(thumbInit.fileId);
+              logger.info("Video thumbnail uploaded successfully", {
+                videoFileId: initResponse.fileId,
+                thumbnailFileId: thumbInit.fileId,
+              });
+            } catch (thumbError) {
+              logger.warn("Thumbnail upload failed (non-fatal)", {
+                videoFileId: initResponse.fileId,
+                "error.message":
+                  thumbError instanceof Error
+                    ? thumbError.message
+                    : String(thumbError),
+              });
+            }
+          } else {
+            logger.info("Skipping thumbnail upload for video", {
+              videoFileId: initResponse.fileId,
+              hasThumbnailUri: !!file.thumbnailUri,
+              thumbnailUri: file.thumbnailUri ?? "undefined",
+            });
+          }
+        }
 
         updateFileState(uri, { status: "complete", progress: 1 });
         onFileUploaded?.(file, initResponse.fileId, completedFile.downloadUrl);
@@ -244,7 +295,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError]
+    [filesService, updateFileState, onFileUploaded, onFileError],
   );
 
   /**
@@ -255,7 +306,7 @@ export function useFileUpload(
     async (
       target: FileUploadTarget,
       file: FileAttachment,
-      signal: AbortSignal
+      signal: AbortSignal,
     ): Promise<UploadResult> => {
       const uri = file.uri;
       const targetId = getTargetId(target);
@@ -263,7 +314,7 @@ export function useFileUpload(
       try {
         // 1. Initialize video upload - get Mux direct upload URL
         // Include metadata for easier tracking in Mux dashboard
-        const initResponse = await filesService.initVideoUpload(target, {
+        const videoUploadPayload = {
           filename: file.fileName,
           mimeType: file.mimeType,
           sizeBytes: file.fileSize,
@@ -273,9 +324,18 @@ export function useFileUpload(
             title: file.fileName,
           },
           passthrough: JSON.stringify(
-            target.entryId ? { entryId: target.entryId } : { wishId: target.wishId }
+            target.entryId
+              ? { entryId: target.entryId }
+              : target.messageId
+                ? { messageId: target.messageId }
+                : { wishId: target.wishId },
           ),
-        });
+        };
+
+        const initResponse = await filesService.initVideoUpload(
+          target,
+          videoUploadPayload,
+        );
 
         if (signal.aborted) {
           return { uri, success: false, error: "Cancelled" };
@@ -293,7 +353,7 @@ export function useFileUpload(
           blob,
           file.mimeType,
           (progress) => updateFileState(uri, { progress }),
-          signal
+          signal,
         );
 
         // No complete call needed for Mux - webhook handles it
@@ -328,7 +388,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError, user?.id]
+    [filesService, updateFileState, onFileUploaded, onFileError, user?.id],
   );
 
   /**
@@ -337,14 +397,14 @@ export function useFileUpload(
   const uploadFiles = useCallback(
     async (
       target: FileUploadTarget,
-      files: FileAttachment[]
+      files: FileAttachment[],
     ): Promise<UploadResult[]> => {
       // Clear any previous storage quota error
       setHasStorageQuotaError(false);
 
       // Filter to only pending files (not already remote)
       const pendingFiles = files.filter(
-        (f) => !f.isRemote && f.uploadStatus !== "complete"
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
       );
 
       if (pendingFiles.length === 0) {
@@ -370,7 +430,7 @@ export function useFileUpload(
         }
 
         const isVideo = file.mimeType.startsWith("video/");
-        const result = isVideo
+        const result = isVideo && !useStandardUploadForVideo
           ? await uploadVideoFile(target, file, signal)
           : await uploadStandardFile(target, file, signal);
 
@@ -394,6 +454,22 @@ export function useFileUpload(
             return (
               key[0] === "entries" &&
               (key.includes(target.entryId) || key.includes("detail"))
+            );
+          },
+        });
+      } else if (target.messageId) {
+        // Invalidate message-related queries
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.files.byMessage(target.messageId),
+        });
+
+        // Also invalidate message queries since files are included in message responses
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey;
+            return (
+              key[0] === "messages" &&
+              (key.includes(target.messageId) || key.includes("detail"))
             );
           },
         });
@@ -428,10 +504,11 @@ export function useFileUpload(
     [
       uploadStandardFile,
       uploadVideoFile,
+      useStandardUploadForVideo,
       updateFileState,
       queryClient,
       onAllComplete,
-    ]
+    ],
   );
 
   /**

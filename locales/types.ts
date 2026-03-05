@@ -50,6 +50,11 @@ export interface Translations {
     endOfLife: SectionText;
     values: SectionText;
   };
+  legacy: {
+    people: SectionText;
+    story: SectionText;
+    future: SectionText;
+  };
   pages: {
     home: {
       pageTitle: string;
@@ -62,6 +67,7 @@ export interface Translations {
       pillarActions: {
         information: string;
         wishes: string;
+        legacy: string;
         family: string;
         comingSoon: string;
       };
@@ -78,16 +84,21 @@ export interface Translations {
         carePrefs: string;
         endOfLife: string;
         values: string;
+        legacyPeople: string;
+        legacyStory: string;
+        legacyFuture: string;
       };
       /** Adaptive guidance section strings */
       guidance: {
         allComplete: { title: string; body: string; cta: string };
         vaultComplete: { title: string; body: string; cta: string };
         wishesComplete: { title: string; body: string; cta: string };
+        legacyComplete: { title: string; body: string; cta: string };
         makingProgress: { title: string; body: string; cta: string };
         continue: { title: string; body: string; cta: string };
         startedVault: { title: string; body: string; cta: string };
         startedWishes: { title: string; body: string; cta: string };
+        startedLegacy: { title: string; body: string; cta: string };
         brandNew: { title: string; body: string; cta: string };
         sharedPlan: { title: string; body: string };
       };
@@ -96,6 +107,9 @@ export interface Translations {
       description: string;
     };
     wishes: {
+      description: string;
+    };
+    legacy: {
       description: string;
     };
     family: {

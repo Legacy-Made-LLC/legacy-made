@@ -222,6 +222,32 @@ export default function AppLayout() {
             }}
           />
           <Stack.Screen
+            name="legacy/[sectionId]/index"
+            options={{
+              title: "",
+            }}
+          />
+          <Stack.Screen
+            name="legacy/[sectionId]/[taskId]/index"
+            options={{
+              title: "",
+            }}
+          />
+          <Stack.Screen
+            name="legacy/[sectionId]/[taskId]/[entryId]"
+            options={{
+              title: "",
+            }}
+          />
+          <Stack.Screen
+            name="legacy/[sectionId]/[taskId]/record"
+            options={{
+              presentation: "fullScreenModal",
+              headerShown: false,
+              animation: "slide_from_bottom",
+            }}
+          />
+          <Stack.Screen
             name="family/contacts/new"
             options={{
               title: "Add Trusted Contact",

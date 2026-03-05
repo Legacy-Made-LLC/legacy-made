@@ -17,6 +17,8 @@ interface EmptyStateProps {
   icon?: keyof typeof Ionicons.glyphMap;
   /** Override the icon color */
   iconColor?: string;
+  /** Override the button background color (defaults to colors.primary) */
+  buttonColor?: string;
   /** Optional secondary text link displayed below the primary button */
   secondaryActionLabel?: string;
   /** Callback when secondary action is tapped */
@@ -31,6 +33,7 @@ export function EmptyState({
   onButtonPress,
   icon = "add-circle-outline",
   iconColor = colors.textTertiary,
+  buttonColor,
   secondaryActionLabel,
   onSecondaryAction,
   style,
@@ -52,7 +55,7 @@ export function EmptyState({
         <Button
           title={buttonTitle}
           onPress={onButtonPress}
-          style={styles.button}
+          style={[styles.button, buttonColor ? { backgroundColor: buttonColor } : undefined]}
         />
       )}
       {hasSecondary && (

@@ -18,6 +18,7 @@ export const familyPages: Translations["pages"] = {
     pillarActions: {
       information: "Their accounts and contacts",
       wishes: "Their wishes and values",
+      legacy: "Their messages and memories",
       family: "Shared access and trusted contacts",
       comingSoon: "Coming soon",
     },
@@ -33,6 +34,9 @@ export const familyPages: Translations["pages"] = {
       carePrefs: "View care preferences",
       endOfLife: "View end-of-life wishes",
       values: "View their values",
+      legacyPeople: "View their messages",
+      legacyStory: "View their story",
+      legacyFuture: "View future moments",
     },
     guidance: {
       allComplete: {
@@ -49,6 +53,11 @@ export const familyPages: Translations["pages"] = {
         title: "Their wishes are recorded",
         body: "Their accounts and contacts are also available.",
         cta: "View Information",
+      },
+      legacyComplete: {
+        title: "Their messages are ready",
+        body: "They left messages and memories for loved ones.",
+        cta: "View their messages",
       },
       makingProgress: {
         title: "Good progress so far",
@@ -70,6 +79,11 @@ export const familyPages: Translations["pages"] = {
         body: "They\u2019ve started recording their wishes.",
         cta: "View Information",
       },
+      startedLegacy: {
+        title: "Messages are in progress",
+        body: "They\u2019ve started leaving messages for loved ones.",
+        cta: "View Messages",
+      },
       brandNew: {
         title: "Just getting started",
         body: "They haven\u2019t added any information yet. Check back later.",
@@ -88,6 +102,10 @@ export const familyPages: Translations["pages"] = {
   wishes: {
     description:
       "Their values, preferences, and words\nfor those who matter most",
+  },
+  legacy: {
+    description:
+      "Letters, videos, and memories\nfor the people they love",
   },
   family: {
     title: "Family Access",

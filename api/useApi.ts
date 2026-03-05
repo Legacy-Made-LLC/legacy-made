@@ -9,6 +9,7 @@ import { createApiClient } from './client';
 import { createEntriesService } from './entries';
 import { createEntitlementsService } from './entitlements';
 import { createFilesService } from './files';
+import { createMessagesService } from './messages';
 import { createPlansService } from './plans';
 import { createProgressService } from './progress';
 import { createSharedPlansService } from './sharedPlans';
@@ -66,6 +67,10 @@ export function useApi() {
     return createWishesService(client);
   }, [client]);
 
+  const messages = useMemo(() => {
+    return createMessagesService(client);
+  }, [client]);
+
   const progress = useMemo(() => {
     return createProgressService(client);
   }, [client]);
@@ -95,6 +100,8 @@ export function useApi() {
     entitlements,
     /** Wishes service with CRUD operations (Wishes pillar) */
     wishes,
+    /** Messages service with CRUD operations (Legacy Messages pillar) */
+    messages,
     /** Progress service for task completion tracking */
     progress,
     /** Trusted contacts service for family access management */

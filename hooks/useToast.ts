@@ -30,7 +30,7 @@ function showError({ title, message, duration }: ToastOptions) {
     type: "error",
     text1: title ?? "Something went wrong",
     text2: message,
-    visibilityTime: duration ?? 4000,
+    visibilityTime: duration ?? 8000,
   });
 }
 
