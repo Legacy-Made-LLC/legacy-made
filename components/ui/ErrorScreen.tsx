@@ -27,9 +27,11 @@ interface ErrorScreenProps {
   isOffline?: boolean;
   /** Callback to retry the failed operation */
   onRetry: () => void | Promise<void>;
+  /** Optional error detail shown in dev builds */
+  errorDetail?: string;
 }
 
-export function ErrorScreen({ isOffline = false, onRetry }: ErrorScreenProps) {
+export function ErrorScreen({ isOffline = false, onRetry, errorDetail }: ErrorScreenProps) {
   const [isRetrying, setIsRetrying] = useState(false);
 
   const handleRetry = useCallback(async () => {
@@ -75,6 +77,10 @@ export function ErrorScreen({ isOffline = false, onRetry }: ErrorScreenProps) {
             <Text style={styles.retryButtonText}>Try Again</Text>
           )}
         </Pressable>
+
+        {errorDetail ? (
+          <Text style={styles.errorDetail}>{errorDetail}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -136,5 +142,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.body,
     color: colors.surface,
+  },
+  errorDetail: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
 });

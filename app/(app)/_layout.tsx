@@ -12,6 +12,7 @@ import Loader from "@/components/ui/Loader";
 import { Menu } from "@/components/ui/Menu";
 import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { colors, spacing, typography } from "@/constants/theme";
+import { logger } from "@/lib/logger";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
@@ -129,11 +130,12 @@ export default function AppLayout() {
         .mutateAsync({
           title: fullName,
           notes: undefined,
+          completionStatus: "draft",
           metadata: {
             firstName: pendingContact.firstName,
             lastName: pendingContact.lastName,
             relationship: pendingContact.relationship,
-            phone: pendingContact.phone,
+            phone: pendingContact.phone || "",
             email: pendingContact.email,
             isPrimary: true,
           },
@@ -155,12 +157,14 @@ export default function AppLayout() {
     return <Loader branded />;
   }
 
-  // Show error screen if plan failed to load and we have no data
+  // Log and show error screen if plan failed to load and we have no data
   if (planError && !planId) {
+    logger.error("Plan failed to load", planError);
     return (
       <ErrorScreen
         isOffline={!onlineManager.isOnline()}
         onRetry={refetchPlan}
+        errorDetail={__DEV__ ? planError.message : undefined}
       />
     );
   }

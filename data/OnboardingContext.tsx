@@ -14,8 +14,8 @@ const ONBOARDING_COMPLETE_KEY = "legacy_made_onboarding_complete";
 export interface PendingContact {
   firstName: string;
   lastName: string;
-  phone: string;
   relationship: string;
+  phone?: string;
   email?: string;
 }
 

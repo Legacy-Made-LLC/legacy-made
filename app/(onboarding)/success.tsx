@@ -1,22 +1,26 @@
 import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
-import { useOnboardingContext } from "@/data/OnboardingContext";
+import { colors, spacing, typography } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, Text, View } from "react-native";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { contactFirstName, contactLastName } = useOnboardingContext();
-  const contactName = `${contactFirstName} ${contactLastName}`.trim();
 
   const checkmarkScale = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animate checkmark appearing
     Animated.sequence([
       Animated.spring(checkmarkScale, {
         toValue: 1,
@@ -39,7 +43,7 @@ export default function SuccessScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={2} />
+      <OnboardingHeader showBackButton currentStep={4} />
 
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>
@@ -49,20 +53,24 @@ export default function SuccessScreen() {
               { transform: [{ scale: checkmarkScale }] },
             ]}
           >
-            <Text style={styles.successCheckmarkText}>✓</Text>
+            <Text style={styles.successCheckmarkText}>&#x2713;</Text>
           </Animated.View>
 
           <Animated.View style={{ opacity: contentOpacity }}>
             <Text style={styles.headingSerif}>
               You&apos;ve taken the first step.
             </Text>
-            <Text style={styles.bodyText}>
-              {contactName} is now saved as your primary contact.
-            </Text>
-            <Text style={styles.bodyTextSecondary}>
-              Next, we&apos;ll create your account so your information stays
-              safe and accessible.
-            </Text>
+
+            {/* Quote block */}
+            <View style={localStyles.quoteBlock}>
+              <View style={localStyles.quoteBorder} />
+              <View style={localStyles.quoteContent}>
+                <Text style={localStyles.quoteText}>
+                  The secret of getting ahead is getting started.
+                </Text>
+                <Text style={localStyles.quoteAttribution}>- Mark Twain</Text>
+              </View>
+            </View>
           </Animated.View>
         </View>
 
@@ -83,3 +91,33 @@ export default function SuccessScreen() {
     </View>
   );
 }
+
+const localStyles = StyleSheet.create({
+  quoteBlock: {
+    flexDirection: "row",
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  quoteBorder: {
+    width: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    marginRight: spacing.md,
+  },
+  quoteContent: {
+    flex: 1,
+  },
+  quoteText: {
+    fontFamily: typography.fontFamily.serif,
+    fontStyle: "italic",
+    fontSize: typography.sizes.titleLarge,
+    color: colors.textPrimary,
+    lineHeight: typography.sizes.titleLarge * typography.lineHeights.relaxed,
+  },
+  quoteAttribution: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+});

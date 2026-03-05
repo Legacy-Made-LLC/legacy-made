@@ -15,7 +15,7 @@ interface OnboardingHeaderProps {
 export function OnboardingHeader({
   showBackButton = false,
   currentStep,
-  totalSteps = 4,
+  totalSteps = 6,
 }: OnboardingHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();

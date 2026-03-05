@@ -79,7 +79,7 @@ export default function IntroScreen() {
   }, [itemAnimations, containerTranslateY, messageCount]);
 
   const handleGetStarted = () => {
-    router.push("/(onboarding)/contact-intro");
+    router.push("/(onboarding)/scattered");
   };
 
   return (

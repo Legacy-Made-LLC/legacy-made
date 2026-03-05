@@ -29,7 +29,6 @@ export default function AccountCreationScreen() {
     setLastName,
     userEmail,
     setUserEmail,
-    setHasCompletedInitialOnboarding,
   } = useOnboardingContext();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -81,13 +80,12 @@ export default function AccountCreationScreen() {
   });
 
   const handleSignIn = () => {
-    setHasCompletedInitialOnboarding(true);
-    router.replace("/(auth)/sign-in");
+    router.push("/(auth)/sign-in");
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={3} />
+      <OnboardingHeader showBackButton currentStep={5} />
 
       <KeyboardAwareScrollView
         style={styles.formScrollView}

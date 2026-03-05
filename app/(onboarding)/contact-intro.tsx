@@ -1,7 +1,6 @@
 import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
 import { colors } from "@/constants/theme";
-import { useOnboardingContext } from "@/data/OnboardingContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -11,35 +10,34 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function ContactIntroScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { setHasCompletedInitialOnboarding } = useOnboardingContext();
-
   const handleContinue = () => {
     router.push("/(onboarding)/contact-form");
   };
 
+  const handleSkip = () => {
+    router.push("/(onboarding)/account-creation");
+  };
+
   const handleSignIn = () => {
-    setHasCompletedInitialOnboarding(true);
     router.push("/(auth)/sign-in");
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={0} />
+      <OnboardingHeader showBackButton currentStep={2} />
 
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>
           <View style={styles.iconContainer}>
-            <Ionicons name="call-outline" size={32} color={colors.primary} />
+            <Ionicons name="call-outline" size={26} color={colors.primary} />
           </View>
           <Text style={styles.headingSerif}>
-            Let&apos;s take the first step together.
-          </Text>
-          <Text style={styles.bodyText}>
-            If something happened to you tomorrow, who would your family call
-            first?
+            Let&apos;s start with an important first step.
           </Text>
           <Text style={styles.bodyTextSecondary}>
-            This is where most people begin — and it only takes a minute.
+            If something unexpected happens, someone needs to take the lead.
+            We&apos;ll help you name that person — your primary contact who can
+            coordinate and guide others.
           </Text>
         </View>
 
@@ -51,7 +49,10 @@ export default function ContactIntroScreen() {
             ]}
             onPress={handleContinue}
           >
-            <Text style={styles.primaryButtonText}>Add my primary contact</Text>
+            <Text style={styles.primaryButtonText}>Let&apos;s do this</Text>
+          </Pressable>
+          <Pressable onPress={handleSkip} hitSlop={12}>
+            <Text style={styles.skipText}>I&apos;ll do this later</Text>
           </Pressable>
         </View>
 

@@ -100,7 +100,8 @@ export const onboardingStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   centerContent: {
     flex: 1,
@@ -173,7 +174,7 @@ export const onboardingStyles = StyleSheet.create({
   },
   formTitle: {
     fontFamily: typography.fontFamily.serif,
-    fontSize: 28,
+    fontSize: 26,
     color: colors.textPrimary,
     textAlign: "center",
     marginBottom: spacing.sm,
@@ -184,7 +185,7 @@ export const onboardingStyles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
     marginBottom: spacing.xl,
-    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
+    lineHeight: typography.sizes.body * typography.lineHeights.normal,
   },
   formField: {
     marginBottom: spacing.lg,
@@ -311,14 +312,14 @@ export const onboardingStyles = StyleSheet.create({
 
   // Icon Container (for intro screens)
   iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: colors.primary + "15",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
 
   // Success Screen
@@ -412,6 +413,15 @@ export const onboardingStyles = StyleSheet.create({
   signInLink: {
     fontFamily: typography.fontFamily.semibold,
     color: colors.primary,
+  },
+
+  // Skip / "I'll do this later" link
+  skipText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textTertiary,
+    textAlign: "center",
+    paddingVertical: spacing.md,
   },
 });
 

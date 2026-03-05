@@ -105,6 +105,14 @@ export type ContactFormValuesWithRequiredPhone = z.infer<
   typeof contactSchemaWithRequiredPhone
 >;
 
+/** Onboarding contact form - only name and relationship required */
+export const onboardingContactSchema = z.object({
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
+  relationship: requiredString("Relationship"),
+});
+export type OnboardingContactFormValues = z.infer<typeof onboardingContactSchema>;
+
 // ============================================================================
 // Vault Form Schemas
 // ============================================================================

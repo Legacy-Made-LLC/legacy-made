@@ -52,14 +52,16 @@ export default function VerifyOtpScreen() {
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
 
-        // Save the pending contact for later
-        setPendingContact({
-          firstName: contactFirstName.trim(),
-          lastName: contactLastName.trim(),
-          phone: contactPhone.trim(),
-          relationship: contactRelationship.trim(),
-          email: contactEmail.trim() || undefined,
-        });
+        // Save the pending contact for later (only if user entered contact info)
+        if (contactFirstName.trim() && contactLastName.trim()) {
+          setPendingContact({
+            firstName: contactFirstName.trim(),
+            lastName: contactLastName.trim(),
+            relationship: contactRelationship.trim(),
+            phone: contactPhone.trim() || undefined,
+            email: contactEmail.trim() || undefined,
+          });
+        }
 
         // Mark onboarding as complete
         setHasCompletedInitialOnboarding(true);
@@ -102,7 +104,7 @@ export default function VerifyOtpScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={3} />
+      <OnboardingHeader showBackButton currentStep={5} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}

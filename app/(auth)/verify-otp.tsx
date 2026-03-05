@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { colors, spacing, typography } from '@/constants/theme';
+import { useOnboardingContext } from '@/data/OnboardingContext';
 import { logger } from '@/lib/logger';
 
 export default function VerifyOtpScreen() {
@@ -26,6 +27,7 @@ export default function VerifyOtpScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ email: string; mode: 'sign-in' | 'sign-up' }>();
 
+  const { setHasCompletedInitialOnboarding } = useOnboardingContext();
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +53,7 @@ export default function VerifyOtpScreen() {
 
         if (result.status === 'complete') {
           await setSignInActive!({ session: result.createdSessionId });
+          setHasCompletedInitialOnboarding(true);
           router.replace('/(app)');
         } else {
           setError('Verification could not be completed. Please try again.');
@@ -61,6 +64,7 @@ export default function VerifyOtpScreen() {
 
         if (result.status === 'complete') {
           await setSignUpActive!({ session: result.createdSessionId });
+          setHasCompletedInitialOnboarding(true);
           router.replace('/(app)');
         } else {
           setError('Verification could not be completed. Please try again.');
