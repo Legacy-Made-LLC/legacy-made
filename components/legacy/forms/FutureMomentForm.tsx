@@ -104,8 +104,6 @@ export function FutureMomentForm({
       deliveryNote: value.deliveryNote.trim() || undefined,
     };
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title: value.occasion.trim() || "Draft",
@@ -163,7 +161,6 @@ export function FutureMomentForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {

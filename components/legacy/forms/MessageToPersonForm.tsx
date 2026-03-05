@@ -51,6 +51,7 @@ const MESSAGE_TO_PERSON_SCHEMA: MetadataSchema = {
     writtenMessage: { label: "Message", order: 4 },
     shortDescription: { label: "Description", order: 5 },
     deliveryTiming: { label: "Delivery", order: 6 },
+    deliveryTimingDetail: { label: "Delivery Detail", order: 7 },
   },
 };
 
@@ -61,6 +62,7 @@ interface FormValues {
   writtenMessage: string;
   shortDescription: string;
   deliveryTiming: string;
+  deliveryTimingDetail: string;
 }
 
 export function MessageToPersonForm({
@@ -101,6 +103,7 @@ export function MessageToPersonForm({
       writtenMessage: initialMetadata?.writtenMessage ?? "",
       shortDescription: initialMetadata?.shortDescription ?? "",
       deliveryTiming: initialMetadata?.deliveryTiming ?? "anytime",
+      deliveryTimingDetail: initialMetadata?.deliveryTimingDetail ?? "",
     }),
     [initialMetadata],
   );
@@ -116,9 +119,12 @@ export function MessageToPersonForm({
           : undefined,
       shortDescription: value.shortDescription.trim() || undefined,
       deliveryTiming: value.deliveryTiming || undefined,
+      deliveryTimingDetail:
+        value.deliveryTiming === "specific_date" ||
+        value.deliveryTiming === "specific_event"
+          ? value.deliveryTimingDetail.trim() || undefined
+          : undefined,
     };
-
-    if (toast.isOffline()) return;
 
     try {
       await onSave({
@@ -177,7 +183,6 @@ export function MessageToPersonForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {
@@ -436,7 +441,13 @@ export function MessageToPersonForm({
             <Select
               label="When should they receive this?"
               value={field.state.value}
-              onValueChange={(val) => !readOnly && field.handleChange(val)}
+              onValueChange={(val) => {
+                if (readOnly) return;
+                field.handleChange(val);
+                if (val !== "specific_date" && val !== "specific_event") {
+                  form.setFieldValue("deliveryTimingDetail", "");
+                }
+              }}
               options={DELIVERY_TIMING_OPTIONS}
               disabled={readOnly}
               onBlur={field.handleBlur}
@@ -444,6 +455,29 @@ export function MessageToPersonForm({
           </View>
         )}
       </form.Field>
+
+      <form.Subscribe selector={(state) => state.values.deliveryTiming}>
+        {(timing) =>
+          (timing === "specific_date" || timing === "specific_event") && (
+            <form.Field name="deliveryTimingDetail">
+              {(field) => (
+                <View style={legacyFormStyles.fieldContainer}>
+                  <FormInput
+                    field={field}
+                    label={timing === "specific_date" ? "When?" : "Which event?"}
+                    placeholder={
+                      timing === "specific_date"
+                        ? "e.g., When they turn 21, June 2030"
+                        : "e.g., Their wedding day, first child"
+                    }
+                    disabled={readOnly}
+                  />
+                </View>
+              )}
+            </form.Field>
+          )
+        }
+      </form.Subscribe>
 
       {!readOnly && onAttachmentsChange && (
         <FilePicker

@@ -1025,6 +1025,7 @@ export interface MessageToPersonMetadata {
   writtenMessage?: string;
   shortDescription?: string;
   deliveryTiming?: string;
+  deliveryTimingDetail?: string;
 }
 
 /** Your Story - metadata for the user's life story */
