@@ -91,7 +91,7 @@ export function useVideoRecorder(
     if (state === "recording" && elapsedSeconds >= maxDuration) {
       stopRecording();
     }
-  }, [elapsedSeconds, maxDuration, state]);
+  }, [elapsedSeconds, maxDuration, state, stopRecording]);
 
   const startRecording = useCallback(async () => {
     if (!cameraRef.current || state !== "idle") return;

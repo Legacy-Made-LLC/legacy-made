@@ -57,8 +57,8 @@ export const ownerPages: Translations["pages"] = {
       },
       legacyComplete: {
         title: "Your messages are ready",
-        body: "The people you love will hear from you when it matters most.",
-        cta: "Review your messages",
+        body: "The people you love will hear from you when it matters most. Ready to organize the rest?",
+        cta: "Keep going",
       },
       makingProgress: {
         title: "You\u2019re making real progress",
@@ -88,8 +88,8 @@ export const ownerPages: Translations["pages"] = {
       },
       startedLegacy: {
         title: "Your messages are taking shape",
-        body: "Keep going \u2014 every message is a gift your loved ones will treasure.",
-        cta: "Continue messages",
+        body: "Adding your accounts and contacts helps complete the picture.",
+        cta: "Explore Information",
       },
       brandNew: {
         title: "A good place to start",

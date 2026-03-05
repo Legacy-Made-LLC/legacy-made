@@ -230,14 +230,17 @@ export function useHomeGuidance(): HomeGuidanceResult {
       };
     }
 
-    // Priority 5: Legacy complete, others incomplete
+    // Priority 5: Legacy complete, others incomplete — nudge toward next pillar
     if (allLegacyDone && (!allVaultDone || !allWishesDone)) {
+      const nextRoute = !allVaultDone
+        ? ("/(app)/(tabs)/information" as Href)
+        : ("/(app)/(tabs)/wishes" as Href);
       return {
         type: "legacy_complete",
         title: g.legacyComplete.title,
         body: g.legacyComplete.body,
         cta: g.legacyComplete.cta,
-        ctaRoute: "/(app)/(tabs)/legacy" as Href,
+        ctaRoute: nextRoute,
         tintColor: colors.featureLegacyTint,
         accentColor: colors.featureLegacy,
         icon: "videocam-outline",
@@ -279,7 +282,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
         title: g.startedLegacy.title,
         body: g.startedLegacy.body,
         cta: g.startedLegacy.cta,
-        ctaRoute: "/(app)/(tabs)/legacy" as Href,
+        ctaRoute: "/(app)/(tabs)/information" as Href,
         tintColor: colors.featureLegacyTint,
         accentColor: colors.featureLegacy,
         icon: "videocam-outline",
