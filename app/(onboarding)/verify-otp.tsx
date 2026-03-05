@@ -123,7 +123,6 @@ export default function VerifyOtpScreen() {
             This helps us verify that it&apos;s really you and keeps your
             information secure.
           </Text>
-
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
@@ -170,6 +169,10 @@ export default function VerifyOtpScreen() {
               )}
             </Pressable>
           </View>
+
+          <Text style={styles.spamHint}>
+            Don&apos;t see it? Check your spam or junk folder.
+          </Text>
 
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>Didn&apos;t receive a code?</Text>

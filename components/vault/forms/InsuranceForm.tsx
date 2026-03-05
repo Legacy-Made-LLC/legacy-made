@@ -111,8 +111,6 @@ export function InsuranceForm({
     const title =
       `${value.provider.trim()} ${value.policyType}`.trim() || "Draft";
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title,
@@ -169,7 +167,6 @@ export function InsuranceForm({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          if (toast.isOffline()) return;
           try {
             await onDelete();
           } catch (err) {

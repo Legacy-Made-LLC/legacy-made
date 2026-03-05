@@ -87,6 +87,7 @@ export interface Translations {
         legacyPeople: string;
         legacyStory: string;
         legacyFuture: string;
+        addTrustedContact: string;
       };
       /** Adaptive guidance section strings */
       guidance: {
@@ -95,6 +96,12 @@ export interface Translations {
         wishesComplete: { title: string; body: string; cta: string };
         legacyComplete: { title: string; body: string; cta: string };
         makingProgress: { title: string; body: string; cta: string };
+        addTrustedContact: {
+          title: string;
+          body: string;
+          cta: string;
+          secondaryCta: string;
+        };
         continue: { title: string; body: string; cta: string };
         startedVault: { title: string; body: string; cta: string };
         startedWishes: { title: string; body: string; cta: string };

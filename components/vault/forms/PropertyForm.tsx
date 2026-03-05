@@ -180,8 +180,6 @@ export function PropertyForm({
       ? value.addressDescription.trim() || "Draft"
       : value.propertyType || "Draft";
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title,
@@ -257,7 +255,6 @@ export function PropertyForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {

@@ -374,6 +374,13 @@ export const onboardingStyles = StyleSheet.create({
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
   },
+  spamHint: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.md,
+  },
   resendContainer: {
     alignItems: "center",
     paddingTop: spacing.lg,
@@ -410,7 +417,7 @@ export const onboardingStyles = StyleSheet.create({
 
 // Intro messages for the animated intro screen
 export const INTRO_MESSAGES = [
-  "If something happened, would the people you love know what to do next?",
+  "If something happened to you, would the people you love know what to do next?",
   "Most of us mean to get organized, but life gets busy.",
   "Legacy Made helps you put the important pieces in one calm place.",
 ];

@@ -12,36 +12,20 @@ import {
   focusManager,
   onlineManager,
 } from "@tanstack/react-query";
-import * as Network from "expo-network";
+import NetInfo from "@react-native-community/netinfo";
 import { useEffect, useState, type ReactNode } from "react";
 import type { AppStateStatus } from "react-native";
 import { AppState, Platform } from "react-native";
 
 import { createQueryClient } from "@/lib/queryClient";
 
-// Configure online manager using the recommended setEventListener pattern.
-// This runs once at module load, before any component renders, so queries
-// have accurate online status from the start.
+// Configure online manager with NetInfo.
+// NetInfo fires immediately on subscribe (handles initial state) and returns
+// its own unsubscribe function — no race-condition workaround needed.
 onlineManager.setEventListener((setOnline) => {
-  let initialised = false;
-
-  const eventSubscription = Network.addNetworkStateListener((state) => {
-    initialised = true;
-    setOnline(!!state.isConnected);
+  return NetInfo.addEventListener((state) => {
+    setOnline(state.isConnected ?? true); // Default to online if unknown
   });
-
-  // Check initial network state (the listener only fires on changes)
-  Network.getNetworkStateAsync()
-    .then((state) => {
-      if (!initialised) {
-        setOnline(!!state.isConnected);
-      }
-    })
-    .catch(() => {
-      // getNetworkStateAsync can reject on some platforms/SDK versions
-    });
-
-  return eventSubscription.remove;
 });
 
 interface QueryProviderProps {

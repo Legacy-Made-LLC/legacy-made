@@ -162,6 +162,10 @@ export default function VerifyOtpScreen() {
             disabled={isLoading || code.length < 6}
             style={styles.button}
           />
+
+          <Text style={styles.spamHint}>
+            Don&apos;t see it? Check your spam or junk folder.
+          </Text>
         </View>
 
         <View style={styles.footer}>
@@ -220,6 +224,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
+    marginTop: spacing.md,
+  },
+  spamHint: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
+    textAlign: 'center',
     marginTop: spacing.md,
   },
   form: {

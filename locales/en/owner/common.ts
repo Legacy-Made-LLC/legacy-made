@@ -75,7 +75,7 @@ export const ownerCommon: Translations["common"] = {
 
   notApplicable: {
     button: "Doesn't apply to me",
-    changeMyMind: "Change my mind",
+    changeMyMind: "Undo",
     title: "You've marked this as not applicable",
     description: "If things change, you can always come back.",
     marked: "Marked as not applicable",

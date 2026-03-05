@@ -20,7 +20,9 @@ import { useLegacySections, type LegacySection } from "@/constants/legacy";
 import { useVaultSections, type VaultSection } from "@/constants/vault";
 import { useWishesSections, type WishesSection } from "@/constants/wishes";
 import { useTranslations } from "@/contexts/LocaleContext";
-import { useAllProgressQuery } from "@/hooks/queries";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
+import { useAllProgressQuery, useTrustedContactsQuery } from "@/hooks/queries";
 import type { Translations } from "@/locales/types";
 
 const MAX_ACTIONS = 3;
@@ -122,6 +124,9 @@ export function useQuickActions(): QuickAction[] {
   const { data: progress = {} } = useAllProgressQuery();
   const translations = useTranslations();
   const labels = translations.pages.home.quickActions;
+  const { isViewingSharedPlan } = usePlan();
+  const { isLockedPillar } = useEntitlements();
+  const { data: trustedContacts = [] } = useTrustedContactsQuery();
 
   return useMemo(() => {
     const notStarted: QuickAction[] = [];
@@ -153,14 +158,62 @@ export function useQuickActions(): QuickAction[] {
 
     // Not-started first, then in-progress
     const active = [...notStarted, ...inProgress];
+    let actions: QuickAction[];
     if (active.length > 0) {
-      return active.slice(0, MAX_ACTIONS);
+      actions = active.slice(0, MAX_ACTIONS);
+    } else {
+      // Everything complete — show common revisit actions
+      actions = REVISIT_SECTION_IDS.map((id) => {
+        const section = vaultSections.find((s) => s.id === id);
+        return section ? toAction(section, "vault", labels) : null;
+      }).filter((a): a is QuickAction => a !== null);
     }
 
-    // Everything complete — show common revisit actions
-    return REVISIT_SECTION_IDS.map((id) => {
-      const section = vaultSections.find((s) => s.id === id);
-      return section ? toAction(section, "vault", labels) : null;
-    }).filter((a): a is QuickAction => a !== null);
-  }, [vaultSections, wishesSections, legacySections, progress, labels]);
+    // Inject "Share your plan" action when user has significant progress
+    // but no trusted contacts yet
+    if (
+      !isViewingSharedPlan &&
+      !isLockedPillar("family_access") &&
+      trustedContacts.length === 0
+    ) {
+      const totalTasks = allSections.reduce(
+        (sum, { section }) => sum + section.tasks.length,
+        0,
+      );
+      let totalCompleted = 0;
+      for (const { section } of allSections) {
+        for (const task of section.tasks) {
+          const entry = progress[task.taskKey];
+          if (
+            entry?.status === "complete" ||
+            entry?.status === "not_applicable"
+          ) {
+            totalCompleted++;
+          }
+        }
+      }
+
+      if (totalCompleted > totalTasks / 2) {
+        actions.unshift({
+          key: "family.addContact",
+          label: labels.addTrustedContact,
+          icon: "people-outline" as keyof typeof Ionicons.glyphMap,
+          route: "/(app)/family/contacts/new" as Href,
+          color: colors.featureFamily,
+        });
+        actions = actions.slice(0, MAX_ACTIONS);
+      }
+    }
+
+    return actions;
+  }, [
+    vaultSections,
+    wishesSections,
+    legacySections,
+    progress,
+    labels,
+    isViewingSharedPlan,
+    isLockedPillar,
+    trustedContacts,
+  ]);
 }

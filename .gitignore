@@ -42,5 +42,8 @@ app-example
 /ios
 /android
 
+# AI
+.superset
+
 .env
 .env.local

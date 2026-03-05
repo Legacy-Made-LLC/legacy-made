@@ -16,9 +16,15 @@ import type { GuidanceState } from "@/hooks/useHomeGuidance";
 interface GuidanceSectionProps {
   guidance: GuidanceState;
   isLoading: boolean;
+  /** Callback for the secondary action (e.g. "Not now" dismiss) */
+  onSecondaryCta?: () => void;
 }
 
-export function GuidanceSection({ guidance, isLoading }: GuidanceSectionProps) {
+export function GuidanceSection({
+  guidance,
+  isLoading,
+  onSecondaryCta,
+}: GuidanceSectionProps) {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.97)).current;
@@ -79,18 +85,38 @@ export function GuidanceSection({ guidance, isLoading }: GuidanceSectionProps) {
         <Text style={styles.title}>{guidance.title}</Text>
         <Text style={styles.body}>{guidance.body}</Text>
 
-        {guidance.cta && (
-          <Pressable
-            onPress={handleCTA}
-            style={({ pressed }) => [
-              styles.ctaButton,
-              { backgroundColor: guidance.accentColor },
-              pressed && styles.ctaPressed,
-            ]}
-          >
-            <Text style={styles.ctaText}>{guidance.cta}</Text>
-            <Ionicons name="arrow-forward" size={12} color={colors.surface} />
-          </Pressable>
+        {(guidance.cta || (guidance.secondaryCta && onSecondaryCta)) && (
+          <View style={styles.ctaRow}>
+            {guidance.cta && (
+              <Pressable
+                onPress={handleCTA}
+                style={({ pressed }) => [
+                  styles.ctaButton,
+                  { backgroundColor: guidance.accentColor },
+                  pressed && styles.ctaPressed,
+                ]}
+              >
+                <Text style={styles.ctaText}>{guidance.cta}</Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={12}
+                  color={colors.surface}
+                />
+              </Pressable>
+            )}
+
+            {guidance.secondaryCta && onSecondaryCta && (
+              <Pressable
+                onPress={onSecondaryCta}
+                style={styles.secondaryCta}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.secondaryCtaText}>
+                  {guidance.secondaryCta}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         )}
       </View>
     </Animated.View>
@@ -130,10 +156,15 @@ const styles = StyleSheet.create({
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.tight,
     marginBottom: spacing.md,
   },
+  ctaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.md,
+  },
   ctaButton: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.sm + 4,
     borderRadius: borderRadius.pill,
@@ -147,5 +178,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
     color: colors.surface,
+  },
+  secondaryCta: {
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  secondaryCtaText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
   },
 });

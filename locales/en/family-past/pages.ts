@@ -37,6 +37,7 @@ export const familyPastPages: Translations["pages"] = {
       legacyPeople: "View their messages",
       legacyStory: "View their story",
       legacyFuture: "View future moments",
+      addTrustedContact: "Share your plan",
     },
     guidance: {
       allComplete: {
@@ -63,6 +64,12 @@ export const familyPastPages: Translations["pages"] = {
         title: "They made good progress",
         body: "They organized important information for you.",
         cta: "See details",
+      },
+      addTrustedContact: {
+        title: "Share their plan with someone they trusted",
+        body: "Adding a trusted contact means the right person can access their plan when it matters most.",
+        cta: "Add Trusted Contact",
+        secondaryCta: "Not now",
       },
       continue: {
         title: "Recent activity",

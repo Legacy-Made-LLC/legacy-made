@@ -101,8 +101,6 @@ export function PetForm({
       careInstructions: value.careInstructions.trim() || null,
     };
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title: value.name.trim() || "Draft",
@@ -160,7 +158,6 @@ export function PetForm({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (toast.isOffline()) return;
             try {
               await onDelete();
             } catch (err) {

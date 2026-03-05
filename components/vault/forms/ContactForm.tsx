@@ -121,8 +121,6 @@ export function ContactForm({
       isPrimary: taskKey === "contacts.primary",
     };
 
-    if (toast.isOffline()) return;
-
     try {
       await onSave({
         title,
@@ -179,7 +177,6 @@ export function ContactForm({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          if (toast.isOffline()) return;
           try {
             await onDelete();
           } catch (err) {

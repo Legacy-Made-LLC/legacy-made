@@ -1,11 +1,15 @@
-import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import {
+  onlineManager,
+  useIsFetching,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   borderRadius,
@@ -14,8 +18,9 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
-import { usePerspective } from "@/contexts/LocaleContext";
 import { useOnboardingContext } from "@/data/OnboardingContext";
+import { usePlan } from "@/data/PlanProvider";
+import { GUIDANCE_DISMISSED_KEY_PREFIX } from "@/hooks/useGuidanceDismissals";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DevAction {
@@ -29,7 +34,6 @@ interface DevAction {
 export function DevMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const { signOut, isSignedIn } = useAuth();
   const {
     hasCompletedInitialOnboarding,
     setHasCompletedInitialOnboarding,
@@ -38,8 +42,16 @@ export function DevMenu() {
   const queryClient = useQueryClient();
   const isFetching = useIsFetching();
   const isLoading = isFetching > 0;
-  const { perspective, setPerspective, familyTense, setFamilyTense, isFamily } =
-    usePerspective();
+  const { planId } = usePlan();
+
+  const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
+
+  // Keep local state in sync with onlineManager (e.g. real network events)
+  useEffect(() => {
+    return onlineManager.subscribe((isOnlineNow) => {
+      setIsOnline(isOnlineNow);
+    });
+  }, []);
 
   const insets = useSafeAreaInsets();
 
@@ -47,6 +59,10 @@ export function DevMenu() {
   if (!__DEV__) {
     return null;
   }
+
+  const handleToggleOnline = () => {
+    onlineManager.setOnline(!onlineManager.isOnline());
+  };
 
   const handleSkipOnboarding = () => {
     setHasCompletedInitialOnboarding(true);
@@ -61,48 +77,23 @@ export function DevMenu() {
     router.replace("/(onboarding)");
   };
 
-  const handleSignOut = async () => {
-    queryClient.clear();
-    await signOut();
-    setIsOpen(false);
-    router.replace("/(auth)");
-  };
-
   const handleRefreshData = async () => {
     await queryClient.invalidateQueries();
     setIsOpen(false);
   };
 
-  const handleTogglePerspective = () => {
-    setPerspective(perspective === "owner" ? "family" : "owner");
+  const handleClearContactGuidanceDismissal = async () => {
+    if (!planId) {
+      Alert.alert("No plan", "No active plan to clear dismissal for.");
+      return;
+    }
+    await AsyncStorage.removeItem(`${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`);
+    await queryClient.invalidateQueries();
+    setIsOpen(false);
+    Alert.alert("Cleared", "Contact guidance dismissal reset for this plan.");
   };
-
-  const handleToggleFamilyTense = () => {
-    setFamilyTense(familyTense === "present" ? "past" : "present");
-  };
-
-  const perspectiveLabel =
-    perspective === "owner"
-      ? "Owner (you/your)"
-      : `Family (they/their) — ${familyTense}`;
 
   const actions: DevAction[] = [
-    {
-      id: "toggle-perspective",
-      label: `Perspective: ${perspectiveLabel}`,
-      icon: "people-outline",
-      onPress: handleTogglePerspective,
-    },
-    ...(isFamily
-      ? [
-          {
-            id: "toggle-family-tense",
-            label: `Family Tense: ${familyTense === "present" ? "Present (alive)" : "Past (passed)"}`,
-            icon: "time-outline" as keyof typeof Ionicons.glyphMap,
-            onPress: handleToggleFamilyTense,
-          },
-        ]
-      : []),
     {
       id: "skip-onboarding",
       label: hasCompletedInitialOnboarding
@@ -118,16 +109,22 @@ export function DevMenu() {
       onPress: handleRestartOnboarding,
     },
     {
-      id: "sign-out",
-      label: isSignedIn ? "Sign Out" : "Not signed in",
-      icon: "log-out-outline",
-      onPress: handleSignOut,
+      id: "clear-contact-guidance",
+      label: "Reset Contact Guidance Dismissal",
+      icon: "eye-outline",
+      onPress: handleClearContactGuidanceDismissal,
     },
     {
       id: "refresh-data",
       label: isLoading ? "Refreshing..." : "Refresh Data",
       icon: "sync-outline",
       onPress: handleRefreshData,
+    },
+    {
+      id: "toggle-online",
+      label: isOnline ? "Simulate Offline" : "Go Back Online",
+      icon: isOnline ? "cloud-offline-outline" : "cloud-done-outline",
+      onPress: handleToggleOnline,
     },
     {
       id: "test-error",
@@ -191,25 +188,16 @@ export function DevMenu() {
                 </View>
 
                 <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Auth:</Text>
+                  <Text style={styles.statusLabel}>Network:</Text>
                   <Text
                     style={[
                       styles.statusValue,
-                      isSignedIn
+                      isOnline
                         ? styles.statusComplete
                         : styles.statusIncomplete,
                     ]}
                   >
-                    {isSignedIn ? "Signed in" : "Not signed in"}
-                  </Text>
-                </View>
-
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Perspective:</Text>
-                  <Text style={[styles.statusValue, styles.statusComplete]}>
-                    {perspective === "owner"
-                      ? "Owner"
-                      : `Family (${familyTense})`}
+                    {isOnline ? "Online" : "Simulated offline"}
                   </Text>
                 </View>
 

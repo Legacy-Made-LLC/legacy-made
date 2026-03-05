@@ -42,8 +42,6 @@ export default function NewTrustedContactScreen() {
     },
     validationLogic: revalidateLogic(),
     onSubmit: async ({ value }) => {
-      if (toast.isOffline()) return;
-
       if (!value.accessLevel) {
         toast.error({ message: "Please select an access level." });
         return;
