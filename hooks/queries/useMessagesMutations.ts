@@ -1,0 +1,436 @@
+/**
+ * Messages Mutation Hooks
+ *
+ * TanStack Query hooks for creating, updating, and deleting legacy messages.
+ * Includes optimistic updates for a responsive UI.
+ *
+ * Follows same pattern as useWishesMutations.ts for consistency.
+ */
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useApi } from "@/api";
+import type {
+  CreateMessageRequest,
+  EntitlementInfo,
+  EntryCompletionStatus,
+  MetadataSchema,
+  UpdateMessageRequest,
+  Message,
+} from "@/api/types";
+import { useEntitlements } from "@/data/EntitlementsProvider";
+import { usePlan } from "@/data/PlanProvider";
+import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
+import { queryKeys } from "@/lib/queryKeys";
+
+/**
+ * Custom error for quota exceeded (client-side check)
+ */
+export class MessageQuotaExceededError extends Error {
+  code = "QUOTA_EXCEEDED" as const;
+  limit: number;
+  current: number;
+
+  constructor(limit: number, current: number) {
+    super(
+      `You've reached your limit of ${limit} messages. Upgrade your plan to add more.`,
+    );
+    this.name = "MessageQuotaExceededError";
+    this.limit = limit;
+    this.current = current;
+  }
+}
+
+interface CreateMessageData<T = Record<string, unknown>> {
+  title?: string;
+  notes?: string | null;
+  metadata: T;
+  metadataSchema: MetadataSchema;
+  completionStatus?: EntryCompletionStatus;
+}
+
+interface UpdateMessageData<T = Record<string, unknown>> {
+  title?: string;
+  notes?: string | null;
+  metadata?: Partial<T>;
+  metadataSchema?: MetadataSchema;
+  completionStatus?: EntryCompletionStatus;
+}
+
+/**
+ * Helper to optimistically update the messages quota count
+ */
+function updateMessagesQuota(
+  entitlements: EntitlementInfo | undefined,
+  delta: number,
+): EntitlementInfo | undefined {
+  if (!entitlements) return undefined;
+
+  return {
+    ...entitlements,
+    quotas: entitlements.quotas.map((quota) =>
+      quota.feature === "legacy_messages"
+        ? { ...quota, current: Math.max(0, quota.current + delta) }
+        : quota,
+    ),
+  };
+}
+
+/**
+ * Hook for creating a new message with optimistic updates
+ */
+export function useCreateMessage<T = Record<string, unknown>>(
+  taskKey: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  const { planId, isReadOnly } = usePlan();
+  const { messages } = useApi();
+  const { canCreate, getQuotaInfo } = useEntitlements();
+  const { setIfNew } = useSetProgressIfNew();
+
+  return useMutation({
+    mutationFn: (data: CreateMessageData<T>) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
+      if (!planId || !taskKey) {
+        throw new Error("Plan ID and task key are required");
+      }
+
+      // Client-side quota check
+      if (!canCreate("legacy_messages")) {
+        const quota = getQuotaInfo("legacy_messages");
+        throw new MessageQuotaExceededError(
+          quota?.limit ?? 0,
+          quota?.current ?? 0,
+        );
+      }
+
+      const request: CreateMessageRequest<T> = {
+        planId,
+        taskKey,
+        title: data.title,
+        notes: data.notes,
+        completionStatus: data.completionStatus,
+        metadata: data.metadata,
+        metadataSchema: data.metadataSchema,
+      };
+
+      return messages.create<T>(request);
+    },
+    onMutate: async (data) => {
+      if (!planId || !taskKey) return;
+
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.messages.byTaskKey(planId, taskKey),
+      });
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.entitlements.current(),
+      });
+
+      const previousMessages = queryClient.getQueryData<Message<T>[]>(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+      );
+      const previousEntitlements = queryClient.getQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current(),
+      );
+
+      const optimisticMessage: Message<T> = {
+        id: `temp-${Date.now()}`,
+        planId,
+        taskKey,
+        title: data.title ?? null,
+        notes: data.notes ?? null,
+        sortOrder: (previousMessages?.length ?? 0) + 1,
+        completionStatus: data.completionStatus,
+        metadata: data.metadata as T,
+        metadataSchema: data.metadataSchema,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Message<T>[]>(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+        [...(previousMessages ?? []), optimisticMessage],
+      );
+
+      queryClient.setQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current(),
+        updateMessagesQuota(previousEntitlements, 1),
+      );
+
+      return { previousMessages, previousEntitlements };
+    },
+    onError: (_err, _data, context) => {
+      if (!planId || !taskKey) return;
+
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          queryKeys.messages.byTaskKey(planId, taskKey),
+          context.previousMessages,
+        );
+      }
+
+      if (context?.previousEntitlements) {
+        queryClient.setQueryData(
+          queryKeys.entitlements.current(),
+          context.previousEntitlements,
+        );
+      }
+    },
+    onSuccess: (newMessage) => {
+      if (!planId || !taskKey) return;
+
+      queryClient.setQueryData<Message<T>[]>(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+        (old) => {
+          if (!old) return [newMessage];
+          return [...old.filter((m) => !m.id.startsWith("temp-")), newMessage];
+        },
+      );
+
+      queryClient.setQueryData<Record<string, number>>(
+        queryKeys.messages.counts(planId),
+        (old) => {
+          if (!old) return { [taskKey]: 1 };
+          return { ...old, [taskKey]: (old[taskKey] || 0) + 1 };
+        },
+      );
+
+      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
+        if (!old) return [newMessage as Message];
+        return [
+          ...old.filter((m) => !m.id.startsWith("temp-")),
+          newMessage as Message,
+        ];
+      });
+    },
+    onSettled: (_data, error) => {
+      if (!planId || !taskKey) return;
+
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entitlements.all(),
+      });
+
+      if (!error) {
+        setIfNew(taskKey);
+      }
+    },
+  });
+}
+
+/**
+ * Hook for updating an existing message with optimistic updates
+ */
+export function useUpdateMessage<T = Record<string, unknown>>(
+  taskKey: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  const { planId, isReadOnly } = usePlan();
+  const { messages } = useApi();
+
+  return useMutation({
+    mutationFn: ({
+      messageId,
+      data,
+    }: {
+      messageId: string;
+      data: UpdateMessageData<T>;
+    }) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
+      if (!planId) {
+        throw new Error("Plan ID is required");
+      }
+
+      const request: UpdateMessageRequest<T> = {
+        title: data.title,
+        notes: data.notes,
+        completionStatus: data.completionStatus,
+        metadata: data.metadata,
+        metadataSchema: data.metadataSchema,
+      };
+
+      return messages.update<T>(planId, messageId, request);
+    },
+    onMutate: async ({ messageId, data }) => {
+      if (!planId || !taskKey) return;
+
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.messages.byTaskKey(planId, taskKey),
+      });
+
+      const previousMessages = queryClient.getQueryData<Message<T>[]>(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+      );
+
+      if (previousMessages) {
+        queryClient.setQueryData<Message<T>[]>(
+          queryKeys.messages.byTaskKey(planId, taskKey),
+          previousMessages.map((msg) =>
+            msg.id === messageId
+              ? {
+                  ...msg,
+                  ...(data.title !== undefined && { title: data.title }),
+                  ...(data.notes !== undefined && { notes: data.notes }),
+                  ...(data.metadata && {
+                    metadata: { ...msg.metadata, ...data.metadata },
+                  }),
+                  ...(data.metadataSchema && {
+                    metadataSchema: data.metadataSchema,
+                  }),
+                  updatedAt: new Date().toISOString(),
+                }
+              : msg,
+          ),
+        );
+      }
+
+      return { previousMessages };
+    },
+    onError: (_err, _variables, context) => {
+      if (!planId || !taskKey || !context?.previousMessages) return;
+
+      queryClient.setQueryData(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+        context.previousMessages,
+      );
+    },
+    onSuccess: (updatedMessage, variables) => {
+      if (!planId || !taskKey) return;
+
+      // The update response may not include `files` — preserve them from the
+      // previous cache so file attachments aren't lost between saves.
+      queryClient.setQueryData<Message<T>[]>(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+        (old) => {
+          if (!old) return [updatedMessage];
+          return old.map((m) => {
+            if (m.id !== variables.messageId) return m;
+            return { ...updatedMessage, files: updatedMessage.files ?? m.files };
+          });
+        },
+      );
+
+      const oldSingle = queryClient.getQueryData<Message<T>>(
+        queryKeys.messages.single(planId, variables.messageId),
+      );
+      queryClient.setQueryData(
+        queryKeys.messages.single(planId, variables.messageId),
+        { ...updatedMessage, files: updatedMessage.files ?? oldSingle?.files },
+      );
+
+      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
+        if (!old) return [updatedMessage as Message];
+        return old.map((m) => {
+          if (m.id !== variables.messageId) return m;
+          return {
+            ...(updatedMessage as Message),
+            files: (updatedMessage as Message).files ?? m.files,
+          };
+        });
+      });
+    },
+  });
+}
+
+/**
+ * Hook for deleting a message with optimistic updates
+ */
+export function useDeleteMessage<T = Record<string, unknown>>(
+  taskKey: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  const { planId, isReadOnly } = usePlan();
+  const { messages } = useApi();
+
+  return useMutation({
+    mutationFn: (messageId: string) => {
+      if (isReadOnly) {
+        throw new Error("This plan is read-only");
+      }
+      if (!planId) {
+        throw new Error("Plan ID is required");
+      }
+
+      return messages.delete(planId, messageId);
+    },
+    onMutate: async (messageId) => {
+      if (!planId || !taskKey) return;
+
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.messages.byTaskKey(planId, taskKey),
+      });
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.entitlements.current(),
+      });
+
+      const previousMessages = queryClient.getQueryData<Message<T>[]>(
+        queryKeys.messages.byTaskKey(planId, taskKey),
+      );
+      const previousEntitlements = queryClient.getQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current(),
+      );
+
+      if (previousMessages) {
+        queryClient.setQueryData<Message<T>[]>(
+          queryKeys.messages.byTaskKey(planId, taskKey),
+          previousMessages.filter((msg) => msg.id !== messageId),
+        );
+      }
+
+      queryClient.setQueryData<EntitlementInfo>(
+        queryKeys.entitlements.current(),
+        updateMessagesQuota(previousEntitlements, -1),
+      );
+
+      return { previousMessages, previousEntitlements };
+    },
+    onError: (_err, _messageId, context) => {
+      if (!planId || !taskKey) return;
+
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          queryKeys.messages.byTaskKey(planId, taskKey),
+          context.previousMessages,
+        );
+      }
+
+      if (context?.previousEntitlements) {
+        queryClient.setQueryData(
+          queryKeys.entitlements.current(),
+          context.previousEntitlements,
+        );
+      }
+    },
+    onSuccess: (_data, messageId) => {
+      if (!planId || !taskKey) return;
+
+      queryClient.setQueryData<Record<string, number>>(
+        queryKeys.messages.counts(planId),
+        (old) => {
+          if (!old) return {};
+          const newCount = Math.max(0, (old[taskKey] || 0) - 1);
+          return { ...old, [taskKey]: newCount };
+        },
+      );
+
+      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
+        if (!old) return [];
+        return old.filter((m) => m.id !== messageId);
+      });
+
+      queryClient.removeQueries({
+        queryKey: queryKeys.messages.single(planId, messageId),
+      });
+    },
+    onSettled: () => {
+      if (!planId || !taskKey) return;
+
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entitlements.all(),
+      });
+    },
+  });
+}

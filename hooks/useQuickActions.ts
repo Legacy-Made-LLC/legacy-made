@@ -1,7 +1,7 @@
 /**
  * useQuickActions - Dynamic quick action suggestions for the home screen
  *
- * Evaluates progress across vault and wishes sections and returns the 3
+ * Evaluates progress across vault, wishes, and legacy sections and returns the 3
  * most relevant next actions.
  *
  * Priority order:
@@ -16,6 +16,7 @@ import { useMemo } from "react";
 
 import type { TaskProgressData } from "@/api/types";
 import { colors } from "@/constants/theme";
+import { useLegacySections, type LegacySection } from "@/constants/legacy";
 import { useVaultSections, type VaultSection } from "@/constants/vault";
 import { useWishesSections, type WishesSection } from "@/constants/wishes";
 import { useTranslations } from "@/contexts/LocaleContext";
@@ -34,7 +35,9 @@ export interface QuickAction {
   color: string;
 }
 
-type Section = VaultSection | WishesSection;
+type Section = VaultSection | WishesSection | LegacySection;
+
+type Pillar = "vault" | "wishes" | "legacy";
 
 type SectionStatus = "not_started" | "in_progress" | "complete";
 
@@ -67,23 +70,40 @@ function getSectionStatus(
   return "in_progress";
 }
 
-const PILLAR_COLORS: Record<"vault" | "wishes", string> = {
+const PILLAR_COLORS: Record<Pillar, string> = {
   vault: colors.featureInformation,
   wishes: colors.featureWishes,
+  legacy: colors.featureLegacy,
+};
+
+/** Map legacy section IDs to their namespaced quick action label keys */
+const LEGACY_LABEL_KEYS: Record<string, keyof QuickActionLabels> = {
+  people: "legacyPeople",
+  story: "legacyStory",
+  future: "legacyFuture",
 };
 
 function toAction(
   section: Section,
-  pillar: "vault" | "wishes",
+  pillar: Pillar,
   labels: QuickActionLabels,
 ): QuickAction {
-  const route =
-    pillar === "vault"
-      ? (`/(app)/vault/${section.id}` as Href)
-      : (`/(app)/wishes/${section.id}` as Href);
+  let route: Href;
+  if (pillar === "vault") {
+    route = `/(app)/vault/${section.id}` as Href;
+  } else if (pillar === "wishes") {
+    route = `/(app)/wishes/${section.id}` as Href;
+  } else {
+    route = `/(app)/legacy/${section.id}` as Href;
+  }
 
-  const label =
-    labels[section.id as keyof QuickActionLabels] ?? section.title;
+  // Legacy sections use namespaced label keys to avoid collision with vault "people"
+  const labelKey =
+    pillar === "legacy"
+      ? LEGACY_LABEL_KEYS[section.id]
+      : (section.id as keyof QuickActionLabels);
+
+  const label = (labelKey && labels[labelKey]) ?? section.title;
 
   return {
     key: `${pillar}.${section.id}`,
@@ -100,6 +120,7 @@ const REVISIT_SECTION_IDS = ["contacts", "finances", "documents"];
 export function useQuickActions(): QuickAction[] {
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
+  const legacySections = useLegacySections();
   const { data: progress = {} } = useAllProgressQuery();
   const translations = useTranslations();
   const labels = translations.pages.home.quickActions;
@@ -111,7 +132,7 @@ export function useQuickActions(): QuickAction[] {
     const notStarted: QuickAction[] = [];
     const inProgress: QuickAction[] = [];
 
-    const allSections: { section: Section; pillar: "vault" | "wishes" }[] = [
+    const allSections: { section: Section; pillar: Pillar }[] = [
       ...vaultSections.map((s) => ({
         section: s as Section,
         pillar: "vault" as const,
@@ -119,6 +140,10 @@ export function useQuickActions(): QuickAction[] {
       ...wishesSections.map((s) => ({
         section: s as Section,
         pillar: "wishes" as const,
+      })),
+      ...legacySections.map((s) => ({
+        section: s as Section,
+        pillar: "legacy" as const,
       })),
     ];
 
@@ -184,6 +209,7 @@ export function useQuickActions(): QuickAction[] {
   }, [
     vaultSections,
     wishesSections,
+    legacySections,
     progress,
     labels,
     isViewingSharedPlan,

@@ -36,6 +36,22 @@ export {
   WishQuotaExceededError,
 } from './useWishesMutations';
 
+// Messages
+export {
+  useMessagesQuery,
+  useMessageQuery,
+  useAllMessagesQuery,
+  useMessageCountsQuery,
+  usePrefetchMessagesByTaskKeys,
+} from './useMessagesQuery';
+
+export {
+  useCreateMessage,
+  useUpdateMessage,
+  useDeleteMessage,
+  MessageQuotaExceededError,
+} from './useMessagesMutations';
+
 // Plan
 export { usePlanQuery } from './usePlanQuery';
 

@@ -1,41 +1,41 @@
 /**
- * Wishes Task Screen - Single Wish Form with Auto-Save
+ * Legacy Task Screen - Hybrid List/Singleton
  *
- * Each task has exactly one wish. This screen directly shows the form:
- * - If a wish exists for this task, pre-populate the form for editing
- * - If no wish exists yet, show an empty form for creation
+ * This screen handles both patterns:
+ * - Singleton tasks (messages.story): Shows a single form with auto-save (like wishes)
+ * - List tasks (messages.people, messages.future): Shows entry list (like vault)
  *
- * Auto-save behavior:
- * - Changes are automatically saved after 600ms of inactivity
- * - A floating indicator shows save status (saving/saved/error)
- * - Navigation protection ensures pending saves complete before leaving
- *
- * There's no delete functionality since every task always has one wish
- * (either created or not yet created).
+ * The task's `taskType` in legacy-structure.ts determines which pattern to use.
  */
 
 import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
 import type { FileAttachment } from "@/api/types";
-import { apiFileToAttachment } from "@/api/types";
+import { apiFilesToAttachments } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
 import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { SavedIndicator } from "@/components/ui/SavedIndicator";
 import { TaskCompletionFooter } from "@/components/ui/TaskCompletionFooter";
 import {
-  getWishesFormComponent,
-  type WishFormGuidance,
-  type WishSaveData,
-} from "@/components/wishes/registry";
+  getLegacyListComponent,
+  getLegacySingletonFormComponent,
+  type LegacyFormGuidance,
+  type LegacySaveData,
+} from "@/components/legacy/registry";
 import { colors, spacing, typography } from "@/constants/theme";
 import {
-  useWishesSection,
-  useWishesSectionByTaskKey,
-  useWishesTask,
-} from "@/constants/wishes";
+  useLegacySection,
+  useLegacySectionByTaskKey,
+  useLegacyTask,
+} from "@/constants/legacy";
+import { isLegacyTaskSingleton } from "@/constants/legacy-structure";
 import { usePlan } from "@/data/PlanProvider";
-import { useCreateWish, useUpdateWish, useWishesQuery } from "@/hooks/queries";
+import {
+  useCreateMessage,
+  useMessagesQuery,
+  useUpdateMessage,
+} from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
@@ -55,7 +55,7 @@ import React, {
 import { toast } from "@/hooks/useToast";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
-export default function WishesTaskScreen() {
+export default function LegacyTaskScreen() {
   const { sectionId, taskId } = useLocalSearchParams<{
     sectionId: string;
     taskId: string;
@@ -69,15 +69,17 @@ export default function WishesTaskScreen() {
     useState(false);
 
   const { guardOverlay } = usePillarGuard({
-    pillar: "wishes",
-    featureName: "Wishes & Guidance",
-    lockedDescription: "Share your personal wishes, values, and guidance for your loved ones.",
-    restrictedDescription: "Your access level doesn't include Wishes & Guidance for this plan.",
+    pillar: "messages",
+    featureName: "Legacy Messages",
+    lockedDescription: "Record video messages and memories to share with your loved ones when the time is right.",
+    restrictedDescription: "Your access level doesn't include Legacy Messages for this plan.",
   });
 
-  const section = useWishesSection(sectionId);
-  const task = useWishesTask(sectionId, taskId);
-  const sectionByKey = useWishesSectionByTaskKey(task?.taskKey ?? "");
+  const section = useLegacySection(sectionId);
+  const task = useLegacyTask(sectionId, taskId);
+  const sectionByKey = useLegacySectionByTaskKey(task?.taskKey ?? "");
+
+  const isSingleton = task ? isLegacyTaskSingleton(task.taskKey) : false;
 
   // Set the header title before first render
   useLayoutEffect(() => {
@@ -89,31 +91,32 @@ export default function WishesTaskScreen() {
     }
   }, [task, navigation]);
 
-  // Get the form component for this task
-  const FormComponent = task ? getWishesFormComponent(task.taskKey) : undefined;
+  // Get components for this task
+  const FormComponent = task ? getLegacySingletonFormComponent(task.taskKey) : undefined;
+  const ListComponent = task ? getLegacyListComponent(task.taskKey) : undefined;
 
-  // Fetch wishes for this task (will be 0 or 1 since each task has one wish)
+  // Fetch messages for this task
   const {
-    data: wishes = [],
+    data: messages = [],
     isLoading,
     isFetched,
-  } = useWishesQuery(task?.taskKey);
+  } = useMessagesQuery(task?.taskKey);
 
-  // Get the existing wish if any
-  const existingWish = wishes[0];
+  // Get the existing message if singleton
+  const existingMessage = isSingleton ? messages[0] : undefined;
 
-  // Backwards compatibility: auto-set progress to "in_progress" when a wish
-  // exists but no progress record has been created yet (pre-progress-feature data)
+  // Backwards compatibility: auto-set progress to "in_progress" when a message
+  // exists but no progress record has been created yet
   const { setIfNew } = useSetProgressIfNew();
   useEffect(() => {
-    if (isFetched && existingWish && task?.taskKey) {
+    if (isFetched && messages.length > 0 && task?.taskKey) {
       setIfNew(task.taskKey);
     }
-  }, [isFetched, existingWish, task?.taskKey, setIfNew]);
+  }, [isFetched, messages.length, task?.taskKey, setIfNew]);
 
-  // Build guidance props for the form
-  const guidance: WishFormGuidance | undefined = useMemo(() => {
-    if (!task?.triggerText || !task?.guidance) return undefined;
+  // Build guidance props for singleton form
+  const guidance: LegacyFormGuidance | undefined = useMemo(() => {
+    if (!isSingleton || !task?.triggerText || !task?.guidance) return undefined;
     return {
       icon: task.ionIcon ?? sectionByKey?.ionIcon,
       triggerText: task.triggerText,
@@ -122,16 +125,19 @@ export default function WishesTaskScreen() {
       tips: task.tips,
       pacingNote: task.pacingNote,
     };
-  }, [task, sectionByKey]);
+  }, [task, sectionByKey, isSingleton]);
 
   // Mutations
-  const createMutation = useCreateWish(task?.taskKey);
-  const updateMutation = useUpdateWish(task?.taskKey);
+  const createMutation = useCreateMessage(task?.taskKey);
+  const updateMutation = useUpdateMessage(task?.taskKey);
 
-  // Track if files were changed during this session (to invalidate cache on unmount)
+  // Track if files were changed during this session
   const filesChangedRef = useRef(false);
 
-  // File attachments management (shared hook for deletion logic)
+  // Guard against concurrent file uploads (onSaveComplete + handleAttachmentsChange race)
+  const isUploadingRef = useRef(false);
+
+  // File attachments management
   const {
     attachments,
     setAttachments,
@@ -139,51 +145,48 @@ export default function WishesTaskScreen() {
     handleRemoteFileDeletions,
   } = useFileAttachments();
 
-  // Form reference for auto-save integration
+  // Form reference for auto-save integration (singleton only)
   const formRef = useRef<AnyFormApi | null>(null);
-
-  // Function to get current save data from form - set by child form
-  const getSaveDataRef = useRef<(() => WishSaveData) | null>(null);
+  const getSaveDataRef = useRef<(() => LegacySaveData) | null>(null);
 
   // ============================================================================
-  // Auto-Save Integration
+  // Auto-Save Integration (Singleton Only)
   // ============================================================================
 
-  const autoSave = useAutoSave<WishSaveData>({
+  const autoSave = useAutoSave<LegacySaveData>({
     debounceMs: 600,
     savedDurationMs: 1500,
-    initialId: existingWish?.id,
+    initialId: existingMessage?.id,
     onCreate: async (data) => {
-      const createdWish = await createMutation.mutateAsync(data);
-      return createdWish.id;
+      const created = await createMutation.mutateAsync(data);
+      return created.id;
     },
     onUpdate: async (id, data) => {
-      await updateMutation.mutateAsync({ wishId: id, data });
+      await updateMutation.mutateAsync({ messageId: id, data });
     },
-    onSaveComplete: async (wishId) => {
-      // Upload any pending files after save completes
+    onSaveComplete: async (messageId) => {
+      if (isUploadingRef.current) return;
+
       const pendingFiles = attachments.filter(
         (f) => !f.isRemote && f.uploadStatus !== "complete",
       );
       if (pendingFiles.length > 0 && planId && task) {
         try {
-          const uploadResults = await uploadFiles({ wishId }, attachments);
+          isUploadingRef.current = true;
+          const uploadResults = await uploadFiles({ messageId }, attachments);
 
-          // Invalidate all wish caches after uploads so they include the new files
-          // Must invalidate all related caches to prevent stale data from being re-seeded
           await Promise.all([
             queryClient.invalidateQueries({
-              queryKey: queryKeys.wishes.byTaskKey(planId, task.taskKey),
+              queryKey: queryKeys.messages.byTaskKey(planId, task.taskKey),
             }),
             queryClient.invalidateQueries({
-              queryKey: queryKeys.wishes.all(planId),
+              queryKey: queryKeys.messages.all(planId),
             }),
             queryClient.invalidateQueries({
-              queryKey: queryKeys.wishes.counts(planId),
+              queryKey: queryKeys.messages.counts(planId),
             }),
           ]);
 
-          // Check for upload failures
           const failedUploads = uploadResults.filter(
             (r) => !r.success && !r.isStorageQuotaError,
           );
@@ -202,29 +205,31 @@ export default function WishesTaskScreen() {
               message: "An error occurred during file upload.",
             });
           }
+        } finally {
+          isUploadingRef.current = false;
         }
       }
     },
   });
 
-  // Update autoSave when existingWish changes (e.g., after initial load)
+  // Update autoSave when existingMessage changes
   useEffect(() => {
-    if (existingWish?.id && autoSave.recordId !== existingWish.id) {
-      autoSave.reset(existingWish.id);
+    if (existingMessage?.id && autoSave.recordId !== existingMessage.id) {
+      autoSave.reset(existingMessage.id);
     }
-  }, [existingWish?.id, autoSave]);
+  }, [existingMessage?.id, autoSave]);
 
   // Handle form ready callback from child form
   const handleFormReady = useCallback((form: AnyFormApi) => {
     formRef.current = form;
   }, []);
 
-  // Set up form value subscription for auto-save
+  // Set up form value subscription for auto-save (singleton only)
   useEffect(() => {
+    if (!isSingleton) return;
     const form = formRef.current;
     if (!form) return;
 
-    // Subscribe to form state changes
     const unsubscribe = form.store.subscribe(() => {
       if (isReadOnly) return;
       const state = form.store.state;
@@ -237,25 +242,24 @@ export default function WishesTaskScreen() {
     });
 
     return unsubscribe;
-  }, [autoSave, isReadOnly]);
+  }, [autoSave, isReadOnly, isSingleton]);
 
-  // Navigation protection - ensure pending saves complete before leaving
+  // Navigation protection for singleton (ensure pending saves complete before leaving)
   useEffect(() => {
+    if (!isSingleton) return;
+
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
       const form = formRef.current;
       const hasPendingSave =
         autoSave.status === "pending" || autoSave.status === "saving";
       const isDirty = form?.state.isDirty ?? false;
 
-      // Allow navigation if nothing to save
       if (!hasPendingSave && !isDirty) {
         return;
       }
 
-      // Prevent default navigation
       e.preventDefault();
 
-      // Flush pending save, then allow navigation
       autoSave
         .flushSave()
         .then(() => {
@@ -278,12 +282,11 @@ export default function WishesTaskScreen() {
     });
 
     return unsubscribe;
-  }, [navigation, autoSave]);
+  }, [navigation, autoSave, isSingleton]);
 
   // Handle auto-save errors
   useEffect(() => {
     if (autoSave.status === "error") {
-      // Check for quota errors
       const error = autoSave.errorMessage;
       if (error?.includes("quota") || error?.includes("limit")) {
         if (error.toLowerCase().includes("storage")) {
@@ -297,15 +300,15 @@ export default function WishesTaskScreen() {
   }, [autoSave]);
 
   // ============================================================================
-  // File Attachments
+  // File Attachments (Singleton Only)
   // ============================================================================
 
-  // Initialize attachments when wish data loads
+  // Initialize attachments when message data loads
   useEffect(() => {
-    if (existingWish?.files) {
-      setAttachments(existingWish.files.map(apiFileToAttachment));
+    if (isSingleton && existingMessage?.files) {
+      setAttachments(apiFilesToAttachments(existingMessage.files));
     }
-  }, [existingWish?.files, setAttachments]);
+  }, [existingMessage?.files, setAttachments, isSingleton]);
 
   // Refs to capture current values for unmount cleanup
   const planIdRef = useRef(planId);
@@ -313,23 +316,21 @@ export default function WishesTaskScreen() {
   planIdRef.current = planId;
   taskKeyRef.current = task?.taskKey;
 
-  // Invalidate wish caches on unmount if files were changed during this session
-  // This ensures fresh data is fetched when navigating back
+  // Invalidate message caches on unmount if files were changed
   useEffect(() => {
     return () => {
       if (filesChangedRef.current && planIdRef.current && taskKeyRef.current) {
-        // Invalidate all related caches to prevent stale data
         queryClient.invalidateQueries({
-          queryKey: queryKeys.wishes.byTaskKey(
+          queryKey: queryKeys.messages.byTaskKey(
             planIdRef.current,
             taskKeyRef.current,
           ),
         });
         queryClient.invalidateQueries({
-          queryKey: queryKeys.wishes.all(planIdRef.current),
+          queryKey: queryKeys.messages.all(planIdRef.current),
         });
         queryClient.invalidateQueries({
-          queryKey: queryKeys.wishes.counts(planIdRef.current),
+          queryKey: queryKeys.messages.counts(planIdRef.current),
         });
       }
     };
@@ -343,18 +344,15 @@ export default function WishesTaskScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
+    useStandardUploadForVideo: true,
     onFileUploaded: (file, fileId, downloadUrl) => {
-      // Mark that files changed (for cache invalidation on unmount)
       filesChangedRef.current = true;
-      // Update attachment with backend ID, download URL, and mark as remote
       setAttachments((prev) =>
         prev.map((a) =>
           a.uri === file.uri
             ? {
                 ...a,
                 id: fileId,
-                // Use the download URL if available (for documents/images)
-                // Videos don't have a download URL until processed
                 uri: downloadUrl || a.uri,
                 uploadStatus: "complete",
                 isRemote: true,
@@ -397,30 +395,23 @@ export default function WishesTaskScreen() {
   });
 
   /**
-   * Handle attachment changes from the form.
-   * For new files: If no wishId exists yet, flush save to create one first, then upload.
-   * For removed files: Deletes remote files from the server (confirmation is handled by FilePicker).
+   * Handle attachment changes from the singleton form.
    */
   const handleAttachmentsChange = useCallback(
     async (newAttachments: FileAttachment[]) => {
-      // Helper to get unique identifier for a file (id for remote, uri for local)
       const getFileIdentifier = (file: FileAttachment) => file.id || file.uri;
 
-      // Handle remote file deletions using the shared hook
       const { hadRemoteDeletions, hadSuccessfulDeletions } =
         await handleRemoteFileDeletions(newAttachments);
 
-      // Track if files were changed for cache invalidation on unmount
       if (hadSuccessfulDeletions) {
         filesChangedRef.current = true;
       }
 
-      // If remote files were deleted, the hook already updated state
       if (hadRemoteDeletions) {
         return;
       }
 
-      // Find any new local files that were added
       const addedLocalFiles = newAttachments.filter(
         (newFile) =>
           !newFile.isRemote &&
@@ -430,33 +421,32 @@ export default function WishesTaskScreen() {
           )
       );
 
-      // Update attachments state
       setAttachments(newAttachments);
 
-      // If new local files were added, trigger upload after ensuring wish exists
       if (addedLocalFiles.length > 0) {
-        let wishId = autoSave.recordId;
+        let messageId = autoSave.recordId;
 
-        // If no wish exists yet, flush save to create one
-        if (!wishId) {
+        if (!messageId) {
           const getSaveData = getSaveDataRef.current;
           if (getSaveData) {
             const saveData = getSaveData();
             autoSave.triggerSave(saveData, true);
             try {
-              wishId = await autoSave.flushSave();
+              messageId = await autoSave.flushSave();
             } catch {
               toast.error({
-                message: "Could not save your wish before uploading files. Please try again.",
+                message: "Could not save before uploading files. Please try again.",
               });
               return;
             }
           }
         }
 
-        // Upload the new files
-        if (wishId) {
-          uploadFiles({ wishId }, newAttachments);
+        if (messageId && !isUploadingRef.current) {
+          isUploadingRef.current = true;
+          uploadFiles({ messageId }, newAttachments).finally(() => {
+            isUploadingRef.current = false;
+          });
         }
       }
     },
@@ -464,15 +454,25 @@ export default function WishesTaskScreen() {
   );
 
   // ============================================================================
+  // List Handlers (List tasks only)
+  // ============================================================================
+
+  const handleEntryPress = (entryId: string) => {
+    router.push(`/legacy/${sectionId}/${taskId}/${entryId}`);
+  };
+
+  const handleAddPress = () => {
+    router.push(`/legacy/${sectionId}/${taskId}/new`);
+  };
+
+  // ============================================================================
   // Render
   // ============================================================================
 
-  // Show guard overlay if pillar is locked or access is restricted
   if (guardOverlay) {
     return guardOverlay;
   }
 
-  // Section or task not found
   if (!section || !task) {
     return (
       <View style={styles.errorContainer}>
@@ -481,90 +481,126 @@ export default function WishesTaskScreen() {
     );
   }
 
-  // No form component registered for this task
-  if (!FormComponent) {
+  if (isLoading || !isFetched) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>
-          No form component registered for task: {task.taskKey}
-        </Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="small" color={colors.featureLegacy} />
       </View>
     );
   }
 
-  // Show loading state while fetching
-  if (isLoading || !isFetched) {
+  // ============================================================================
+  // Singleton Rendering (Your Story)
+  // ============================================================================
+  if (isSingleton && FormComponent) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={colors.featureWishes} />
+      <>
+        <FormComponent
+          taskKey={task.taskKey}
+          messageId={
+            autoSave.recordId ?? (existingMessage ? existingMessage.id : undefined)
+          }
+          initialData={existingMessage}
+          onFormReady={handleFormReady}
+          registerGetSaveData={(fn: () => LegacySaveData) => {
+            getSaveDataRef.current = fn;
+          }}
+          guidance={guidance}
+          attachments={attachmentsWithUploadState}
+          onAttachmentsChange={isReadOnly ? undefined : handleAttachmentsChange}
+          isUploading={isUploading}
+          deletingFileIds={deletingFileIds}
+          onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
+          readOnly={isReadOnly}
+        />
+        {(existingMessage || autoSave.recordId) && task && !isReadOnly && (
+          <TaskCompletionFooter
+            taskKey={task.taskKey}
+            pillarColor={colors.featureLegacy}
+            pillarTint={colors.featureLegacyTint}
+            onComeBackLater={() => router.back()}
+          />
+        )}
+        {!isReadOnly && (
+          <SavedIndicator
+            status={autoSave.status}
+            errorMessage={autoSave.errorMessage}
+            onDismissError={autoSave.dismissError}
+            accentColor={colors.featureLegacy}
+          />
+        )}
+        {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureLegacy} autoSave />}
+        <UpgradePrompt
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
+          message={
+            isViewingSharedPlan
+              ? `This plan has reached its limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+              : "You've made great progress with your legacy messages. Upgrade your plan to add more."
+          }
+          hideUpgradeAction={isViewingSharedPlan}
+        />
+        <UpgradePrompt
+          visible={showStorageUpgradePrompt}
+          onClose={() => setShowStorageUpgradePrompt(false)}
+          title="Storage Limit Reached"
+          message={
+            isViewingSharedPlan
+              ? `This plan has reached its storage limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
+              : "This file would exceed your storage limit. Upgrade your plan for more storage space."
+          }
+          hideUpgradeAction={isViewingSharedPlan}
+        />
+      </>
+    );
+  }
+
+  // ============================================================================
+  // List Rendering (Messages to People, Future Moments)
+  // ============================================================================
+  if (!isSingleton && ListComponent) {
+    return (
+      <View style={styles.wrapper}>
+        <View style={styles.listContainer}>
+          <ListComponent
+            taskKey={task.taskKey}
+            messages={messages}
+            isLoading={isLoading}
+            onEntryPress={handleEntryPress}
+            onAddPress={handleAddPress}
+            readOnly={isReadOnly}
+          />
+        </View>
+        {messages.length > 0 && !isReadOnly && (
+          <TaskCompletionFooter
+            taskKey={task.taskKey}
+            pillarColor={colors.featureLegacy}
+            pillarTint={colors.featureLegacyTint}
+            onComeBackLater={() => router.back()}
+          />
+        )}
       </View>
     );
   }
 
   return (
-    <>
-      <FormComponent
-        taskKey={task.taskKey}
-        wishId={
-          autoSave.recordId ?? (existingWish ? existingWish.id : undefined)
-        }
-        initialData={existingWish}
-        onFormReady={handleFormReady}
-        registerGetSaveData={(fn: () => WishSaveData) => {
-          getSaveDataRef.current = fn;
-        }}
-        guidance={guidance}
-        attachments={attachmentsWithUploadState}
-        onAttachmentsChange={isReadOnly ? undefined : handleAttachmentsChange}
-        isUploading={isUploading}
-        deletingFileIds={deletingFileIds}
-        onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
-        readOnly={isReadOnly}
-      />
-      {(existingWish || autoSave.recordId) && task && !isReadOnly && (
-        <TaskCompletionFooter
-          taskKey={task.taskKey}
-          pillarColor={colors.featureWishes}
-          pillarTint={colors.featureWishesTint}
-          onComeBackLater={() => router.back()}
-        />
-      )}
-      {!isReadOnly && (
-        <SavedIndicator
-          status={autoSave.status}
-          errorMessage={autoSave.errorMessage}
-          onDismissError={autoSave.dismissError}
-          accentColor={colors.featureWishes}
-        />
-      )}
-      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureWishes} autoSave />}
-      <UpgradePrompt
-        visible={showUpgradePrompt}
-        onClose={() => setShowUpgradePrompt(false)}
-        title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
-        message={
-          isViewingSharedPlan
-            ? `This plan has reached its limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
-            : "You've made great progress sharing your wishes. Upgrade your plan to add more and unlock additional features."
-        }
-        hideUpgradeAction={isViewingSharedPlan}
-      />
-      <UpgradePrompt
-        visible={showStorageUpgradePrompt}
-        onClose={() => setShowStorageUpgradePrompt(false)}
-        title="Storage Limit Reached"
-        message={
-          isViewingSharedPlan
-            ? `This plan has reached its storage limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`
-            : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important documents safe."
-        }
-        hideUpgradeAction={isViewingSharedPlan}
-      />
-    </>
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>
+        No component registered for task: {task.taskKey}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  listContainer: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

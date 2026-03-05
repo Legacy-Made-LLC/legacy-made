@@ -24,6 +24,7 @@ export type {
   ApiFile,
   ApiFileStorageType,
   ApiFileUploadStatus,
+  FileRole,
   FileAttachment,
   FileType,
   FileUploadStatus,
@@ -57,6 +58,15 @@ export type {
   LovedOnesKnowMetadata,
   FaithPreferencesMetadata,
   HardSituationsMetadata,
+  // Messages types
+  Message,
+  CreateMessageRequest,
+  UpdateMessageRequest,
+  MessagesListResponse,
+  MessagesQuota,
+  MessageToPersonMetadata,
+  YourStoryMetadata,
+  FutureMomentMetadata,
   // Progress types
   ProgressRecord,
   TaskProgressData,
@@ -77,7 +87,7 @@ export type {
 } from './types';
 
 // File utilities
-export { apiFileToAttachment } from './types';
+export { apiFileToAttachment, apiFilesToAttachments } from './types';
 
 // Access Invitations (public + authenticated)
 export { fetchInvitationDetails, createAccessInvitationsService } from './accessInvitations';
@@ -105,6 +115,9 @@ export type { EntitlementsService } from './entitlements';
 
 export { createWishesService } from './wishes';
 export type { WishesService } from './wishes';
+
+export { createMessagesService } from './messages';
+export type { MessagesService } from './messages';
 
 export { createProgressService } from './progress';
 export type { ProgressService } from './progress';

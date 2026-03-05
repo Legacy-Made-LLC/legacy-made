@@ -1,17 +1,30 @@
-import { Ionicons } from "@expo/vector-icons";
+/**
+ * Legacy Tab - Main legacy messages screen
+ *
+ * Displays section cards for Messages to People, Your Story, and Future Moments.
+ * Uses soft blue color theme (featureLegacy).
+ */
+
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LockedFeatureOverlay, RestrictedAccessOverlay } from "@/components/entitlements";
+import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useLegacySections } from "@/constants/legacy";
+import { useTranslations } from "@/contexts/LocaleContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
+import { useAllProgressQuery } from "@/hooks/queries";
 
 export default function LegacyScreen() {
   const insets = useSafeAreaInsets();
   const { isLockedPillar, isViewOnlyPillar } = useEntitlements();
   const { isViewingSharedPlan, canAccessPillar } = usePlan();
+  const legacySections = useLegacySections();
+  const { data: progress = {} } = useAllProgressQuery();
+  const t = useTranslations();
 
   const isLocked = isLockedPillar("messages");
   const isViewOnly = isViewOnlyPillar("messages");
@@ -40,25 +53,32 @@ export default function LegacyScreen() {
   }
 
   return (
-    <View
-      style={[styles.container, { paddingBottom: insets.bottom + spacing.lg }]}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.lg + 80 },
+      ]}
+      showsVerticalScrollIndicator={false}
     >
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name="videocam-outline"
-            size={40}
-            color={colors.textTertiary}
-          />
-        </View>
-        <Text style={styles.title}>Legacy Messages</Text>
-        <Text style={styles.subtitle}>
-          Record video messages and memories to share with your loved ones when
-          the time is right.
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Legacy Messages</Text>
+        <Text style={styles.description}>
+          {t.pages.legacy.description}
         </Text>
-        <Text style={styles.comingSoon}>Coming Soon</Text>
       </View>
-    </View>
+
+      <View style={styles.sections}>
+        {legacySections.map((section) => (
+          <PillarSectionCard
+            key={section.id}
+            section={section}
+            progress={progress}
+            pillar="legacy"
+          />
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -66,43 +86,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.lg,
   },
   content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.surfaceSecondary,
-    justifyContent: "center",
+  header: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
     alignItems: "center",
-    marginBottom: spacing.lg,
   },
-  title: {
-    fontFamily: typography.fontFamily.serif,
-    fontSize: typography.sizes.displayMedium,
+  pageTitle: {
+    fontFamily: typography.fontFamily.serifBold,
+    fontSize: 24,
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
     textAlign: "center",
-    marginBottom: spacing.sm,
   },
-  subtitle: {
-    fontFamily: typography.fontFamily.regular,
+  description: {
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     textAlign: "center",
-    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
-    marginBottom: spacing.lg,
+    lineHeight: typography.sizes.body * typography.lineHeights.normal,
   },
-  comingSoon: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.caption,
-    color: colors.textTertiary,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  sections: {
+    gap: spacing.xs,
   },
 });

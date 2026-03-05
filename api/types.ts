@@ -62,6 +62,8 @@ export interface DigitalAccessMetadata {
 // File Types (Backend Response)
 // ============================================================================
 
+export type FileRole = "primary" | "thumbnail";
+
 export type ApiFileStorageType = "r2" | "mux";
 export type ApiFileUploadStatus =
   | "pending"
@@ -93,6 +95,10 @@ export interface ApiFile {
     thumbnailToken: string;
     storyboardToken: string;
   };
+  /** File role: primary file or a supporting thumbnail */
+  role?: FileRole;
+  /** ID of the parent file (e.g., the video this thumbnail belongs to) */
+  parentFileId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -179,6 +185,39 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
   };
 }
 
+/**
+ * Converts an array of API files to client-side FileAttachments.
+ * Separates thumbnails from primary files, matches thumbnails to their
+ * parent videos via parentFileId, and returns only the primary files
+ * with thumbnailUri set from the matched thumbnail's downloadUrl.
+ */
+export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
+  // Separate primary files from thumbnails
+  const primaryFiles: ApiFile[] = [];
+  const thumbnailsByParent = new Map<string, string>();
+
+  for (const file of files) {
+    if (file.role === "thumbnail" && file.parentFileId) {
+      // Store the thumbnail's download URL keyed by parent file ID
+      if (file.downloadUrl) {
+        thumbnailsByParent.set(file.parentFileId, file.downloadUrl);
+      }
+    } else {
+      primaryFiles.push(file);
+    }
+  }
+
+  return primaryFiles.map((file) => {
+    const attachment = apiFileToAttachment(file);
+    // If there's a matched thumbnail from a separate file, use it
+    const thumbnailUrl = thumbnailsByParent.get(file.id);
+    if (thumbnailUrl) {
+      return { ...attachment, thumbnailUri: thumbnailUrl };
+    }
+    return attachment;
+  });
+}
+
 // ============================================================================
 // File Upload API Types
 // ============================================================================
@@ -190,6 +229,10 @@ export interface InitUploadRequest {
   filename: string;
   mimeType: string;
   sizeBytes: number;
+  /** File role — defaults to "primary" on the backend */
+  role?: FileRole;
+  /** Parent file ID for associating thumbnails with their video */
+  parentFileId?: string;
 }
 
 /**
@@ -891,4 +934,111 @@ export interface WishesQuota {
 export interface WishesListResponse<T = Record<string, unknown>> {
   data: Wish<T>[];
   quota: WishesQuota;
+}
+
+// ============================================================================
+// Message Model (Same shape as Wish, but for Legacy Messages pillar)
+// ============================================================================
+
+/**
+ * Message type from API - same structure as Wish but for the Legacy Messages pillar
+ * Generic parameter T allows specifying the expected metadata type
+ */
+export interface Message<T = Record<string, unknown>> {
+  id: string;
+  planId: string;
+  /** Task key for the legacy structure (e.g., "messages.people", "messages.story") */
+  taskKey: string;
+  /** Optional title */
+  title: string | null;
+  /** Free-form notes */
+  notes: string | null;
+  /** Sort order for manual ordering */
+  sortOrder: number;
+  /** Whether this message is complete or still a draft */
+  completionStatus?: EntryCompletionStatus;
+  /** Type-specific metadata */
+  metadata: T;
+  /** Display schema for rendering metadata without frontend code */
+  metadataSchema: MetadataSchema;
+  /** Files attached to this message */
+  files?: ApiFile[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Request type for creating messages
+ */
+export interface CreateMessageRequest<T = Record<string, unknown>> {
+  planId: string;
+  taskKey: string;
+  title?: string;
+  notes?: string | null;
+  sortOrder?: number;
+  completionStatus?: EntryCompletionStatus;
+  metadata: T;
+  /** Display schema for rendering metadata */
+  metadataSchema: MetadataSchema;
+}
+
+/**
+ * Request type for updating messages
+ */
+export interface UpdateMessageRequest<T = Record<string, unknown>> {
+  title?: string;
+  notes?: string | null;
+  sortOrder?: number;
+  completionStatus?: EntryCompletionStatus;
+  metadata?: Partial<T>;
+  /** Full replacement of display schema (if provided) */
+  metadataSchema?: MetadataSchema;
+}
+
+/**
+ * Quota information for messages (same as wishes/entries)
+ */
+export interface MessagesQuota {
+  limit: number;
+  current: number;
+  remaining: number | null;
+  unlimited: boolean;
+}
+
+/**
+ * Response shape for listing messages
+ */
+export interface MessagesListResponse<T = Record<string, unknown>> {
+  data: Message<T>[];
+  quota: MessagesQuota;
+}
+
+// ============================================================================
+// Legacy Messages Metadata Types
+// ============================================================================
+
+/** Messages to People - metadata for a message to a specific person */
+export interface MessageToPersonMetadata {
+  recipientName: string;
+  recipientRelationship?: string;
+  messageType: "video" | "written" | "both";
+  writtenMessage?: string;
+  shortDescription?: string;
+  deliveryTiming?: string;
+  deliveryTimingDetail?: string;
+}
+
+/** Your Story - metadata for the user's life story */
+export interface YourStoryMetadata {
+  messageType: "video" | "written" | "both";
+  writtenStory?: string;
+}
+
+/** Future Moments - metadata for a message for a future event */
+export interface FutureMomentMetadata {
+  occasion: string;
+  recipientName?: string;
+  messageType: "video" | "written" | "both";
+  writtenMessage?: string;
+  deliveryNote?: string;
 }

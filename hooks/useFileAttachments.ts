@@ -15,6 +15,7 @@ import { useCallback, useRef, useState } from "react";
 import { useApi } from "@/api";
 import { toast } from "@/hooks/useToast";
 import type { FileAttachment } from "@/api/types";
+import { logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface UseFileAttachmentsOptions {
@@ -126,13 +127,21 @@ export function useFileAttachments(
 
       // Track which files were successfully deleted
       const successfullyDeletedIds = new Set<string>();
-      const failedCount = deleteResults.filter((r) => {
-        if (r.status === "fulfilled" && r.value) {
-          successfullyDeletedIds.add(r.value);
-          return false;
+      let failedCount = 0;
+      for (let i = 0; i < deleteResults.length; i++) {
+        const result = deleteResults[i];
+        if (result.status === "fulfilled" && result.value) {
+          successfullyDeletedIds.add(result.value);
+        } else if (result.status === "rejected") {
+          failedCount++;
+          const failedFile = removedRemoteFiles[i];
+          logger.error("File deletion failed", result.reason, {
+            fileId: failedFile?.id,
+            fileName: failedFile?.fileName,
+            mimeType: failedFile?.mimeType,
+          });
         }
-        return r.status === "rejected";
-      }).length;
+      }
 
       // Calculate final attachments after removing successfully deleted files
       let finalAttachments = attachmentsRef.current;

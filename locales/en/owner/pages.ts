@@ -18,6 +18,7 @@ export const ownerPages: Translations["pages"] = {
     pillarActions: {
       information: "Organize your accounts and contacts",
       wishes: "Record your wishes and values",
+      legacy: "Leave messages for loved ones",
       family: "Share access with loved ones",
       comingSoon: "Coming soon",
     },
@@ -33,6 +34,9 @@ export const ownerPages: Translations["pages"] = {
       carePrefs: "Record care preferences",
       endOfLife: "Record end-of-life wishes",
       values: "Record your values",
+      legacyPeople: "Write a message",
+      legacyStory: "Tell your story",
+      legacyFuture: "Record a future moment",
       addTrustedContact: "Share your plan",
     },
     guidance: {
@@ -50,6 +54,11 @@ export const ownerPages: Translations["pages"] = {
         title: "Your wishes are recorded",
         body: "Want to make sure your accounts and contacts are organized too?",
         cta: "Explore Information",
+      },
+      legacyComplete: {
+        title: "Your messages are ready",
+        body: "The people you love will hear from you when it matters most. Ready to organize the rest?",
+        cta: "Keep going",
       },
       makingProgress: {
         title: "You\u2019re making real progress",
@@ -77,6 +86,11 @@ export const ownerPages: Translations["pages"] = {
         body: "Adding your accounts and contacts helps complete the picture.",
         cta: "Explore Information",
       },
+      startedLegacy: {
+        title: "Your messages are taking shape",
+        body: "Adding your accounts and contacts helps complete the picture.",
+        cta: "Explore Information",
+      },
       brandNew: {
         title: "A good place to start",
         body: "Most people begin by adding a key contact or a financial account. There\u2019s no wrong place to start.",
@@ -95,6 +109,10 @@ export const ownerPages: Translations["pages"] = {
   wishes: {
     description:
       "Your values, preferences, and words\nfor those who matter most",
+  },
+  legacy: {
+    description:
+      "Letters, videos, and memories\nfor the people you love",
   },
   family: {
     title: "Family Access",

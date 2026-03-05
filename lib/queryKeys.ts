@@ -25,6 +25,8 @@ export const queryKeys = {
     byEntry: (entryId: string) => ['files', 'entry', entryId] as const,
     // Files for a specific wish
     byWish: (wishId: string) => ['files', 'wish', wishId] as const,
+    // Files for a specific message
+    byMessage: (messageId: string) => ['files', 'message', messageId] as const,
     // Single file detail
     single: (fileId: string) => ['files', 'detail', fileId] as const,
   },
@@ -45,6 +47,16 @@ export const queryKeys = {
     single: (planId: string, wishId: string) => ['wishes', planId, 'detail', wishId] as const,
     // Wish counts for dashboard
     counts: (planId: string) => ['wishes', planId, 'counts'] as const,
+  },
+  messages: {
+    // All messages for a plan
+    all: (planId: string) => ['messages', planId] as const,
+    // Messages filtered by taskKey
+    byTaskKey: (planId: string, taskKey: string) => ['messages', planId, taskKey] as const,
+    // Single message detail
+    single: (planId: string, messageId: string) => ['messages', planId, 'detail', messageId] as const,
+    // Message counts for dashboard
+    counts: (planId: string) => ['messages', planId, 'counts'] as const,
   },
   progress: {
     // All progress records for a plan

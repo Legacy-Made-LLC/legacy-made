@@ -7,7 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: IS_PROD ? "Legacy Made" : "Legacy Made (Dev)",
   slug: "legacy-made",
-  version: "1.0.0",
+  version: "1.1.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "legacymade",
@@ -21,12 +21,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
+      NSCameraUsageDescription: "Record video messages for your loved ones",
+      NSMicrophoneUsageDescription: "Record audio with your video messages",
     },
     appleTeamId: "LQ7UL43SY2",
     associatedDomains: ["applinks:app.mylegacymade.com"],
   },
   android: {
-    versionCode: 5,
+    versionCode: 1,
     adaptiveIcon: {
       backgroundColor: "#8a9785",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -34,7 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: "com.legacymade.LegacyMade",
-    permissions: ["android.permission.RECORD_AUDIO"],
+    permissions: ["android.permission.RECORD_AUDIO", "android.permission.CAMERA"],
     intentFilters: [
       {
         action: "VIEW",
@@ -69,6 +71,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-secure-store",
     "expo-image-picker",
     "expo-video",
+    [
+      "expo-camera",
+      {
+        cameraPermission: "Record video messages for your loved ones",
+        microphonePermission: "Record audio with your video messages",
+        recordAudioAndroid: {
+          audioEncoder: "aac",
+          outputFormat: "mpeg4",
+        },
+      },
+    ],
     "expo-document-picker",
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     [
