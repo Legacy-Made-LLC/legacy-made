@@ -16,6 +16,7 @@ import { createPreferencesService } from "./preferences";
 import { createProgressService } from "./progress";
 import { createPushTokensService } from "./pushTokens";
 import { createSharedPlansService } from "./sharedPlans";
+import { createSubscriptionsService } from "./subscriptions";
 import { createTrustedContactsService } from "./trustedContacts";
 import { createWishesService } from "./wishes";
 
@@ -90,6 +91,11 @@ export function useApi() {
     return createKeysService(client);
   }, [client]);
 
+  const subscriptions = useMemo(() => {
+    return createSubscriptionsService(client);
+  }, [client]);
+
+
   const accessInvitations = useMemo(() => {
     return createAccessInvitationsService(client);
   }, [client]);
@@ -125,6 +131,8 @@ export function useApi() {
     sharedPlans,
     /** E2EE key management service */
     keys,
+    /** Subscriptions service for Stripe portal */
+    subscriptions,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
     /** User preferences (reminders, timezone) service */

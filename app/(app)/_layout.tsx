@@ -26,6 +26,7 @@ import { usePlan } from "@/data/PlanProvider";
 import { useCreateEntry } from "@/hooks/queries";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
 import { ReminderEnablePrompt } from "@/components/notifications/ReminderEnablePrompt";
+import { useAppStateEntitlementRefresh } from "@/hooks/useAppStateEntitlementRefresh";
 import { useAutoMigration } from "@/hooks/useAutoMigration";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
 import { usePreferences } from "@/hooks/queries/usePreferencesQuery";
@@ -159,6 +160,9 @@ const AppContent = React.memo(function AppContent() {
       logger.info("Timezone sync failed (non-critical)", err);
     });
   }, [preferencesService]);
+
+  // Refresh entitlements when app returns from background (e.g., Stripe portal)
+  useAppStateEntitlementRefresh();
 
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();

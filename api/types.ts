@@ -12,6 +12,18 @@ export type {
 } from "@/lib/crypto/types";
 
 // ============================================================================
+// Subscription / Portal Types
+// ============================================================================
+
+/**
+ * Response from POST /subscriptions/portal
+ * Contains the Stripe Customer Portal session URL
+ */
+export interface PortalSessionResponse {
+  url: string;
+}
+
+// ============================================================================
 // Metadata Types
 // ============================================================================
 
