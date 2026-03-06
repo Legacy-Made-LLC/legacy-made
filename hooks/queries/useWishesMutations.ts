@@ -17,6 +17,8 @@ import type {
   UpdateWishRequest,
   Wish,
 } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
@@ -103,6 +105,7 @@ export function useCreateWish<T = Record<string, unknown>>(
   const { wishes } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
   const { setIfNew } = useSetProgressIfNew();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
     mutationFn: (data: CreateWishData<T>) => {
@@ -123,7 +126,7 @@ export function useCreateWish<T = Record<string, unknown>>(
         );
       }
 
-      const request: CreateWishRequest<T> = {
+      const baseRequest: CreateWishRequest<T> = {
         planId,
         taskKey,
         title: data.title,
@@ -132,7 +135,19 @@ export function useCreateWish<T = Record<string, unknown>>(
         metadataSchema: data.metadataSchema,
       };
 
-      return wishes.create<T>(request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.dekCryptoKey) {
+        const encrypted = await encryptForCreate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          crypto.dekCryptoKey,
+        );
+        return wishes.create({
+          ...baseRequest,
+          ...encrypted,
+        } as CreateWishRequest);
+      }
+
+      return wishes.create<T>(baseRequest);
     },
     onMutate: async (data) => {
       if (!planId || !taskKey) return;
@@ -269,6 +284,7 @@ export function useUpdateWish<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId, isReadOnly } = usePlan();
   const { wishes } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
     mutationFn: ({
@@ -285,14 +301,33 @@ export function useUpdateWish<T = Record<string, unknown>>(
         throw new Error("Plan ID is required");
       }
 
-      const request: UpdateWishRequest<T> = {
+      const baseRequest: UpdateWishRequest<T> = {
         title: data.title,
         notes: data.notes,
         metadata: data.metadata,
         metadataSchema: data.metadataSchema,
       };
 
-      return wishes.update<T>(planId, wishId, request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.dekCryptoKey) {
+        const currentWishes = queryClient.getQueryData<Wish<T>[]>(
+          queryKeys.wishes.byTaskKey(planId, taskKey!),
+        );
+        const currentWish = currentWishes?.find((w) => w.id === wishId);
+        const currentMetadata = currentWish?.metadata ?? ({} as T);
+
+        const encrypted = await encryptForUpdate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          currentMetadata,
+          crypto.dekCryptoKey,
+        );
+        return wishes.update(planId, wishId, {
+          ...baseRequest,
+          ...encrypted,
+        } as UpdateWishRequest);
+      }
+
+      return wishes.update<T>(planId, wishId, baseRequest);
     },
     onMutate: async ({ wishId, data }) => {
       if (!planId || !taskKey) return;

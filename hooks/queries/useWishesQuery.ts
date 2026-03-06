@@ -10,6 +10,8 @@ import { useEffect } from "react";
 
 import { useApi } from "@/api";
 import type { Wish } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { decryptEntry, isEncryptedEntry } from "@/lib/crypto/entryEncryption";
 import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -29,10 +31,21 @@ export function useWishesQuery<T = Record<string, unknown>>(
 ) {
   const { planId } = usePlan();
   const { wishes } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.wishes.byTaskKey(planId!, taskKey!),
-    queryFn: () => wishes.listByTaskKey<T>(planId!, taskKey!),
+    queryFn: async () => {
+      const raw = await wishes.listByTaskKey<T>(planId!, taskKey!);
+      if (!crypto?.dekCryptoKey) return raw;
+      return Promise.all(
+        raw.map((w) =>
+          isEncryptedEntry(w)
+            ? decryptEntry<T>(w, crypto.dekCryptoKey!)
+            : w,
+        ),
+      ) as Promise<Wish<T>[]>;
+    },
     enabled: !!planId && !!taskKey,
   });
 }
@@ -59,10 +72,15 @@ export function useWishQuery<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { wishes } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.wishes.single(planId!, wishId!),
-    queryFn: () => wishes.get<T>(planId!, wishId!),
+    queryFn: async () => {
+      const raw = await wishes.get<T>(planId!, wishId!);
+      if (!crypto?.dekCryptoKey || !isEncryptedEntry(raw)) return raw;
+      return decryptEntry<T>(raw, crypto.dekCryptoKey) as Promise<Wish<T>>;
+    },
     enabled: !!planId && !!wishId,
     // Use cached data from list query as initial data for instant display
     initialData: () => {

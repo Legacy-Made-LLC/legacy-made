@@ -32,6 +32,7 @@ import { PlanTransitionProvider } from "@/contexts/PlanTransitionContext";
 import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
+import { CryptoProvider } from "@/lib/crypto/CryptoProvider";
 import { UpgradePromptProvider } from "@/data/UpgradePromptContext";
 import { QueryProvider } from "@/providers/QueryProvider";
 import * as Sentry from "@sentry/react-native";
@@ -119,6 +120,7 @@ export default Sentry.wrap(function RootLayout() {
                 >
                   <QueryProvider>
                     <PlanProvider>
+                      <CryptoProvider>
                       <EntitlementsProvider>
                         <PlanTransitionProvider>
                           <Stack
@@ -149,6 +151,7 @@ export default Sentry.wrap(function RootLayout() {
                           <DevMenu />
                         </PlanTransitionProvider>
                       </EntitlementsProvider>
+                      </CryptoProvider>
                     </PlanProvider>
                   </QueryProvider>
                 </ClerkProvider>

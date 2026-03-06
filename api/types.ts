@@ -3,6 +3,15 @@
  */
 
 // ============================================================================
+// E2EE Types (re-exported from lib/crypto for API layer access)
+// ============================================================================
+
+export type {
+  EncryptedEntryMetadata,
+  EncryptedPayload,
+} from "@/lib/crypto/types";
+
+// ============================================================================
 // Metadata Types
 // ============================================================================
 
@@ -64,7 +73,7 @@ export interface DigitalAccessMetadata {
 
 export type FileRole = "primary" | "thumbnail";
 
-export type ApiFileStorageType = "r2" | "mux";
+export type ApiFileStorageType = "r2";
 export type ApiFileUploadStatus =
   | "pending"
   | "uploading"
@@ -87,18 +96,12 @@ export interface ApiFile {
   downloadUrl: string | null;
   /** Thumbnail URL for images/videos */
   thumbnailUrl: string | null;
-  /** Mux playback ID for videos */
-  playbackId: string | null;
-  /** Mux tokens for video playback (videos only) */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
   /** File role: primary file or a supporting thumbnail */
   role?: FileRole;
   /** ID of the parent file (e.g., the video this thumbnail belongs to) */
   parentFileId?: string | null;
+  /** Whether this file is encrypted (E2EE) */
+  isEncrypted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -144,16 +147,8 @@ export interface FileAttachment {
   errorMessage?: string;
   /** Whether this file exists on the server (vs local-only) */
   isRemote?: boolean;
-  /** Whether this video is still processing on the server (Mux) */
-  isProcessing?: boolean;
-  /** Mux playback ID for videos */
-  playbackId?: string;
-  /** Mux tokens for video playback */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
+  /** Whether this file is encrypted (E2EE) */
+  isEncrypted?: boolean;
 }
 
 /**
@@ -166,9 +161,6 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
       ? "video"
       : "document";
 
-  // Videos are "processing" if they're on the server but not yet complete (Mux transcoding)
-  const isProcessing = type === "video" && file.uploadStatus !== "complete";
-
   return {
     id: file.id,
     uri: file.downloadUrl || "",
@@ -179,9 +171,7 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
     thumbnailUri: file.thumbnailUrl || undefined,
     uploadStatus: file.uploadStatus === "complete" ? "complete" : "pending",
     isRemote: true,
-    isProcessing,
-    playbackId: file.playbackId || undefined,
-    tokens: file.tokens,
+    isEncrypted: file.isEncrypted,
   };
 }
 
@@ -235,28 +225,6 @@ export interface InitUploadRequest {
   parentFileId?: string;
 }
 
-/**
- * Request body for initializing a video upload (Mux)
- * Includes optional metadata fields that Mux supports for tracking
- */
-export interface InitVideoUploadRequest {
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-  /**
-   * Metadata to associate with the Mux asset for easier tracking.
-   * These are passed to Mux via the passthrough field and stored on the asset.
-   */
-  meta?: {
-    /** External ID from your system (e.g., entry ID, user ID combination) */
-    externalId?: string;
-    /** ID of the user who uploaded the video */
-    creatorId?: string;
-    /** Human-readable title for the video */
-    title?: string;
-  };
-  passthrough?: string;
-}
 
 /**
  * Response from POST /entries/:entryId/files/upload/init
@@ -273,32 +241,14 @@ export interface InitUploadResponse {
 }
 
 /**
- * Response from POST /entries/:entryId/files/video/init
- */
-export interface InitVideoUploadResponse {
-  fileId: string;
-  uploadUrl: string;
-}
-
-/**
  * Response from GET /files/:id/download
- * Returns either R2 download URL or Mux playback info
+ * Returns presigned R2 download URL
  */
 export interface DownloadUrlResponse {
   /** Presigned download URL for R2 files */
   downloadUrl?: string;
   /** Seconds until URL expires */
   expiresIn?: number;
-  /** Mux playback URL for videos */
-  playbackUrl?: string;
-  /** Mux playback ID */
-  playbackId?: string;
-  /** Mux authentication tokens */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
 }
 
 // ============================================================================
@@ -445,10 +395,13 @@ export interface EntriesListResponse<T = Record<string, unknown>> {
 // Plan Type
 // ============================================================================
 
+export type PlanEncryptionStatus = "unencrypted" | "migrating" | "encrypted";
+
 export interface Plan {
   id: string;
   userId: string;
   name: string;
+  encryptionStatus?: PlanEncryptionStatus;
   createdAt: string;
   updatedAt: string;
 }

@@ -2,6 +2,7 @@
  * Entries Query Hooks
  *
  * TanStack Query hooks for fetching entry data.
+ * Entries are automatically decrypted if they have encrypted metadata.
  */
 
 import { useEffect } from "react";
@@ -9,6 +10,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "@/api";
 import type { Entry } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { decryptEntry, isEncryptedEntry } from "@/lib/crypto/entryEncryption";
 import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -18,10 +21,21 @@ import { queryKeys } from "@/lib/queryKeys";
 export function useEntriesQuery<T = Record<string, unknown>>(taskKey: string | undefined) {
   const { planId } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.entries.byTaskKey(planId!, taskKey!),
-    queryFn: () => entries.listByTaskKey<T>(planId!, taskKey!),
+    queryFn: async () => {
+      const raw = await entries.listByTaskKey<T>(planId!, taskKey!);
+      if (!crypto?.dekCryptoKey) return raw;
+      return Promise.all(
+        raw.map((e) =>
+          isEncryptedEntry(e)
+            ? decryptEntry<T>(e, crypto.dekCryptoKey!)
+            : e,
+        ),
+      ) as Promise<Entry<T>[]>;
+    },
     enabled: !!planId && !!taskKey,
   });
 }
@@ -39,10 +53,15 @@ export function useEntryQuery<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.entries.single(planId!, entryId!),
-    queryFn: () => entries.get<T>(planId!, entryId!),
+    queryFn: async () => {
+      const raw = await entries.get<T>(planId!, entryId!);
+      if (!crypto?.dekCryptoKey || !isEncryptedEntry(raw)) return raw;
+      return decryptEntry<T>(raw, crypto.dekCryptoKey) as Promise<Entry<T>>;
+    },
     enabled: !!planId && !!entryId,
     // Use cached data from list query as initial data for instant display
     initialData: () => {

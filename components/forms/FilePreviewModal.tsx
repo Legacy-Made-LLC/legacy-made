@@ -26,8 +26,7 @@ export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
       <VideoPlayer
         visible
         uri={file.uri}
-        playbackId={file.playbackId}
-        tokens={file.tokens}
+        fileId={file.isEncrypted ? file.id : undefined}
         onClose={onClose}
       />
     );

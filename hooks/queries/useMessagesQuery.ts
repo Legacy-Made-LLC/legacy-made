@@ -2,7 +2,8 @@
  * Messages Query Hooks
  *
  * TanStack Query hooks for fetching legacy messages data.
- * Follows same pattern as useWishesQuery.ts for consistency.
+ * Messages are automatically decrypted if they have encrypted metadata.
+ * Follows same pattern as useEntriesQuery.ts for consistency.
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +11,8 @@ import { useEffect } from "react";
 
 import { useApi } from "@/api";
 import type { Message } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { decryptEntry, isEncryptedEntry } from "@/lib/crypto/entryEncryption";
 import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -24,10 +27,21 @@ export function useMessagesQuery<T = Record<string, unknown>>(
 ) {
   const { planId } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.messages.byTaskKey(planId!, taskKey!),
-    queryFn: () => messages.listByTaskKey<T>(planId!, taskKey!),
+    queryFn: async () => {
+      const raw = await messages.listByTaskKey<T>(planId!, taskKey!);
+      if (!crypto?.dekCryptoKey) return raw;
+      return Promise.all(
+        raw.map((m) =>
+          isEncryptedEntry(m)
+            ? decryptEntry<T>(m, crypto.dekCryptoKey!)
+            : m,
+        ),
+      ) as Promise<Message<T>[]>;
+    },
     enabled: !!planId && !!taskKey,
   });
 }
@@ -45,10 +59,15 @@ export function useMessageQuery<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.messages.single(planId!, messageId!),
-    queryFn: () => messages.get<T>(planId!, messageId!),
+    queryFn: async () => {
+      const raw = await messages.get<T>(planId!, messageId!);
+      if (!crypto?.dekCryptoKey || !isEncryptedEntry(raw)) return raw;
+      return decryptEntry<T>(raw, crypto.dekCryptoKey) as Promise<Message<T>>;
+    },
     enabled: !!planId && !!messageId,
     initialData: () => {
       if (!planId || !messageId) return undefined;

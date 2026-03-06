@@ -17,6 +17,8 @@ import type {
   TaskProgressData,
   UpdateEntryRequest,
 } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
@@ -88,6 +90,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
   const { entries } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
   const { setIfNew } = useSetProgressIfNew();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
     mutationFn: (data: CreateEntryData<T>) => {
@@ -104,7 +107,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
         throw new QuotaExceededError(quota?.limit ?? 0, quota?.current ?? 0);
       }
 
-      const request: CreateEntryRequest<T> = {
+      const baseRequest: CreateEntryRequest<T> = {
         planId,
         taskKey,
         title: data.title,
@@ -114,7 +117,19 @@ export function useCreateEntry<T = Record<string, unknown>>(
         completionStatus: data.completionStatus,
       };
 
-      return entries.create<T>(request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.dekCryptoKey) {
+        const encrypted = await encryptForCreate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          crypto.dekCryptoKey,
+        );
+        return entries.create({
+          ...baseRequest,
+          ...encrypted,
+        } as CreateEntryRequest);
+      }
+
+      return entries.create<T>(baseRequest);
     },
     onMutate: async (data) => {
       if (!planId || !taskKey) return;
@@ -217,6 +232,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId, isReadOnly } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
     mutationFn: ({
@@ -233,7 +249,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
         throw new Error("Plan ID is required");
       }
 
-      const request: UpdateEntryRequest<T> = {
+      const baseRequest: UpdateEntryRequest<T> = {
         title: data.title,
         notes: data.notes,
         metadata: data.metadata,
@@ -241,7 +257,27 @@ export function useUpdateEntry<T = Record<string, unknown>>(
         completionStatus: data.completionStatus,
       };
 
-      return entries.update<T>(planId, entryId, request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.dekCryptoKey) {
+        // Get current entry to merge metadata for encryption
+        const currentEntries = queryClient.getQueryData<Entry<T>[]>(
+          queryKeys.entries.byTaskKey(planId, taskKey!),
+        );
+        const currentEntry = currentEntries?.find((e) => e.id === entryId);
+        const currentMetadata = currentEntry?.metadata ?? ({} as T);
+
+        const encrypted = await encryptForUpdate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          currentMetadata,
+          crypto.dekCryptoKey,
+        );
+        return entries.update(planId, entryId, {
+          ...baseRequest,
+          ...encrypted,
+        } as UpdateEntryRequest);
+      }
+
+      return entries.update<T>(planId, entryId, baseRequest);
     },
     onMutate: async ({ entryId, data }) => {
       if (!planId || !taskKey) return;

@@ -75,4 +75,8 @@ export const queryKeys = {
     // All plans shared with the current user
     all: () => ['sharedPlans'] as const,
   },
+  sharedDEKs: {
+    // Shared DEK for a specific plan (as recipient)
+    forPlan: (planId: string) => ['sharedDEKs', planId] as const,
+  },
 } as const;

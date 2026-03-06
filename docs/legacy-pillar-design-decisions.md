@@ -73,7 +73,7 @@ Messages support file attachments using the same infrastructure as vault entries
 
 - `FileUploadTarget` extended to include `{ messageId: string }`
 - Files are uploaded to `/messages/:messageId/files/` endpoints
-- Uses existing Mux integration for video uploads
+- Videos are uploaded as encrypted files to R2 (same path as images/documents)
 - `useFileAttachments` and `useFileUpload` hooks handle state management
 
 ## Video Recording

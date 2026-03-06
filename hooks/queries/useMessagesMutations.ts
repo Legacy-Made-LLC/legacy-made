@@ -3,8 +3,9 @@
  *
  * TanStack Query hooks for creating, updating, and deleting legacy messages.
  * Includes optimistic updates for a responsive UI.
+ * Sensitive fields (title, notes, metadata) are encrypted before sending to server.
  *
- * Follows same pattern as useWishesMutations.ts for consistency.
+ * Follows same pattern as useEntriesMutations.ts for consistency.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +19,8 @@ import type {
   UpdateMessageRequest,
   Message,
 } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
@@ -87,9 +90,10 @@ export function useCreateMessage<T = Record<string, unknown>>(
   const { messages } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
   const { setIfNew } = useSetProgressIfNew();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
-    mutationFn: (data: CreateMessageData<T>) => {
+    mutationFn: async (data: CreateMessageData<T>) => {
       if (isReadOnly) {
         throw new Error("This plan is read-only");
       }
@@ -106,7 +110,7 @@ export function useCreateMessage<T = Record<string, unknown>>(
         );
       }
 
-      const request: CreateMessageRequest<T> = {
+      const baseRequest: CreateMessageRequest<T> = {
         planId,
         taskKey,
         title: data.title,
@@ -116,7 +120,19 @@ export function useCreateMessage<T = Record<string, unknown>>(
         metadataSchema: data.metadataSchema,
       };
 
-      return messages.create<T>(request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.dekCryptoKey) {
+        const encrypted = await encryptForCreate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          crypto.dekCryptoKey,
+        );
+        return messages.create({
+          ...baseRequest,
+          ...encrypted,
+        } as CreateMessageRequest);
+      }
+
+      return messages.create<T>(baseRequest);
     },
     onMutate: async (data) => {
       if (!planId || !taskKey) return;
@@ -228,9 +244,10 @@ export function useUpdateMessage<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId, isReadOnly } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       messageId,
       data,
     }: {
@@ -242,6 +259,30 @@ export function useUpdateMessage<T = Record<string, unknown>>(
       }
       if (!planId) {
         throw new Error("Plan ID is required");
+      }
+
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.dekCryptoKey) {
+        // Get current message to merge metadata for encryption
+        const currentMessages = queryClient.getQueryData<Message<T>[]>(
+          taskKey
+            ? queryKeys.messages.byTaskKey(planId, taskKey)
+            : queryKeys.messages.all(planId),
+        );
+        const currentMessage = currentMessages?.find((m) => m.id === messageId);
+        const currentMetadata = currentMessage?.metadata ?? ({} as T);
+
+        const encrypted = await encryptForUpdate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          currentMetadata,
+          crypto.dekCryptoKey,
+        );
+
+        return messages.update(planId, messageId, {
+          completionStatus: data.completionStatus,
+          metadataSchema: data.metadataSchema,
+          ...encrypted,
+        } as UpdateMessageRequest);
       }
 
       const request: UpdateMessageRequest<T> = {

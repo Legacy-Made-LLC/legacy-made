@@ -1,8 +1,12 @@
 /**
  * VideoPlayer - Full-screen video player with swipe-to-dismiss
+ *
+ * Supports local file playback (file:// URIs), remote URLs (https://),
+ * and encrypted files (downloaded + decrypted via fileId).
  */
 
 import { colors, spacing, typography } from '@/constants/theme';
+import { useEncryptedFileView } from '@/hooks/useEncryptedFileView';
 import { logger } from '@/lib/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
@@ -32,18 +36,12 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 interface VideoPlayerProps {
   visible: boolean;
   uri: string;
-  /** Mux playback ID for streaming videos */
-  playbackId?: string;
-  /** Mux authentication tokens */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
+  /** Backend file ID for encrypted files — triggers download + decrypt */
+  fileId?: string;
   onClose: () => void;
 }
 
-export function VideoPlayer({ visible, uri, playbackId, tokens, onClose }: VideoPlayerProps) {
+export function VideoPlayer({ visible, uri, fileId, onClose }: VideoPlayerProps) {
   const insets = useSafeAreaInsets();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +50,13 @@ export function VideoPlayer({ visible, uri, playbackId, tokens, onClose }: Video
 
   // Track if we've already loaded a source to avoid duplicate loads
   const loadedSourceRef = useRef<string | null>(null);
+
+  // For encrypted files, download + decrypt via the E2EE hook
+  const effectiveFileId = visible && fileId ? fileId : undefined;
+  const {
+    localUri: decryptedUri,
+    error: decryptError,
+  } = useEncryptedFileView(effectiveFileId, 'video/mp4');
 
   // Animation values for swipe-to-dismiss
   const translateY = useSharedValue(0);
@@ -102,8 +107,23 @@ export function VideoPlayer({ visible, uri, playbackId, tokens, onClose }: Video
       return;
     }
 
-    // Need either a playbackId (for Mux) or a uri
-    if (!playbackId && !uri) {
+    // For encrypted files, wait for decryption
+    if (fileId) {
+      if (decryptError) {
+        setError(decryptError);
+        setIsLoading(false);
+        return;
+      }
+      if (!decryptedUri) {
+        // Still decrypting — show loading state
+        setIsLoading(true);
+        return;
+      }
+    }
+
+    // Determine the video source URI
+    const sourceUri = fileId ? decryptedUri : uri;
+    if (!sourceUri) {
       setIsSourceReady(false);
       return;
     }
@@ -117,29 +137,22 @@ export function VideoPlayer({ visible, uri, playbackId, tokens, onClose }: Video
       try {
         let finalUri: string;
 
-        // For Mux videos, construct the HLS streaming URL
-        if (playbackId) {
-          finalUri = `https://stream.mux.com/${playbackId}.m3u8`;
-          if (tokens?.playbackToken) {
-            finalUri += `?token=${tokens.playbackToken}`;
-          }
-        }
         // For remote URLs (http/https), use directly
-        else if (uri.startsWith('http://') || uri.startsWith('https://')) {
-          finalUri = uri;
+        if (sourceUri!.startsWith('http://') || sourceUri!.startsWith('https://')) {
+          finalUri = sourceUri!;
         }
         // For file:// URIs that are already in cache/documents, use directly
-        else if (uri.startsWith('file://') &&
-            (uri.includes('/Caches/') || uri.includes('/Documents/') || uri.includes('/tmp/'))) {
-          finalUri = uri;
+        else if (sourceUri!.startsWith('file://') &&
+            (sourceUri!.includes('/Caches/') || sourceUri!.includes('/Documents/') || sourceUri!.includes('/tmp/'))) {
+          finalUri = sourceUri!;
         }
         // For other URIs (ph://, assets-library://, or file:// outside our directories),
         // copy to cache directory for reliable playback
         else {
-          const extension = uri.split('.').pop() || 'mp4';
+          const extension = sourceUri!.split('.').pop() || 'mp4';
           const destFileName = `video_preview_${Date.now()}.${extension}`;
 
-          const sourceFile = new File(uri);
+          const sourceFile = new File(sourceUri!);
           const destFile = new File(Paths.cache, destFileName);
 
           await sourceFile.copy(destFile);
@@ -173,7 +186,7 @@ export function VideoPlayer({ visible, uri, playbackId, tokens, onClose }: Video
     return () => {
       isMounted = false;
     };
-  }, [visible, uri, playbackId, tokens, player]);
+  }, [visible, uri, fileId, decryptedUri, decryptError, player]);
 
   const handleClose = useCallback(async () => {
     if (player) {

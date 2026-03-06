@@ -4,6 +4,8 @@
 
 // Types
 export type {
+  EncryptedEntryMetadata,
+  EncryptedPayload,
   Entry,
   ContactMetadata,
   FinancialMetadata,
@@ -17,6 +19,7 @@ export type {
   ApiError,
   DeleteResponse,
   Plan,
+  PlanEncryptionStatus,
   // Metadata schema types (shared by Entry and Wish)
   FieldSchema,
   MetadataSchema,
@@ -30,8 +33,6 @@ export type {
   FileUploadStatus,
   InitUploadRequest,
   InitUploadResponse,
-  InitVideoUploadRequest,
-  InitVideoUploadResponse,
   DownloadUrlResponse,
   // Entitlement types
   SubscriptionTier,
@@ -124,6 +125,17 @@ export type { ProgressService } from './progress';
 
 export { createTrustedContactsService } from './trustedContacts';
 export type { TrustedContactsService } from './trustedContacts';
+
+export { createKeysService } from './keys';
+export type {
+  KeysService,
+  ShareDEKRequest,
+  SharedDEKResponse,
+  CreateKeyTransferRequest,
+  KeyTransferResponse,
+  KeyTransferPayload,
+  EscrowRecoverResponse,
+} from './keys';
 
 // Mappers
 export {

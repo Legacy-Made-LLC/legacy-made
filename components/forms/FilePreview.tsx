@@ -105,11 +105,11 @@ export function FilePreview({
   const isDocument = file.type === "document";
   const isUploading = file.uploadStatus === "uploading";
   const hasError = file.uploadStatus === "error";
-  const isProcessing = file.isProcessing === true;
-  const isBusy = isUploading || isProcessing || isDeleting || isSharing;
+  const isProcessing = false;
+  const isBusy = isUploading || isDeleting || isSharing;
 
-  // Videos cannot be shared yet (no download URL until transcoding is complete)
-  const canShare = onShare && !isVideo;
+  // Videos can now be shared since they're stored as regular files in R2
+  const canShare = onShare;
 
   // Whether to show the menu button (has at least one action available)
   const hasMenuActions = (canShare || onDelete) && !selectMode;

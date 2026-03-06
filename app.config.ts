@@ -19,7 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ? "com.mylegacymade.legacymade"
       : "com.gibsonops.legacymade.dev1",
     infoPlist: {
-      ITSAppUsesNonExemptEncryption: false,
+      ITSAppUsesNonExemptEncryption: true,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
       NSCameraUsageDescription: "Record video messages for your loved ones",
       NSMicrophoneUsageDescription: "Record audio with your video messages",
@@ -83,6 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-document-picker",
+    "react-native-quick-crypto",
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     [
       "expo-build-properties",

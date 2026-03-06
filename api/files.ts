@@ -12,8 +12,6 @@ import type {
   DownloadUrlResponse,
   InitUploadRequest,
   InitUploadResponse,
-  InitVideoUploadRequest,
-  InitVideoUploadResponse,
 } from "./types";
 
 /**
@@ -59,25 +57,6 @@ export function createFilesService(client: ApiClient) {
     },
 
     /**
-     * Initialize a video upload (Mux)
-     * Returns a Mux direct upload URL
-     * Supports optional metadata for tracking in Mux dashboard
-     *
-     * @param target - Either { entryId } or { wishId }
-     * @param data - Video upload request data
-     */
-    initVideoUpload: async (
-      target: FileUploadTarget,
-      data: InitVideoUploadRequest
-    ): Promise<InitVideoUploadResponse> => {
-      const basePath = getUploadBasePath(target);
-      return client.post<InitVideoUploadResponse>(
-        `${basePath}/video/init`,
-        data
-      );
-    },
-
-    /**
      * Complete a standard file upload
      * Called after uploading to the presigned URL
      * For multipart uploads, pass the completed parts with ETags
@@ -114,7 +93,7 @@ export function createFilesService(client: ApiClient) {
 
     /**
      * Get download/playback URL for a file
-     * Returns presigned URL for R2 or playback URL for Mux videos
+     * Returns a presigned download URL for the file
      */
     getDownloadUrl: async (fileId: string): Promise<DownloadUrlResponse> => {
       return client.get<DownloadUrlResponse>(`/files/${fileId}/download`);
