@@ -142,6 +142,13 @@ export default Sentry.wrap(function RootLayout() {
                                 presentation: "modal",
                               }}
                             />
+                            <Stack.Screen
+                              name="subscription/return"
+                              options={{
+                                headerShown: false,
+                                presentation: "modal",
+                              }}
+                            />
                           </Stack>
                           <StatusBar style="dark" />
                           <Toast />

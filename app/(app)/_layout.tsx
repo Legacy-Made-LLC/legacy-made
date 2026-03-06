@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { useAppStateEntitlementRefresh } from "@/hooks/useAppStateEntitlementRefresh";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCreateEntry } from "@/hooks/queries";
@@ -108,6 +109,9 @@ export default function AppLayout() {
   // Guard against revoked shared plan access
   useAccessRevocationGuard();
   useSharedPlanStatusPolling();
+
+  // Refresh entitlements when app returns from background (e.g., Stripe portal)
+  useAppStateEntitlementRefresh();
 
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();

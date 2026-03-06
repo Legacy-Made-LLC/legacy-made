@@ -13,14 +13,13 @@ import {
   BottomSheetModal,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
-import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FullWindowOverlay } from "react-native-screens";
 
-import { EXTERNAL_LINKS } from "@/constants/links";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useOpenPortal } from "@/hooks/queries";
 
 interface UpgradePromptProps {
   visible: boolean;
@@ -73,10 +72,15 @@ export function UpgradePrompt({
     [],
   );
 
+  const portalMutation = useOpenPortal();
+
   const handleUpgrade = () => {
     onUpgrade?.();
-    bottomSheetModalRef.current?.dismiss();
-    WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+    portalMutation.mutate(undefined, {
+      onSuccess: () => {
+        bottomSheetModalRef.current?.dismiss();
+      },
+    });
   };
 
   const handleDismiss = () => {
@@ -119,16 +123,29 @@ export function UpgradePrompt({
         {/* Message */}
         <Text style={styles.message}>{message}</Text>
 
+        {/* Portal error */}
+        {portalMutation.isError && (
+          <Text style={styles.errorText}>
+            Something went wrong. Please try again.
+          </Text>
+        )}
+
         {/* Upgrade button — hidden for shared plan limits */}
         {!hideUpgradeAction && (
           <Pressable
             onPress={handleUpgrade}
+            disabled={portalMutation.isPending}
             style={({ pressed }) => [
               styles.upgradeButton,
               pressed && styles.upgradeButtonPressed,
+              portalMutation.isPending && styles.upgradeButtonDisabled,
             ]}
           >
-            <Text style={styles.upgradeButtonText}>Upgrade Your Plan</Text>
+            {portalMutation.isPending ? (
+              <ActivityIndicator color={colors.surface} />
+            ) : (
+              <Text style={styles.upgradeButtonText}>Upgrade Your Plan</Text>
+            )}
           </Pressable>
         )}
 
@@ -188,6 +205,13 @@ const styles = StyleSheet.create({
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
     marginBottom: spacing.xl,
   },
+  errorText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.error,
+    textAlign: "center",
+    marginBottom: spacing.md,
+  },
   upgradeButton: {
     height: 52,
     borderRadius: 26,
@@ -198,6 +222,9 @@ const styles = StyleSheet.create({
   },
   upgradeButtonPressed: {
     backgroundColor: colors.primaryPressed,
+  },
+  upgradeButtonDisabled: {
+    opacity: 0.6,
   },
   upgradeButtonText: {
     fontFamily: typography.fontFamily.semibold,

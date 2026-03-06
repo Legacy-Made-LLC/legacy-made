@@ -86,6 +86,9 @@ export {
   useDeclineAccessInvitation,
 } from './useAccessInvitationMutations';
 
+// Subscriptions
+export { useOpenPortal } from './useSubscriptionMutations';
+
 // Trusted Contacts
 export {
   useTrustedContactsQuery,
