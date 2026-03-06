@@ -3,6 +3,7 @@ import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
+import { useOpenPortal } from "@/hooks/queries";
 import { logger } from "@/lib/logger";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -151,6 +152,7 @@ function AccountView({
   const { user } = useUser();
   const { tier, tierName, isFree, getQuotaInfo } = useEntitlements();
   const { showUpgradePrompt } = useUpgradePrompt();
+  const portalMutation = useOpenPortal();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -505,6 +507,30 @@ function AccountView({
                 >
                   <Text style={styles.upgradeFieldLabel}>
                     Upgrade your plan
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </>
+            )}
+            {!isFree && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <Pressable
+                  onPress={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  style={({ pressed }) => [
+                    styles.accountField,
+                    pressed && styles.upgradeFieldPressed,
+                  ]}
+                >
+                  <Text style={styles.upgradeFieldLabel}>
+                    {portalMutation.isPending
+                      ? "Opening..."
+                      : "Manage Subscription"}
                   </Text>
                   <Ionicons
                     name="chevron-forward"

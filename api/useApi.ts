@@ -13,6 +13,7 @@ import { createMessagesService } from './messages';
 import { createPlansService } from './plans';
 import { createProgressService } from './progress';
 import { createSharedPlansService } from './sharedPlans';
+import { createSubscriptionsService } from './subscriptions';
 import { createTrustedContactsService } from './trustedContacts';
 import { createWishesService } from './wishes';
 
@@ -83,6 +84,10 @@ export function useApi() {
     return createSharedPlansService(client);
   }, [client]);
 
+  const subscriptions = useMemo(() => {
+    return createSubscriptionsService(client);
+  }, [client]);
+
   const accessInvitations = useMemo(() => {
     return createAccessInvitationsService(client);
   }, [client]);
@@ -108,6 +113,8 @@ export function useApi() {
     trustedContacts,
     /** Shared plans service for viewing plans shared with the user */
     sharedPlans,
+    /** Subscriptions service for Stripe portal */
+    subscriptions,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
     /** Whether the user is signed in */
