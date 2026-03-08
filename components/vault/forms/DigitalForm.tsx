@@ -302,7 +302,7 @@ export function DigitalForm({
             <FormTextArea
               field={field}
               label="How to Access"
-              placeholder="Where can the password be found? Don't store the actual password here."
+              placeholder="Describe where to find login info, not the password itself — it's safer to point to where it's kept."
               disabled={readOnly}
             />
           )}

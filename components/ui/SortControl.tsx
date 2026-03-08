@@ -9,6 +9,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { TouchableOpacity as GHTouchable } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -53,9 +54,9 @@ export function SortControl({
   }, [isExpanded]);
 
   const handleSearchClose = useCallback(() => {
+    inputRef.current?.blur();
     isExpanded.value = false;
     onSearchQueryChange?.("");
-    inputRef.current?.blur();
     // Wait for animation to finish before unmounting the input
     setTimeout(() => setSearchVisible(false), ANIM_DURATION + 50);
   }, [isExpanded, onSearchQueryChange]);
@@ -181,15 +182,16 @@ export function SortControl({
               autoCorrect={false}
               autoCapitalize="none"
             />
-            <Pressable
+            <GHTouchable
               onPress={handleSearchClose}
               style={styles.clearButton}
               accessibilityRole="button"
               accessibilityLabel="Close search"
               hitSlop={8}
+              activeOpacity={0.7}
             >
               <Ionicons name="close" size={14} color={colors.textSecondary} />
-            </Pressable>
+            </GHTouchable>
           </View>
         </Animated.View>
       )}

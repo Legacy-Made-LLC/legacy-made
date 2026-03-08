@@ -80,7 +80,7 @@ export default function EntryScreen() {
       // Skip guard in read-only mode
       if (isReadOnly) return;
       // Allow navigation if form has no unsaved changes
-      if (!formRef.current?.state.isDirty) return;
+      if (!formRef.current?.state.isDirty && !attachmentsDirtyRef.current) return;
 
       e.preventDefault();
 
@@ -133,6 +133,7 @@ export default function EntryScreen() {
 
   // Track if files were deleted during this session (for cache invalidation on unmount)
   const filesDeletedRef = useRef(false);
+  const attachmentsDirtyRef = useRef(false);
 
   // Initialize attachments when entry data loads (but not during save/upload)
   useEffect(() => {
@@ -284,7 +285,9 @@ export default function EntryScreen() {
    */
   const handleAttachmentsChange = useCallback(
     async (newAttachments: FileAttachment[]) => {
-      const { hadRemoteDeletions, hadSuccessfulDeletions } =
+      attachmentsDirtyRef.current = true;
+
+      const { hadRemoteDeletions, hadSuccessfulDeletions, finalAttachments } =
         await handleRemoteFileDeletions(newAttachments);
 
       // Track if files were deleted for cache invalidation on unmount
@@ -295,6 +298,19 @@ export default function EntryScreen() {
       // If no remote files were removed, just update state
       if (!hadRemoteDeletions) {
         setAttachments(newAttachments);
+      } else {
+        // Remote deletions were processed — finalAttachments only has the old
+        // files minus the deleted ones. Merge in any new local files from
+        // newAttachments that aren't already present (e.g. a re-recorded video).
+        const finalIds = new Set(
+          finalAttachments.map((a) => a.id || a.uri),
+        );
+        const newLocalFiles = newAttachments.filter(
+          (a) => !a.isRemote && !finalIds.has(a.id || a.uri),
+        );
+        if (newLocalFiles.length > 0) {
+          setAttachments([...finalAttachments, ...newLocalFiles]);
+        }
       }
     },
     [handleRemoteFileDeletions, setAttachments]
