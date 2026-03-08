@@ -230,9 +230,9 @@ Each main feature has a distinct pastel color identity that carries through the 
 | Feature | Color | Hex | Usage |
 |---------|-------|-----|-------|
 | **Information Vault** | Sage Green | `#8a9785` | Primary feature for organizing critical information |
-| **Wishes & Guidance** | Soft Lavender | TBD | Future feature for end-of-life wishes |
-| **Legacy Messages** | Soft Blue | TBD | Future feature for personal messages to loved ones |
-| **Family Access** | Warm Blush/Peach | TBD | Future feature for sharing access with family |
+| **Wishes & Guidance** | Soft Lavender | `#B8A9C9` | Future feature for end-of-life wishes |
+| **Legacy Messages** | Soft Blue | `#A3C4D8` | Future feature for personal messages to loved ones |
+| **Family Access** | Warm Blush/Peach | `#E0B8A8` | Future feature for sharing access with family |
 
 This color system creates visual distinction between features while maintaining the calm, cohesive aesthetic. The sage green serves as the primary accent for the MVP (Information Vault pillar).
 

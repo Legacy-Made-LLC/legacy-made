@@ -34,9 +34,11 @@ export function RecordedVideoPreview({
   onRemove,
 }: RecordedVideoPreviewProps) {
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
   const isUploading = video.uploadStatus === "uploading";
   const hasError = video.uploadStatus === "error";
+  const showThumbnail = !!video.thumbnailUri && !thumbnailFailed;
 
   return (
     <>
@@ -48,11 +50,12 @@ export function RecordedVideoPreview({
           accessibilityLabel="Play recorded video"
           accessibilityRole="button"
         >
-          {video.thumbnailUri ? (
+          {showThumbnail ? (
             <Image
               source={{ uri: video.thumbnailUri }}
               style={styles.thumbnail}
               resizeMode="cover"
+              onError={() => setThumbnailFailed(true)}
             />
           ) : (
             <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>

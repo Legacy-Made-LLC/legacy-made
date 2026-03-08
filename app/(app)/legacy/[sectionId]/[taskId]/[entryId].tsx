@@ -81,7 +81,7 @@ export default function LegacyEntryScreen() {
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
       if (allowNavigationRef.current) return;
       if (isReadOnly) return;
-      if (!formRef.current?.state.isDirty) return;
+      if (!formRef.current?.state.isDirty && !attachmentsDirtyRef.current) return;
 
       e.preventDefault();
 
@@ -133,6 +133,7 @@ export default function LegacyEntryScreen() {
 
   const isSavingRef = useRef(false);
   const filesDeletedRef = useRef(false);
+  const attachmentsDirtyRef = useRef(false);
 
   // Initialize attachments when message data loads
   useEffect(() => {
@@ -224,7 +225,9 @@ export default function LegacyEntryScreen() {
 
   const handleAttachmentsChange = useCallback(
     async (newAttachments: FileAttachment[]) => {
-      const { hadRemoteDeletions, hadSuccessfulDeletions } =
+      attachmentsDirtyRef.current = true;
+
+      const { hadRemoteDeletions, hadSuccessfulDeletions, finalAttachments } =
         await handleRemoteFileDeletions(newAttachments);
 
       if (hadSuccessfulDeletions) {
@@ -233,6 +236,19 @@ export default function LegacyEntryScreen() {
 
       if (!hadRemoteDeletions) {
         setAttachments(newAttachments);
+      } else {
+        // Remote deletions were processed — finalAttachments only has the old
+        // files minus the deleted ones. Merge in any new local files from
+        // newAttachments that aren't already present (e.g. a re-recorded video).
+        const finalIds = new Set(
+          finalAttachments.map((a) => a.id || a.uri),
+        );
+        const newLocalFiles = newAttachments.filter(
+          (a) => !a.isRemote && !finalIds.has(a.id || a.uri),
+        );
+        if (newLocalFiles.length > 0) {
+          setAttachments([...finalAttachments, ...newLocalFiles]);
+        }
       }
     },
     [handleRemoteFileDeletions, setAttachments],
