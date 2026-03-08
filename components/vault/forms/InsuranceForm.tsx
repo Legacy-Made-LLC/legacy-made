@@ -3,19 +3,19 @@
  */
 
 import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
-import { FormInput, FormTextArea, insuranceSchema, FilePicker } from "@/components/forms";
+import {
+  FilePicker,
+  FormInput,
+  FormTextArea,
+  insuranceSchema,
+} from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
-import {
-  Alert,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
@@ -190,144 +190,145 @@ export function InsuranceForm({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-        <form.Field name="provider">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Insurance Provider"
-              placeholder="e.g., State Farm, MetLife, etc."
-              disabled={readOnly}
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="policyType">
-          {(field) => (
-            <View style={formStyles.fieldContainer}>
-              <Text style={formStyles.label}>Policy Type</Text>
-              <View style={formStyles.typeGrid}>
-                {policyTypes.map((type) => (
-                  <Pressable
-                    key={type}
-                    style={[
-                      formStyles.typeButton,
-                      field.state.value === type &&
-                        formStyles.typeButtonSelected,
-                    ]}
-                    onPress={readOnly ? undefined : () => field.handleChange(type)}
-                  >
-                    <Text
-                      style={[
-                        formStyles.typeButtonText,
-                        field.state.value === type &&
-                          formStyles.typeButtonTextSelected,
-                      ]}
-                    >
-                      {type}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-        </form.Field>
-
-        <View style={formStyles.fieldRow}>
-          <View style={formStyles.fieldRowItem}>
-            <form.Field name="policyNumber">
-              {(field) => (
-                <FormInput
-                  field={field}
-                  label="Policy #"
-                  placeholder="e.g., LF-2847592"
-                  containerStyle={{ marginBottom: 0 }}
-                  disabled={readOnly}
-                />
-              )}
-            </form.Field>
-          </View>
-          <View style={formStyles.fieldRowItem}>
-            <form.Field name="coverageDetails">
-              {(field) => (
-                <FormInput
-                  field={field}
-                  label="Coverage"
-                  placeholder="e.g., $500,000"
-                  containerStyle={{ marginBottom: 0 }}
-                  disabled={readOnly}
-                />
-              )}
-            </form.Field>
-          </View>
-        </View>
-
-        <form.Field name="beneficiaries">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Beneficiaries"
-              placeholder="e.g., Jane Doe, John Doe"
-              disabled={readOnly}
-            />
-          )}
-        </form.Field>
-
-        <View style={formStyles.fieldRow}>
-          <View style={formStyles.fieldRowItem}>
-            <form.Field name="agentName">
-              {(field) => (
-                <FormInput
-                  field={field}
-                  label="Agent Name"
-                  placeholder="e.g., John Smith"
-                  containerStyle={{ marginBottom: 0 }}
-                  disabled={readOnly}
-                />
-              )}
-            </form.Field>
-          </View>
-          <View style={formStyles.fieldRowItem}>
-            <form.Field name="agentPhone">
-              {(field) => (
-                <FormInput
-                  field={field}
-                  label="Agent Phone"
-                  placeholder="(555) 123-4567"
-                  keyboardType="phone-pad"
-                  containerStyle={{ marginBottom: 0 }}
-                  disabled={readOnly}
-                />
-              )}
-            </form.Field>
-          </View>
-        </View>
-
-        <form.Field name="notes">
-          {(field) => (
-            <FormTextArea
-              field={field}
-              label="Notes"
-              placeholder="i.e. physical location, contact information, etc."
-              disabled={readOnly}
-            />
-          )}
-        </form.Field>
-
-        {!readOnly && onAttachmentsChange && (
-          <FilePicker
-            label="Policy Documents"
-            value={attachments ?? []}
-            onChange={onAttachmentsChange}
-            mode="all"
-            maxFiles={5}
-            placeholder="Add policy documents or ID cards"
-            helpText="Attach scans of insurance cards, policy documents, or related files"
-            showStorageIndicator
-            onUpgradeRequired={onStorageUpgradeRequired}
+      <form.Field name="provider">
+        {(field) => (
+          <FormInput
+            field={field}
+            label="Insurance Provider"
+            placeholder="e.g., State Farm, MetLife, etc."
+            disabled={readOnly}
           />
         )}
+      </form.Field>
 
-        {!readOnly && (
+      <form.Field name="policyType">
+        {(field) => (
+          <View style={formStyles.fieldContainer}>
+            <Text style={formStyles.label}>Policy Type</Text>
+            <View style={formStyles.typeGrid}>
+              {policyTypes.map((type) => (
+                <Pressable
+                  key={type}
+                  style={[
+                    formStyles.typeButton,
+                    field.state.value === type && formStyles.typeButtonSelected,
+                  ]}
+                  onPress={
+                    readOnly ? undefined : () => field.handleChange(type)
+                  }
+                >
+                  <Text
+                    style={[
+                      formStyles.typeButtonText,
+                      field.state.value === type &&
+                        formStyles.typeButtonTextSelected,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+      </form.Field>
+
+      <View style={formStyles.fieldRow}>
+        <View style={formStyles.fieldRowItem}>
+          <form.Field name="policyNumber">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Policy #"
+                placeholder="e.g., LF-2847592"
+                containerStyle={{ marginBottom: 0 }}
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        </View>
+        <View style={formStyles.fieldRowItem}>
+          <form.Field name="coverageDetails">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Coverage"
+                placeholder="e.g., $500,000"
+                containerStyle={{ marginBottom: 0 }}
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        </View>
+      </View>
+
+      <form.Field name="beneficiaries">
+        {(field) => (
+          <FormInput
+            field={field}
+            label="Beneficiaries"
+            placeholder="e.g., Jane Doe, John Doe"
+            disabled={readOnly}
+          />
+        )}
+      </form.Field>
+
+      <View style={formStyles.fieldRow}>
+        <View style={formStyles.fieldRowItem}>
+          <form.Field name="agentName">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Agent Name"
+                placeholder=""
+                containerStyle={{ marginBottom: 0 }}
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        </View>
+        <View style={formStyles.fieldRowItem}>
+          <form.Field name="agentPhone">
+            {(field) => (
+              <FormInput
+                field={field}
+                label="Agent Phone"
+                placeholder=""
+                keyboardType="phone-pad"
+                containerStyle={{ marginBottom: 0 }}
+                disabled={readOnly}
+              />
+            )}
+          </form.Field>
+        </View>
+      </View>
+
+      <form.Field name="notes">
+        {(field) => (
+          <FormTextArea
+            field={field}
+            label="Notes"
+            placeholder="i.e. physical location, contact information, etc."
+            disabled={readOnly}
+          />
+        )}
+      </form.Field>
+
+      {!readOnly && onAttachmentsChange && (
+        <FilePicker
+          label="Policy Documents"
+          value={attachments ?? []}
+          onChange={onAttachmentsChange}
+          mode="all"
+          maxFiles={5}
+          placeholder="Add policy documents or ID cards"
+          helpText="Attach scans of insurance cards, policy documents, or related files"
+          showStorageIndicator
+          onUpgradeRequired={onStorageUpgradeRequired}
+        />
+      )}
+
+      {!readOnly && (
         <View style={formStyles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -358,17 +359,17 @@ export function InsuranceForm({
             }}
           </form.Subscribe>
         </View>
-        )}
+      )}
 
-        {!readOnly && !isNew && onDelete && (
-          <View style={formStyles.deleteContainer}>
-            <Button
-              title="Delete Policy"
-              variant="destructive"
-              onPress={handleDelete}
-            />
-          </View>
-        )}
+      {!readOnly && !isNew && onDelete && (
+        <View style={formStyles.deleteContainer}>
+          <Button
+            title="Delete Policy"
+            variant="destructive"
+            onPress={handleDelete}
+          />
+        </View>
+      )}
     </KeyboardAwareScrollView>
   );
 }
