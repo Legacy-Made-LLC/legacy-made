@@ -5,12 +5,13 @@
  * 1. Configure the notification handler (foreground display)
  * 2. Request / check permission
  * 3. Obtain Expo push token and register with backend
- * 4. Foreground listener → show in-app toast
- * 5. Tap handler → navigate to Family tab
+ * 4. Foreground listener → show in-app toast + invalidate relevant query caches
+ * 5. Tap handler → navigate based on notification type
  * 6. Persist token in AsyncStorage for sign-out cleanup
  */
 
 import { useAuth } from "@clerk/clerk-expo";
+import { useQueryClient } from "@tanstack/react-query";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
@@ -21,8 +22,37 @@ import Constants from "expo-constants";
 
 import { useApi } from "@/api/useApi";
 import { logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "@/hooks/useToast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// ── Notification data types ─────────────────────────────────────────────────
+type InvitationAcceptedData = {
+  type: "invitation_accepted";
+  planId: string;
+  dekShared: boolean;
+};
+
+type InvitationDeclinedData = {
+  type: "invitation_declined";
+  planId: string;
+};
+
+type InvitationReceivedData = {
+  type: "invitation_received";
+  planId: string;
+};
+
+type DekSharedData = {
+  type: "dek_shared";
+  planId: string;
+};
+
+type NotificationData =
+  | InvitationAcceptedData
+  | InvitationDeclinedData
+  | InvitationReceivedData
+  | DekSharedData;
 
 const EAS_PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId;
 
@@ -44,6 +74,7 @@ export function usePushNotifications() {
   const { isSignedIn } = useAuth();
   const { pushTokens } = useApi();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [permissionStatus, setPermissionStatus] =
     useState<Notifications.PermissionStatus | null>(null);
@@ -138,28 +169,81 @@ export function usePushNotifications() {
     })();
   }, [isSignedIn, registerToken]);
 
-  // ── Foreground notification listener → show toast ────────────────────────
+  // ── Invalidate query caches based on notification type ──────────────────
+  const invalidateCachesForNotification = useCallback(
+    (data: NotificationData) => {
+      logger.debug("Invalidating caches for push notification", {
+        type: data.type,
+        planId: data.planId,
+      });
+
+      switch (data.type) {
+        case "invitation_accepted":
+        case "invitation_declined":
+          // Owner received update about a trusted contact — refresh the list
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.trustedContacts.all(data.planId),
+          });
+          break;
+
+        case "invitation_received":
+          // Invitee received a new invitation — refresh shared plans so it appears
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.sharedPlans.all(),
+          });
+          break;
+
+        case "dek_shared":
+          // Trusted contact now has decryption access — refresh shared plans
+          // and crypto state so the UI reflects the new access
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.sharedPlans.all(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.crypto.all(),
+          });
+          break;
+      }
+    },
+    [queryClient],
+  );
+
+  // ── Foreground notification listener → show toast + invalidate caches ───
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener(
       (notification) => {
-        const { title, body } = notification.request.content;
+        const { title, body, data } = notification.request.content;
         toast.info({ title: title ?? undefined, message: body ?? undefined });
+
+        // Invalidate relevant caches if the notification has typed data
+        if (data && typeof data === "object" && "type" in data) {
+          invalidateCachesForNotification(data as NotificationData);
+        }
       },
     );
 
     return () => subscription.remove();
-  }, []);
+  }, [invalidateCachesForNotification]);
 
-  // ── Tap handler → navigate to Family tab ─────────────────────────────────
+  // ── Tap handler → navigate based on notification type + invalidate caches
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
-      () => {
+      (response) => {
+        const data = response.notification.request.content.data;
+
+        // Invalidate caches on tap as well (covers background notifications
+        // where the foreground listener didn't fire)
+        if (data && typeof data === "object" && "type" in data) {
+          invalidateCachesForNotification(data as NotificationData);
+        }
+
+        // All current notification types relate to the Family tab
         router.push("/(app)/(tabs)/family");
       },
     );
 
     return () => subscription.remove();
-  }, [router]);
+  }, [router, invalidateCachesForNotification]);
 
   return {
     permissionStatus,
