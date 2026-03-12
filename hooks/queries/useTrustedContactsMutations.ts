@@ -153,7 +153,70 @@ export function useUpdateTrustedContact() {
 }
 
 /**
- * Hook for revoking/deleting a trusted contact
+ * Hook for revoking a trusted contact's access (soft delete)
+ */
+export function useRevokeTrustedContact() {
+  const queryClient = useQueryClient();
+  const { planId } = usePlan();
+  const { trustedContacts } = useApi();
+
+  return useMutation({
+    mutationFn: (contactId: string) => {
+      if (!planId) {
+        throw new Error("Plan ID is required");
+      }
+      return trustedContacts.revoke(planId, contactId);
+    },
+    onMutate: async (contactId) => {
+      if (!planId) return;
+
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.trustedContacts.all(planId),
+      });
+
+      const previousContacts = queryClient.getQueryData<TrustedContact[]>(
+        queryKeys.trustedContacts.all(planId),
+      );
+
+      if (previousContacts) {
+        queryClient.setQueryData<TrustedContact[]>(
+          queryKeys.trustedContacts.all(planId),
+          previousContacts.map((c) =>
+            c.id === contactId
+              ? {
+                  ...c,
+                  accessStatus: "revoked_by_owner" as const,
+                  revokedAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+              : c,
+          ),
+        );
+      }
+
+      return { previousContacts };
+    },
+    onError: (_err, _contactId, context) => {
+      if (!planId || !context?.previousContacts) return;
+      queryClient.setQueryData(
+        queryKeys.trustedContacts.all(planId),
+        context.previousContacts,
+      );
+    },
+    onSettled: (_data, _error, contactId) => {
+      if (!planId) return;
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.trustedContacts.all(planId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.trustedContacts.single(planId, contactId),
+      });
+    },
+  });
+}
+
+/**
+ * Hook for permanently deleting a trusted contact
  */
 export function useDeleteTrustedContact() {
   const queryClient = useQueryClient();

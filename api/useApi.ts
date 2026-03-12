@@ -13,6 +13,7 @@ import { createKeysService } from './keys';
 import { createMessagesService } from './messages';
 import { createPlansService } from './plans';
 import { createProgressService } from './progress';
+import { createPushTokensService } from './pushTokens';
 import { createSharedPlansService } from './sharedPlans';
 import { createTrustedContactsService } from './trustedContacts';
 import { createWishesService } from './wishes';
@@ -92,6 +93,10 @@ export function useApi() {
     return createAccessInvitationsService(client);
   }, [client]);
 
+  const pushTokens = useMemo(() => {
+    return createPushTokensService(client);
+  }, [client]);
+
   return {
     /** The base API client for custom requests */
     client,
@@ -117,6 +122,8 @@ export function useApi() {
     keys,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
+    /** Push token registration service */
+    pushTokens,
     /** Whether the user is signed in */
     isSignedIn,
     /** Whether Clerk has finished loading */

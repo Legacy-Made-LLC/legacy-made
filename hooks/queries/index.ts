@@ -95,6 +95,7 @@ export {
 export {
   useCreateTrustedContact,
   useUpdateTrustedContact,
+  useRevokeTrustedContact,
   useDeleteTrustedContact,
   useResendInvitation,
 } from './useTrustedContactsMutations';

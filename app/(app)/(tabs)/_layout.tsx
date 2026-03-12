@@ -78,11 +78,11 @@ export default function TabsLayout() {
   const isInfoLocked = isEffectivelyLocked(TAB_TO_PILLAR.information);
   const isWishesLocked = isEffectivelyLocked(TAB_TO_PILLAR.wishes);
   const isLegacyLocked = isEffectivelyLocked(TAB_TO_PILLAR.legacy);
-  // Family tab is always locked on shared plans — you can't manage someone else's contacts
+  // Family tab lock: only when fully locked or viewing a shared plan.
+  // View-only users (free tier) can still access the tab to see shared plans —
+  // the screen itself handles restricting trusted contact creation.
   const isFamilyLocked =
-    isLockedPillar(TAB_TO_PILLAR.family) ||
-    isViewOnlyPillar(TAB_TO_PILLAR.family) ||
-    isViewingSharedPlan;
+    isLockedPillar(TAB_TO_PILLAR.family) || isViewingSharedPlan;
 
   return (
     <Tabs

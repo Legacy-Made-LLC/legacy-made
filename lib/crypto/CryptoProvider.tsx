@@ -18,9 +18,11 @@ import {
   useDEKQuery,
   useEscrowRecoveryMutation,
   useHasEncryptionKeysQuery,
+  useKeySyncMutation,
   useKeyVersionQuery,
   usePlanE2EEStatusQuery,
   useRetrySetupMutation,
+  useServerKeysQuery,
   useSetupKeysMutation,
   useSharedPlanDEKQuery,
 } from "@/hooks/queries/useCryptoQueries";
@@ -110,6 +112,13 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
 
   const keyVersionQuery = useKeyVersionQuery(userId, isReady);
 
+  // Verify local keys are actually registered on the server
+  const serverKeysQuery = useServerKeysQuery(
+    userId,
+    isReady,
+    keyVersionQuery.data,
+  );
+
   // Only check E2EE status when no local keys (detecting returning user)
   const e2eeStatusQuery = usePlanE2EEStatusQuery(
     planId,
@@ -151,6 +160,9 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
 
   const setupMutation = useSetupKeysMutation();
   const retrySetupMutation = useRetrySetupMutation();
+  const keySyncMutation = useKeySyncMutation();
+  const keySyncMutate = keySyncMutation.mutate;
+  const isKeySyncPending = keySyncMutation.isPending;
   const escrowRecoveryMutation = useEscrowRecoveryMutation();
   // ── Derived state ────────────────────────────────────────────────────
 
@@ -208,6 +220,49 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
     keyVersionQuery.isFetched,
     planId,
     userId,
+    retrySetupMutation,
+  ]);
+
+  // ── Server key sync (verify local keys exist on backend) ────────────
+
+  useEffect(() => {
+    if (
+      isReady &&
+      dekCryptoKey &&
+      keyVersionQuery.data != null &&
+      serverKeysQuery.isFetched &&
+      serverKeysQuery.data &&
+      planId &&
+      userId &&
+      !isKeySyncPending &&
+      !retrySetupMutation.isPending
+    ) {
+      const localVersion = keyVersionQuery.data;
+      const serverHasKey = serverKeysQuery.data.some(
+        (k) => k.keyVersion === localVersion,
+      );
+
+      if (!serverHasKey) {
+        logger.warn(
+          "E2EE: Local keyVersion=" +
+            localVersion +
+            " not found on server (server has " +
+            serverKeysQuery.data.length +
+            " keys). Re-syncing...",
+        );
+        keySyncMutate({ dek: dekCryptoKey, planId, userId });
+      }
+    }
+  }, [
+    isReady,
+    dekCryptoKey,
+    keyVersionQuery.data,
+    serverKeysQuery.isFetched,
+    serverKeysQuery.data,
+    planId,
+    userId,
+    isKeySyncPending,
+    keySyncMutate,
     retrySetupMutation,
   ]);
 
@@ -295,9 +350,10 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
             if (!dekRecords || dekRecords.length === 0) return null;
 
             const myKeyVersion = await getKeyVersion(userId);
-            const matchingDek = myKeyVersion
-              ? dekRecords.find((d) => d.keyVersion === myKeyVersion)
-              : dekRecords[0];
+            if (!myKeyVersion) return null; // No local keyVersion = can't unwrap
+            const matchingDek = dekRecords.find(
+              (d) => d.keyVersion === myKeyVersion,
+            );
             if (!matchingDek) return null;
 
             const privateKey = await getPrivateKey(userId);
@@ -355,6 +411,9 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
     });
     await queryClient.invalidateQueries({
       queryKey: queryKeys.crypto.keyVersion(userId),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.crypto.serverKeys(userId),
     });
     logger.info("E2EE: Recovery complete, queries invalidated");
   }, [userId, queryClient]);

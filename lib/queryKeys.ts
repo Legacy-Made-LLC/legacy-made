@@ -84,6 +84,9 @@ export const queryKeys = {
     backupStatus: (planId: string) => ['crypto', 'backupStatus', planId] as const,
     sharedDEK: (planId: string, ownerId: string) =>
       ['crypto', 'sharedDEK', planId, ownerId] as const,
+    serverKeys: (userId: string) => ['crypto', 'serverKeys', userId] as const,
+    /** All device keys (including inactive) for the device management UI */
+    deviceKeys: (userId: string) => ['crypto', 'deviceKeys', userId] as const,
     recoveryEvents: () => ['crypto', 'recoveryEvents'] as const,
   },
 } as const;

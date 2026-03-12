@@ -37,6 +37,8 @@ export interface UserKeyRecord {
   keyVersion: number;
   deviceLabel: string | null;
   keyType: "device" | "recovery";
+  isActive: boolean;
+  deactivatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,14 +49,26 @@ export interface PublicKeyRecord {
   publicKey: string;
   keyVersion: number;
   keyType: "device" | "recovery";
-  deviceLabel: string | null;
+  isActive: boolean;
 }
 
 // ============================================================================
 // DEK records
 // ============================================================================
 
-/** Request to store an encrypted DEK copy */
+/**
+ * Request to store an encrypted DEK copy.
+ *
+ * The `encryptedDek` format depends on `dekType`:
+ *
+ * - **device / contact / escrow**: Base64 RSA-OAEP ciphertext (no IV needed —
+ *   RSA-OAEP handles randomization internally).
+ *
+ * - **recovery**: JSON string with PBKDF2 + AES-256-GCM parameters:
+ *   `{ v: number, iv: string, data: string, salt: string, kdf: "pbkdf2", iterations: number }`
+ *   All binary values are base64-encoded. Required because the wrapping key is
+ *   derived from a mnemonic via PBKDF2, and AES-GCM decryption needs the IV and salt.
+ */
 export interface StoreDekRequest {
   planId: string;
   recipientId: string;
@@ -66,7 +80,11 @@ export interface StoreDekRequest {
 /** DEK types managed via rotate/delete (escrow is managed separately) */
 export type ManagedDekType = "device" | "contact" | "recovery";
 
-/** Request to rotate (replace) DEK copies for a plan */
+/**
+ * Request to rotate (replace) DEK copies for a plan.
+ *
+ * See {@link StoreDekRequest} for the `encryptedDek` format per `dekType`.
+ */
 export interface RotateDekRequest {
   planId: string;
   newDeks: {
@@ -77,7 +95,11 @@ export interface RotateDekRequest {
   }[];
 }
 
-/** DEK record returned from the server */
+/**
+ * DEK record returned from the server.
+ *
+ * See {@link StoreDekRequest} for the `encryptedDek` format per `dekType`.
+ */
 export interface DekRecord {
   id: string;
   planId: string;
@@ -124,10 +146,15 @@ export interface DeviceLinkClaimResponse {
 // Escrow & recovery
 // ============================================================================
 
+/** Response from fetching the escrow public key */
+export interface EscrowPublicKeyResponse {
+  publicKey: string;
+}
+
 /** Request to enable KMS escrow for a plan */
 export interface EnableEscrowRequest {
   planId: string;
-  dekPlaintext: string;
+  encryptedDek: string;
 }
 
 /** Response from enabling escrow */
@@ -174,6 +201,28 @@ export interface PlanE2EEStatus {
 }
 
 // ============================================================================
+// Public key lookup by email
+// ============================================================================
+
+/** Response when a user with the given email has registered encryption keys */
+export interface PublicKeyByEmailResponse {
+  found: true;
+  userId: string;
+  /** All active device keys for this user */
+  keys: PublicKeyRecord[];
+}
+
+/** Response when no user with encryption keys is found for the email */
+export interface PublicKeyByEmailNotFoundResponse {
+  found: false;
+}
+
+/** Union result for email-based public key lookup */
+export type PublicKeyByEmailResult =
+  | PublicKeyByEmailResponse
+  | PublicKeyByEmailNotFoundResponse;
+
+// ============================================================================
 // Service
 // ============================================================================
 
@@ -197,16 +246,38 @@ export function createKeysService(client: ApiClient) {
 
     /**
      * Get all key records for the current user (multiple devices/recovery).
+     * @param includeInactive - If true, include deactivated keys (for device management UI)
      */
-    getMyKeys: async (): Promise<UserKeyRecord[]> => {
-      return client.get<UserKeyRecord[]>("/encryption/keys/me");
+    getMyKeys: async (includeInactive?: boolean): Promise<UserKeyRecord[]> => {
+      const query = includeInactive ? "?includeInactive=true" : "";
+      return client.get<UserKeyRecord[]>(`/encryption/keys/me${query}`);
     },
 
     /**
-     * Get all public keys for another user.
+     * Get public keys for another user. Defaults to active keys only.
+     * @param includeInactive - If true, include deactivated keys
      */
-    getPublicKeys: async (userId: string): Promise<PublicKeyRecord[]> => {
-      return client.get<PublicKeyRecord[]>(`/encryption/keys/${userId}`);
+    getPublicKeys: async (
+      userId: string,
+      includeInactive?: boolean,
+    ): Promise<PublicKeyRecord[]> => {
+      const query = includeInactive ? "?includeInactive=true" : "";
+      return client.get<PublicKeyRecord[]>(
+        `/encryption/keys/${userId}${query}`,
+      );
+    },
+
+    /**
+     * Look up a user's public key by email address.
+     * Returns the user's info and primary public key if found,
+     * or { found: false } if no user with encryption keys exists.
+     */
+    getPublicKeyByEmail: async (
+      email: string,
+    ): Promise<PublicKeyByEmailResult> => {
+      return client.get<PublicKeyByEmailResult>(
+        `/encryption/keys/by-email?email=${encodeURIComponent(email)}`,
+      );
     },
 
     /**
@@ -226,6 +297,18 @@ export function createKeysService(client: ApiClient) {
      */
     deleteKey: async (keyVersion: number): Promise<void> => {
       await client.delete(`/encryption/keys/${keyVersion}`);
+    },
+
+    /**
+     * Deactivate a key (report as lost). Sets is_active = false,
+     * deletes DEK records for that keyVersion.
+     * Returns the updated key record.
+     */
+    deactivateKey: async (keyVersion: number): Promise<UserKeyRecord> => {
+      return client.patch<UserKeyRecord>(
+        `/encryption/keys/${keyVersion}/deactivate`,
+        {},
+      );
     },
 
     // --- DEKs ---
@@ -339,7 +422,19 @@ export function createKeysService(client: ApiClient) {
     // --- Escrow ---
 
     /**
-     * Enable KMS escrow for a plan. Server encrypts the DEK with AWS KMS.
+     * Fetch the escrow RSA public key (SPKI/DER, base64-encoded).
+     * The key rarely rotates — callers should cache it for the session.
+     */
+    getEscrowPublicKey: async (): Promise<EscrowPublicKeyResponse> => {
+      return client.get<EscrowPublicKeyResponse>(
+        "/encryption/escrow/public-key",
+      );
+    },
+
+    /**
+     * Enable KMS escrow for a plan.
+     * Client encrypts the DEK with the escrow public key before sending.
+     * Server stores the ciphertext directly — never sees the plaintext.
      */
     enableEscrow: async (
       data: EnableEscrowRequest,

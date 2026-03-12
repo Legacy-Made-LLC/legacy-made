@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
-import React from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,6 +13,7 @@ import {
 } from "@/components/entitlements";
 import { SharedPlanCard } from "@/components/family/SharedPlanCard";
 import { TrustedContactCard } from "@/components/family/TrustedContactCard";
+import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
@@ -37,6 +40,13 @@ export default function FamilyScreen() {
     useSharedPlansQuery();
   const acceptMutation = useAcceptSharedPlan();
   const declineMutation = useDeclineSharedPlan();
+
+  // Clear notification badge each time the Family tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      Notifications.setBadgeCountAsync(0);
+    }, []),
+  );
 
   const isLocked = isLockedPillar("family_access");
   const isViewOnly = isViewOnlyPillar("family_access");
@@ -274,6 +284,8 @@ export default function FamilyScreen() {
           message="Upgrade your plan to invite trusted contacts and share access to your legacy information."
         />
       )}
+
+      <NotificationPermissionPrompt />
     </>
   );
 }

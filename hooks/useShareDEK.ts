@@ -9,7 +9,7 @@
 
 import { useApi } from "@/api";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
-import { importPublicKey, wrapDEK } from "@/lib/crypto/keys";
+import { wrapDEKForRecipient } from "@/lib/crypto/wrapDEKForRecipient";
 import { logger } from "@/lib/logger";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -46,23 +46,31 @@ export function useShareDEK() {
         throw new Error("Recipient has no registered encryption keys");
       }
 
-      // 2. Wrap DEK for each device key and store on server
-      for (const key of recipientKeys) {
-        const recipientPubKey = await importPublicKey(key.publicKey);
-        const wrappedDEK = await wrapDEK(dekCryptoKey, recipientPubKey);
+      // 2. Wrap DEK for each active device key
+      const wrappedDeks = await wrapDEKForRecipient(
+        dekCryptoKey,
+        recipientUserId,
+        recipientKeys,
+      );
 
+      if (wrappedDeks.length === 0) {
+        throw new Error("Recipient has no active encryption keys");
+      }
+
+      // 3. Store each wrapped DEK copy on the server
+      for (const dek of wrappedDeks) {
         await keys.storeDek({
           planId,
           recipientId: recipientUserId,
           dekType: "contact",
-          encryptedDek: wrappedDEK,
-          keyVersion: key.keyVersion,
+          encryptedDek: dek.encryptedDek,
+          keyVersion: dek.keyVersion,
         });
       }
 
       logger.info("E2EE: DEK shared with trusted contact", {
         recipientUserId,
-        deviceCount: recipientKeys.length,
+        deviceCount: wrappedDeks.length,
       });
     },
     onSettled: () => {

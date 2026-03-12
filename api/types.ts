@@ -637,6 +637,18 @@ export interface CreateTrustedContactRequest {
   accessLevel: TrustedContactAccessLevel;
   accessTiming: TrustedContactAccessTiming;
   notes?: string;
+  /** @deprecated Use `deks` (plural) for multi-device support */
+  dek?: {
+    recipientId: string;
+    encryptedDek: string;
+    keyVersion: number;
+  };
+  /** Pre-shared DEKs for atomic encryption key sharing (one per recipient device) */
+  deks?: Array<{
+    recipientId: string;
+    encryptedDek: string;
+    keyVersion: number;
+  }>;
 }
 
 /**

@@ -14,10 +14,12 @@ import { useApi } from "@/api";
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePlan } from "@/data/PlanProvider";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { getDeviceLabel } from "@/lib/crypto/deviceLabel";
 import {
   exportPublicKey,
   generateKeyPair,
   getKeyVersion,
+  getPrivateKey,
   importPublicKey,
   storeDEK,
   storeKeyVersion,
@@ -146,7 +148,7 @@ export default function DeviceLinkingScreen() {
       setStatusMessage("Registering device...");
       const keyRecord = await keys.registerKey({
         publicKey: publicKeyB64,
-        deviceLabel: "linked device",
+        deviceLabel: getDeviceLabel("linked"),
         keyType: "device",
       });
       await storeKeyVersion(keyRecord.keyVersion, userId);
@@ -280,12 +282,12 @@ export default function DeviceLinkingScreen() {
         throw new Error("Could not find the new device's public key");
       }
 
-      // 3. Wrap our DEK with the new device's public key
-      setStatusMessage("Encrypting key for new device...");
+      // 3. Wrap our own plan DEK with the new device's public key
+      setStatusMessage("Encrypting keys for new device...");
       const recipientPubKey = await importPublicKey(targetKey.publicKey);
       const wrappedDEK = await wrapDEK(dekCryptoKey, recipientPubKey);
 
-      // 4. Store the wrapped DEK
+      // 4. Store the wrapped DEK for own plan
       const myKeyVersion = await getKeyVersion(userId);
       await keys.storeDek({
         planId,
@@ -294,6 +296,55 @@ export default function DeviceLinkingScreen() {
         encryptedDek: wrappedDEK,
         keyVersion: newDeviceKeyVersion,
       });
+
+      // 5. Transfer shared plan DEKs (plans shared with us by others)
+      try {
+        const sharedPlans = await keys.listDeks(); // All DEK records we have
+        const myPrivateKey = await getPrivateKey(userId);
+        if (myPrivateKey && myKeyVersion) {
+          // For shared plans where WE are the recipient, unwrap with our key
+          // and re-wrap for the new device
+          const seenPlans = new Set<string>();
+          for (const dek of sharedPlans) {
+            if (
+              dek.dekType === "contact" &&
+              dek.keyVersion === myKeyVersion &&
+              !seenPlans.has(dek.planId)
+            ) {
+              seenPlans.add(dek.planId);
+              try {
+                const sharedDEK = await unwrapDEK(
+                  dek.encryptedDek,
+                  myPrivateKey,
+                );
+                const reWrapped = await wrapDEK(sharedDEK, recipientPubKey);
+                await keys.storeDek({
+                  planId: dek.planId,
+                  recipientId: newDeviceUserId,
+                  dekType: "contact",
+                  encryptedDek: reWrapped,
+                  keyVersion: newDeviceKeyVersion,
+                });
+                logger.info(
+                  "E2EE: Shared plan DEK transferred to new device",
+                  { planId: dek.planId },
+                );
+              } catch (dekErr) {
+                // Non-fatal: new device won't have this shared plan's DEK
+                logger.warn(
+                  "E2EE: Failed to transfer shared plan DEK",
+                  { planId: dek.planId, error: dekErr },
+                );
+              }
+            }
+          }
+        }
+      } catch (sharedErr) {
+        // Non-fatal: own plan DEK was already transferred
+        logger.warn("E2EE: Failed to transfer shared plan DEKs", {
+          error: sharedErr,
+        });
+      }
 
       setIsComplete(true);
       setStatusMessage(null);

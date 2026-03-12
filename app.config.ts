@@ -81,6 +81,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-document-picker",
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/notification-icon.png",
+        color: "#8a9785",
+      },
+    ],
     "react-native-quick-crypto",
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     [

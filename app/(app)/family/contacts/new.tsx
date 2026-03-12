@@ -6,31 +6,45 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
+  CreateTrustedContactRequest,
   TrustedContactAccessLevel,
   TrustedContactAccessTiming,
 } from "@/api/types";
 import { AccessLevelSelector } from "@/components/family/AccessLevelSelector";
+import { EmailLookupIndicator } from "@/components/family/EmailLookupIndicator";
 import { FormInput } from "@/components/forms/FormInput";
 import { FormTextArea } from "@/components/forms/FormTextArea";
 import { Button } from "@/components/ui/Button";
 import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useNotificationPrompt } from "@/contexts/NotificationPromptContext";
 import { useCreateTrustedContact } from "@/hooks/queries";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
-import { useShareDEK } from "@/hooks/useShareDEK";
+import { usePublicKeyLookup } from "@/hooks/usePublicKeyLookup";
 import { toast } from "@/hooks/useToast";
+import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { wrapDEKForRecipient } from "@/lib/crypto/wrapDEKForRecipient";
 import { logger } from "@/lib/logger";
 
 export default function NewTrustedContactScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const createMutation = useCreateTrustedContact();
-  const shareDEKMutation = useShareDEK();
+  const { triggerPrompt } = useNotificationPrompt();
+  const {
+    isLoading: isLookingUp,
+    recipientKeys,
+    lastLookedUpEmail,
+    lookup,
+  } = usePublicKeyLookup();
+  const { dekCryptoKey } = useCrypto();
   const { guardOverlay } = usePillarGuard({
     pillar: "family_access",
     featureName: "Family Access",
-    lockedDescription: "Manage who can access your legacy information and when they can see it.",
-    restrictedDescription: "Your access level doesn't include Family Access for this plan.",
+    lockedDescription:
+      "Manage who can access your legacy information and when they can see it.",
+    restrictedDescription:
+      "Your access level doesn't include Family Access for this plan.",
   });
 
   const form = useForm({
@@ -51,7 +65,7 @@ export default function NewTrustedContactScreen() {
       }
 
       try {
-        const contact = await createMutation.mutateAsync({
+        const request: CreateTrustedContactRequest = {
           email: value.email.trim(),
           firstName: value.firstName.trim(),
           lastName: value.lastName.trim(),
@@ -59,23 +73,32 @@ export default function NewTrustedContactScreen() {
           accessLevel: value.accessLevel,
           accessTiming: value.accessTiming,
           notes: value.notes.trim() || undefined,
-        });
+        };
 
-        // Fast path: if the contact already has an account, share DEK immediately
-        if (contact.clerkUserId) {
+        // Atomic DEK pre-share: if the recipient already has an account, wrap
+        // the DEK with each of their device public keys
+        if (recipientKeys?.keys.length && dekCryptoKey) {
           try {
-            await shareDEKMutation.mutateAsync({
-              recipientUserId: contact.clerkUserId,
-            });
+            request.deks = await wrapDEKForRecipient(
+              dekCryptoKey,
+              recipientKeys.userId,
+              recipientKeys.keys,
+            );
           } catch (dekError) {
-            logger.error("DEK auto-share failed on create", dekError);
+            logger.warn("DEK pre-share encryption failed", { error: dekError });
           }
         }
+
+        await createMutation.mutateAsync(request);
 
         toast.success({
           title: "Invitation sent",
           message: `An invitation has been sent to ${value.email.trim()}.`,
         });
+
+        // Trigger push notification permission prompt (only fires once, on first contact)
+        triggerPrompt(value.firstName.trim());
+
         router.back();
       } catch {
         toast.error({
@@ -167,6 +190,14 @@ export default function NewTrustedContactScreen() {
               return undefined;
             },
           }}
+          listeners={{
+            onBlur: ({ value }) => {
+              const trimmed = value.trim();
+              if (trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                lookup(trimmed);
+              }
+            },
+          }}
         >
           {(field) => (
             <FormInput
@@ -179,6 +210,12 @@ export default function NewTrustedContactScreen() {
             />
           )}
         </form.Field>
+
+        <EmailLookupIndicator
+          isLoading={isLookingUp}
+          found={recipientKeys !== null && recipientKeys.keys.length > 0}
+          hasLookedUp={lastLookedUpEmail !== null}
+        />
 
         <form.Field name="relationship">
           {(field) => (

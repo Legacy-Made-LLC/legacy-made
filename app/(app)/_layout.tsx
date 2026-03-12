@@ -16,6 +16,7 @@ import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateEntry } from "@/hooks/queries";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
@@ -109,6 +110,9 @@ export default function AppLayout() {
   // Guard against revoked shared plan access
   useAccessRevocationGuard();
   useSharedPlanStatusPolling();
+
+  // Initialize push notification listeners and auto-register token
+  usePushNotifications();
 
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();

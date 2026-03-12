@@ -28,6 +28,7 @@ import Loader from "@/components/ui/Loader";
 import { PausedMutationBanner } from "@/components/ui/PausedMutationBanner";
 import { Toast } from "@/components/ui/Toast";
 import { LocaleProvider } from "@/contexts/LocaleContext";
+import { NotificationPromptProvider } from "@/contexts/NotificationPromptContext";
 import { PlanTransitionProvider } from "@/contexts/PlanTransitionContext";
 import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
@@ -120,6 +121,7 @@ export default Sentry.wrap(function RootLayout() {
                 >
                   <QueryProvider>
                     <PlanProvider>
+                      <NotificationPromptProvider>
                       <CryptoProvider>
                         <EntitlementsProvider>
                           <PlanTransitionProvider>
@@ -156,6 +158,7 @@ export default Sentry.wrap(function RootLayout() {
                           </PlanTransitionProvider>
                         </EntitlementsProvider>
                       </CryptoProvider>
+                      </NotificationPromptProvider>
                     </PlanProvider>
                   </QueryProvider>
                 </ClerkProvider>

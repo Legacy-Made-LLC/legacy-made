@@ -19,6 +19,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { usePlan } from "@/data/PlanProvider";
 import { base64ToUint8, uint8ToBase64 } from "@/lib/crypto/aes";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { getDeviceLabel } from "@/lib/crypto/deviceLabel";
 import {
   exportPublicKey,
   generateKeyPair,
@@ -180,7 +181,7 @@ export default function RecoverDocumentScreen() {
         const publicKeyB64 = await exportPublicKey(newKeyPair.publicKey);
         const keyRecord = await keys.registerKey({
           publicKey: publicKeyB64,
-          deviceLabel: "recovered-document",
+          deviceLabel: getDeviceLabel("recovered"),
           keyType: "device",
         });
         await storeKeyVersion(keyRecord.keyVersion, userId);

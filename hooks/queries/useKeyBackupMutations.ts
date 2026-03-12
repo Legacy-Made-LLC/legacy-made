@@ -10,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/api";
 import { base64ToUint8, uint8ToBase64 } from "@/lib/crypto/aes";
 import { exportDEK, getDEK, getKeyVersion } from "@/lib/crypto/keys";
+import type { KeysService } from "@/api/keys";
 import {
   RECOVERY_DOCUMENT_PBKDF2_ITERATIONS,
   RECOVERY_DOCUMENT_PBKDF2_SALT,
@@ -160,8 +161,42 @@ export function useDisableRecoveryDocumentMutation() {
 // ============================================================================
 
 /**
+ * Encrypt the DEK with the escrow RSA public key (RSA-OAEP, SHA-256).
+ * The server never sees the plaintext DEK during enrollment.
+ */
+async function encryptDekForEscrow(
+  dekB64: string,
+  keysService: KeysService,
+): Promise<string> {
+  // 1. Fetch the escrow RSA public key (SPKI/DER, base64)
+  const { publicKey: publicKeyBase64 } =
+    await keysService.getEscrowPublicKey();
+
+  // 2. Import as RSA-OAEP public key
+  const keyData = base64ToUint8(publicKeyBase64);
+  const publicKey = await QuickCrypto.subtle.importKey(
+    "spki",
+    keyData,
+    { name: "RSA-OAEP", hash: "SHA-256" },
+    false,
+    ["encrypt"],
+  );
+
+  // 3. Encrypt the DEK
+  const dekBytes = base64ToUint8(dekB64);
+  const ciphertext = await QuickCrypto.subtle.encrypt(
+    { name: "RSA-OAEP" },
+    publicKey,
+    dekBytes,
+  );
+
+  return uint8ToBase64(new Uint8Array(ciphertext));
+}
+
+/**
  * Enable KMS escrow for a plan.
- * Exports the DEK and sends it to the server for KMS encryption.
+ * Encrypts the DEK client-side with the escrow RSA public key,
+ * then sends the ciphertext to the server. Server never sees the plaintext.
  */
 export function useEnableEscrowMutation() {
   const queryClient = useQueryClient();
@@ -179,7 +214,10 @@ export function useEnableEscrowMutation() {
       if (!dek) throw new Error("No encryption key found");
       const dekB64 = await exportDEK(dek);
 
-      await keys.enableEscrow({ planId, dekPlaintext: dekB64 });
+      // Encrypt DEK with escrow public key before sending
+      const encryptedDek = await encryptDekForEscrow(dekB64, keys);
+
+      await keys.enableEscrow({ planId, encryptedDek });
     },
     onSuccess: (_data, { planId }) => {
       queryClient.invalidateQueries({

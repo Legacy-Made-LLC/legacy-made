@@ -115,6 +115,10 @@ export default function SettingsLayout() {
         name="device-linking"
         options={{ title: "Link Device" }}
       />
+      <Stack.Screen
+        name="devices"
+        options={{ title: "My Devices" }}
+      />
     </Stack>
   );
 }

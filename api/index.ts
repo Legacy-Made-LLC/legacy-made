@@ -127,12 +127,18 @@ export { createTrustedContactsService } from './trustedContacts';
 export type { TrustedContactsService } from './trustedContacts';
 
 export { createKeysService } from './keys';
+
+export { createPushTokensService } from './pushTokens';
+export type { PushTokensService } from './pushTokens';
 export type {
   KeysService,
   SetupRequest,
   SetupResponse,
   UserKeyRecord,
   PublicKeyRecord,
+  PublicKeyByEmailResponse,
+  PublicKeyByEmailNotFoundResponse,
+  PublicKeyByEmailResult,
   StoreDekRequest,
   RotateDekRequest,
   ManagedDekType,

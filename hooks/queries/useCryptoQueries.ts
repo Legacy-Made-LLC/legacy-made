@@ -8,8 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "@/api";
-import { logger } from "@/lib/logger";
-import { queryKeys } from "@/lib/queryKeys";
+import { getDeviceLabel } from "@/lib/crypto/deviceLabel";
 import {
   exportPublicKey,
   generateDEK,
@@ -27,6 +26,8 @@ import {
   unwrapDEK,
   wrapDEK,
 } from "@/lib/crypto/keys";
+import { logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/queryKeys";
 
 // ============================================================================
 // Queries
@@ -107,7 +108,11 @@ export function useBackupStatusQuery(
   return useQuery({
     queryKey: queryKeys.crypto.backupStatus(planId!),
     queryFn: async () => {
-      const notConfigured = { configured: false, createdAt: null, removedAt: null } as const;
+      const notConfigured = {
+        configured: false,
+        createdAt: null,
+        removedAt: null,
+      } as const;
       try {
         const [dekRecords, recoveryEvents] = await Promise.all([
           keys.listDeks(planId ?? undefined),
@@ -115,26 +120,46 @@ export function useBackupStatusQuery(
         ]);
 
         const escrowRecord = dekRecords.find((d) => d.dekType === "escrow");
-        const recoveryRecord = dekRecords.find(
-          (d) => d.dekType === "recovery",
-        );
+        const recoveryRecord = dekRecords.find((d) => d.dekType === "recovery");
 
         // Find most recent revocation events for each method
         const escrowRevokedEvent = recoveryEvents
           .filter((e) => e.eventType === "escrow_revoked")
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )[0];
 
         const recoveryDeregisteredEvent = recoveryEvents
           .filter((e) => e.eventType === "recovery_key_deregistered")
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )[0];
 
         return {
           escrow: escrowRecord
-            ? { configured: true, createdAt: escrowRecord.createdAt, removedAt: null }
-            : { configured: false, createdAt: null, removedAt: escrowRevokedEvent?.createdAt ?? null },
+            ? {
+                configured: true,
+                createdAt: escrowRecord.createdAt,
+                removedAt: null,
+              }
+            : {
+                configured: false,
+                createdAt: null,
+                removedAt: escrowRevokedEvent?.createdAt ?? null,
+              },
           recoveryPhrase: recoveryRecord
-            ? { configured: true, createdAt: recoveryRecord.createdAt, removedAt: null }
-            : { configured: false, createdAt: null, removedAt: recoveryDeregisteredEvent?.createdAt ?? null },
+            ? {
+                configured: true,
+                createdAt: recoveryRecord.createdAt,
+                removedAt: null,
+              }
+            : {
+                configured: false,
+                createdAt: null,
+                removedAt: recoveryDeregisteredEvent?.createdAt ?? null,
+              },
         };
       } catch {
         return { escrow: notConfigured, recoveryPhrase: notConfigured };
@@ -162,9 +187,8 @@ export function useSharedPlanDEKQuery(
       if (!dekRecords || dekRecords.length === 0) return null;
 
       const myKeyVersion = await getKeyVersion(userId!);
-      const matchingDek = myKeyVersion
-        ? dekRecords.find((d) => d.keyVersion === myKeyVersion)
-        : dekRecords[0];
+      if (!myKeyVersion) return null; // No local keyVersion = can't unwrap
+      const matchingDek = dekRecords.find((d) => d.keyVersion === myKeyVersion);
       if (!matchingDek) return null;
 
       const privateKey = await getPrivateKey(userId!);
@@ -175,6 +199,92 @@ export function useSharedPlanDEKQuery(
     enabled: !!planId && !!ownerId && !!userId && shouldFetch,
     staleTime: Infinity,
     structuralSharing: false,
+  });
+}
+
+// ============================================================================
+// Server key sync
+// ============================================================================
+
+/**
+ * Query the server's key records for the current user.
+ * Used to verify that locally-stored keys are actually registered on the backend.
+ * Only runs once per app launch (staleTime: Infinity) after crypto is ready.
+ */
+export function useServerKeysQuery(
+  userId: string | null | undefined,
+  isReady: boolean,
+  localKeyVersion: number | null | undefined,
+) {
+  const { keys } = useApi();
+  return useQuery({
+    queryKey: queryKeys.crypto.serverKeys(userId!),
+    queryFn: () => keys.getMyKeys(),
+    enabled: !!userId && isReady && localKeyVersion != null,
+    staleTime: Infinity,
+  });
+}
+
+/**
+ * Mutation: re-register a locally-stored key with the server.
+ * Used when keys exist locally and work for encrypt/decrypt, but the
+ * server has no matching key record (e.g., network failure during initial
+ * setup that was partially saved locally).
+ */
+export function useKeySyncMutation() {
+  const queryClient = useQueryClient();
+  const { keys } = useApi();
+
+  return useMutation({
+    mutationFn: async ({
+      dek,
+      planId,
+      userId,
+    }: {
+      dek: CryptoKey;
+      planId: string;
+      userId: string;
+    }) => {
+      logger.info(
+        "E2EE: Key sync — local keys not found on server, re-registering...",
+      );
+
+      let publicKey = await getPublicKey(userId);
+
+      if (!publicKey) {
+        logger.info(
+          "E2EE: Key sync — no stored public key, generating new pair",
+        );
+        const keyPair = await generateKeyPair();
+        await storePrivateKey(keyPair.privateKey, userId);
+        await storePublicKey(keyPair.publicKey, userId);
+        publicKey = keyPair.publicKey;
+      }
+
+      const publicKeyB64 = await exportPublicKey(publicKey);
+      const wrappedDEK = await wrapDEK(dek, publicKey);
+
+      const { keyVersion } = await keys.setup({
+        publicKey: publicKeyB64,
+        planId,
+        encryptedDek: wrappedDEK,
+        deviceLabel: getDeviceLabel(),
+      });
+      await storeKeyVersion(keyVersion, userId);
+      await keys.enablePlanE2EE(planId);
+      logger.info("E2EE: Key sync complete, new keyVersion=" + keyVersion);
+    },
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.keyVersion(userId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.serverKeys(userId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.deviceKeys(userId),
+      });
+    },
   });
 }
 
@@ -215,7 +325,7 @@ export function useSetupKeysMutation() {
           publicKey: publicKeyB64,
           planId,
           encryptedDek: wrappedDEK,
-          deviceLabel: "primary",
+          deviceLabel: getDeviceLabel(),
         });
         await storeKeyVersion(keyVersion, userId);
         await keys.enablePlanE2EE(planId);
@@ -240,6 +350,9 @@ export function useSetupKeysMutation() {
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.crypto.e2eeStatus(planId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.deviceKeys(userId),
       });
     },
   });
@@ -282,7 +395,7 @@ export function useRetrySetupMutation() {
         publicKey: publicKeyB64,
         planId,
         encryptedDek: wrappedDEK,
-        deviceLabel: "primary",
+        deviceLabel: getDeviceLabel(),
       });
       await storeKeyVersion(keyVersion, userId);
       await keys.enablePlanE2EE(planId);
@@ -291,6 +404,9 @@ export function useRetrySetupMutation() {
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.crypto.keyVersion(userId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.deviceKeys(userId),
       });
     },
   });
@@ -317,7 +433,7 @@ export function useEscrowRecoveryMutation() {
       const response = await keys.recoverFromEscrow({
         planId,
         newPublicKey: publicKeyB64,
-        deviceLabel: "recovered",
+        deviceLabel: getDeviceLabel("recovered"),
       });
 
       const dek = await importDEK(response.dekPlaintext);
@@ -328,7 +444,7 @@ export function useEscrowRecoveryMutation() {
 
       const keyRecord = await keys.registerKey({
         publicKey: publicKeyB64,
-        deviceLabel: "recovered",
+        deviceLabel: getDeviceLabel("recovered"),
         keyType: "device",
       });
       await storeKeyVersion(keyRecord.keyVersion, userId);
@@ -354,7 +470,12 @@ export function useEscrowRecoveryMutation() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.crypto.keyVersion(userId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.deviceKeys(userId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.crypto.serverKeys(userId),
+      });
     },
   });
 }
-

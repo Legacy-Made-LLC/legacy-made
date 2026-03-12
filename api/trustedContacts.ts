@@ -60,7 +60,20 @@ export function createTrustedContactsService(client: ApiClient) {
     },
 
     /**
-     * Revoke access (owner removes contact)
+     * Revoke access (soft delete — sets status to revoked_by_owner)
+     */
+    revoke: async (
+      planId: string,
+      id: string,
+    ): Promise<TrustedContact> => {
+      return client.post<TrustedContact>(
+        `${contactsPath(planId)}/${id}/revoke`,
+        {},
+      );
+    },
+
+    /**
+     * Permanently delete a trusted contact record
      */
     delete: async (
       planId: string,
