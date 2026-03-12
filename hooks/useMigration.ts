@@ -108,7 +108,7 @@ export function useMigration() {
         try {
           const encrypted = await encryptForUpdate(
             {
-              title: entry.title,
+              title: entry.title ?? undefined,
               notes: entry.notes,
               metadata: entry.metadata,
             },
@@ -143,7 +143,7 @@ export function useMigration() {
         try {
           const encrypted = await encryptForUpdate(
             {
-              title: wish.title,
+              title: wish.title ?? undefined,
               notes: wish.notes,
               metadata: wish.metadata,
             },

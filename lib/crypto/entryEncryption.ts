@@ -139,7 +139,7 @@ export async function decryptEntry<T>(
     [key: string]: unknown;
   },
   dek: CryptoKey,
-): Promise<typeof entry & { metadata: T; title: string | null; notes: string | null }> {
+): Promise<Omit<typeof entry, "metadata"> & { metadata: T; title: string | null; notes: string | null }> {
   const decrypted = await decryptSensitiveFields<T>(
     entry.metadata.encrypted,
     dek,

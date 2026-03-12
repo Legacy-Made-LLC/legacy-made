@@ -7,6 +7,7 @@
 
 import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
 import { hasEncryptionKeys } from "@/lib/crypto/keys";
+import { useAuth } from "@clerk/clerk-expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
@@ -33,6 +34,7 @@ interface UseKeyBackupNudgeReturn {
 
 export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
   const crypto = useOptionalCrypto();
+  const { userId } = useAuth();
   const { data: entryCounts } = useEntryCountsQuery();
 
   const [shouldShow, setShouldShow] = useState(false);
@@ -57,8 +59,15 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
           return;
         }
 
-        // Don't show if no encryption keys
-        const keysExist = await hasEncryptionKeys();
+        // Don't show if no user or no encryption keys
+        if (!userId) {
+          if (mounted) {
+            setShouldShow(false);
+            setIsLoading(false);
+          }
+          return;
+        }
+        const keysExist = await hasEncryptionKeys(userId);
         if (!keysExist) {
           if (mounted) {
             setShouldShow(false);
@@ -69,9 +78,8 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
 
         // Don't show if user already has a backup
         const hasBackup =
-          crypto.backupStatus.escrow ||
-          crypto.backupStatus.keyFile ||
-          crypto.backupStatus.recoveryPhrase;
+          crypto.backupStatus.escrow.configured ||
+          crypto.backupStatus.recoveryPhrase.configured;
         if (hasBackup) {
           if (mounted) {
             setShouldShow(false);
@@ -126,7 +134,7 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
     return () => {
       mounted = false;
     };
-  }, [crypto, totalEntries]);
+  }, [crypto, userId, totalEntries]);
 
   const dismiss = useCallback(async () => {
     setShouldShow(false);

@@ -61,6 +61,7 @@ export default function LegacyEntryScreen() {
   // Unsaved-changes guard refs
   const formRef = useRef<AnyFormApi | null>(null);
   const allowNavigationRef = useRef(false);
+  const attachmentsRef = useRef<FileAttachment[]>([]);
 
   const handleFormReady = useCallback((form: AnyFormApi) => {
     formRef.current = form;
@@ -81,7 +82,12 @@ export default function LegacyEntryScreen() {
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
       if (allowNavigationRef.current) return;
       if (isReadOnly) return;
-      if (!formRef.current?.state.isDirty && !attachmentsDirtyRef.current) return;
+      // Check for pending file attachments (added but not yet saved/uploaded)
+      const hasPendingFiles = attachmentsRef.current.some(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      // Allow navigation if form has no unsaved changes and no pending files
+      if (!formRef.current?.state.isDirty && !hasPendingFiles) return;
 
       e.preventDefault();
 
@@ -130,6 +136,7 @@ export default function LegacyEntryScreen() {
     deletingFileIds,
     handleRemoteFileDeletions,
   } = useFileAttachments();
+  attachmentsRef.current = attachments;
 
   const isSavingRef = useRef(false);
   const filesDeletedRef = useRef(false);
@@ -176,7 +183,6 @@ export default function LegacyEntryScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    useStandardUploadForVideo: true,
     onFileUploaded: (file, fileId, downloadUrl) => {
       setAttachments((prev) =>
         prev.map((a) =>

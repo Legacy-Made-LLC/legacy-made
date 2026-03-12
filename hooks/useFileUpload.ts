@@ -80,6 +80,19 @@ async function readFileAsBlob(uri: string): Promise<Blob> {
 }
 
 /**
+ * Convert a Blob to ArrayBuffer using FileReader.
+ * Blob.arrayBuffer() is not available in React Native (Hermes).
+ */
+function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error("Failed to read blob as ArrayBuffer"));
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+/**
  * Uploads data to a presigned URL with progress tracking
  * Uses XMLHttpRequest to track upload progress
  */
@@ -194,11 +207,11 @@ export function useFileUpload(
         let uploadContentType = file.mimeType;
         let uploadSize = file.fileSize;
 
-        if (crypto?.dekCryptoKey) {
-          const arrayBuffer = await blob.arrayBuffer();
+        if (crypto?.activeDEK) {
+          const arrayBuffer = await blobToArrayBuffer(blob);
           const encrypted = await encryptFileForUpload(
             arrayBuffer,
-            crypto.dekCryptoKey,
+            crypto.activeDEK,
           );
           uploadData = encrypted;
           // Encrypted files are opaque binary data
@@ -211,10 +224,12 @@ export function useFileUpload(
         }
 
         // 3. Initialize upload - get presigned URL
+        const isEncrypted = !!crypto?.activeDEK;
         const initResponse = await filesService.initUpload(target, {
           filename: file.fileName,
           mimeType: file.mimeType,
           sizeBytes: uploadSize,
+          isEncrypted,
         });
 
         if (signal.aborted) {
@@ -248,17 +263,35 @@ export function useFileUpload(
                 thumbnailUri: file.thumbnailUri,
               });
               const thumbBlob = await readFileAsBlob(file.thumbnailUri);
+
+              // Encrypt thumbnail the same way as the main file
+              let thumbUploadData: Blob | ArrayBuffer = thumbBlob;
+              let thumbContentType = "image/jpeg";
+              let thumbSize = thumbBlob.size;
+
+              if (crypto?.activeDEK) {
+                const thumbArrayBuffer = await blobToArrayBuffer(thumbBlob);
+                const encryptedThumb = await encryptFileForUpload(
+                  thumbArrayBuffer,
+                  crypto.activeDEK,
+                );
+                thumbUploadData = encryptedThumb;
+                thumbContentType = "application/octet-stream";
+                thumbSize = encryptedThumb.byteLength;
+              }
+
               const thumbInit = await filesService.initUpload(target, {
                 filename: `thumb_${file.fileName.replace(/\.\w+$/, ".jpg")}`,
                 mimeType: "image/jpeg",
-                sizeBytes: thumbBlob.size,
+                sizeBytes: thumbSize,
                 role: "thumbnail",
                 parentFileId: initResponse.fileId,
+                isEncrypted,
               });
               await uploadToPresignedUrl(
                 thumbInit.uploadUrl,
-                thumbBlob,
-                "image/jpeg",
+                thumbUploadData,
+                thumbContentType,
                 () => {},
                 signal,
               );

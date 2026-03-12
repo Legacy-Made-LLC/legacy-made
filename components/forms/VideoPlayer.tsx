@@ -56,7 +56,7 @@ export function VideoPlayer({ visible, uri, fileId, onClose }: VideoPlayerProps)
   const {
     localUri: decryptedUri,
     error: decryptError,
-  } = useEncryptedFileView(effectiveFileId, 'video/mp4');
+  } = useEncryptedFileView(effectiveFileId, 'video/mp4', uri);
 
   // Animation values for swipe-to-dismiss
   const translateY = useSharedValue(0);

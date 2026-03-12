@@ -129,12 +129,23 @@ export type { TrustedContactsService } from './trustedContacts';
 export { createKeysService } from './keys';
 export type {
   KeysService,
-  ShareDEKRequest,
-  SharedDEKResponse,
-  CreateKeyTransferRequest,
-  KeyTransferResponse,
-  KeyTransferPayload,
-  EscrowRecoverResponse,
+  SetupRequest,
+  SetupResponse,
+  UserKeyRecord,
+  PublicKeyRecord,
+  StoreDekRequest,
+  RotateDekRequest,
+  ManagedDekType,
+  DekRecord,
+  DekStatusResponse,
+  DeviceLinkSessionResponse,
+  DeviceLinkDepositRequest,
+  DeviceLinkClaimResponse,
+  EnableEscrowRequest,
+  EnableEscrowResponse,
+  RecoverRequest,
+  RecoverResponse,
+  PlanE2EEStatus,
 } from './keys';
 
 // Mappers

@@ -6,6 +6,7 @@
  */
 
 import QuickCrypto from "react-native-quick-crypto";
+import type { CryptoKey as QCCryptoKey } from "react-native-quick-crypto";
 
 import type { EncryptedPayload } from "./types";
 
@@ -13,6 +14,11 @@ const subtle = QuickCrypto.subtle;
 
 /** IV size for AES-GCM (12 bytes recommended by NIST) */
 const IV_LENGTH = 12;
+
+/** Cast standard CryptoKey to quick-crypto CryptoKey for subtle API calls */
+function toQC(key: CryptoKey): QCCryptoKey {
+  return key as unknown as QCCryptoKey;
+}
 
 /**
  * Encrypt a string with AES-256-GCM.
@@ -22,12 +28,12 @@ export async function encryptString(
   plaintext: string,
   dekCryptoKey: CryptoKey,
 ): Promise<EncryptedPayload> {
-  const iv = QuickCrypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const iv = QuickCrypto.getRandomValues(new Uint8Array(IV_LENGTH)) as Uint8Array;
   const encoded = new TextEncoder().encode(plaintext);
 
   const ciphertext = await subtle.encrypt(
     { name: "AES-GCM", iv },
-    dekCryptoKey,
+    toQC(dekCryptoKey),
     encoded,
   );
 
@@ -50,7 +56,7 @@ export async function decryptString(
 
   const decrypted = await subtle.decrypt(
     { name: "AES-GCM", iv },
-    dekCryptoKey,
+    toQC(dekCryptoKey),
     ciphertext,
   );
 
@@ -65,11 +71,11 @@ export async function encryptBuffer(
   data: ArrayBuffer,
   dekCryptoKey: CryptoKey,
 ): Promise<{ encrypted: ArrayBuffer; iv: Uint8Array }> {
-  const iv = QuickCrypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const iv = QuickCrypto.getRandomValues(new Uint8Array(IV_LENGTH)) as Uint8Array;
 
   const encrypted = await subtle.encrypt(
     { name: "AES-GCM", iv },
-    dekCryptoKey,
+    toQC(dekCryptoKey),
     data,
   );
 
@@ -84,7 +90,11 @@ export async function decryptBuffer(
   dekCryptoKey: CryptoKey,
   iv: Uint8Array,
 ): Promise<ArrayBuffer> {
-  return subtle.decrypt({ name: "AES-GCM", iv }, dekCryptoKey, encrypted);
+  return subtle.decrypt(
+    { name: "AES-GCM", iv },
+    toQC(dekCryptoKey),
+    encrypted,
+  );
 }
 
 // ============================================================================

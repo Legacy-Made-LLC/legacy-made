@@ -29,16 +29,19 @@ interface EncryptedFileViewResult {
 /**
  * Hook to download, decrypt, and cache an encrypted file for local viewing.
  *
- * @param fileId - Backend file ID to download
+ * @param fileId - Backend file ID (used for cache naming and fresh-URL fallback)
  * @param mimeType - MIME type for determining file extension
+ * @param downloadUrl - Presigned download URL from the API response (avoids extra API call)
  * @returns Local URI, loading state, and error info
  */
 export function useEncryptedFileView(
   fileId: string | undefined,
   mimeType?: string,
+  downloadUrl?: string | null,
 ): EncryptedFileViewResult {
   const { files } = useApi();
   const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || crypto.isReady;
 
   const [localUri, setLocalUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,10 +54,12 @@ export function useEncryptedFileView(
    */
   const cleanupCache = useCallback(() => {
     if (cachedFileRef.current) {
-      const file = new File(cachedFileRef.current);
-      file.delete().catch(() => {
+      try {
+        const file = new File(cachedFileRef.current);
+        file.delete();
+      } catch {
         // Silently ignore cleanup errors
-      });
+      }
       cachedFileRef.current = null;
       setLocalUri(null);
     }
@@ -64,21 +69,32 @@ export function useEncryptedFileView(
    * Download and decrypt the file
    */
   const loadFile = useCallback(async () => {
-    if (!fileId) return;
+    if (!fileId || !cryptoReady) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // 1. Get download URL from API
-      const downloadInfo = await files.getDownloadUrl(fileId);
-      const url = downloadInfo.downloadUrl;
+      // 1. Use provided download URL, or fetch a fresh one as fallback
+      let url = downloadUrl || null;
+      if (!url) {
+        const downloadInfo = await files.getDownloadUrl(fileId);
+        url = downloadInfo.downloadUrl ?? null;
+      }
       if (!url) {
         throw new Error("No download URL available");
       }
 
       // 2. Download the encrypted file
-      const response = await fetch(url);
+      let response = await fetch(url);
+
+      // If the provided URL expired, fetch a fresh one and retry
+      if (!response.ok && downloadUrl) {
+        const downloadInfo = await files.getDownloadUrl(fileId);
+        if (downloadInfo.downloadUrl) {
+          response = await fetch(downloadInfo.downloadUrl);
+        }
+      }
       if (!response.ok) {
         throw new Error(`Download failed with status ${response.status}`);
       }
@@ -87,16 +103,18 @@ export function useEncryptedFileView(
 
       // 3. Decrypt if crypto is available (file may be unencrypted for pre-E2EE files)
       let decryptedData: ArrayBuffer;
-      if (crypto?.dekCryptoKey) {
+      if (crypto?.activeDEK) {
         try {
           decryptedData = await decryptDownloadedFile(
             encryptedData,
-            crypto.dekCryptoKey,
+            crypto.activeDEK,
           );
         } catch {
           // If decryption fails, the file might be unencrypted (pre-migration)
           // Fall back to using the raw data
-          logger.warn("E2EE: File decryption failed, using raw data (may be pre-migration file)");
+          logger.warn(
+            "E2EE: File decryption failed, using raw data (may be pre-migration file)",
+          );
           decryptedData = encryptedData;
         }
       } else {
@@ -108,32 +126,28 @@ export function useEncryptedFileView(
       const cacheFileName = `decrypted_${fileId}_${Date.now()}.${extension}`;
       const cacheFile = new File(Paths.cache, cacheFileName);
 
-      // Write the decrypted ArrayBuffer as base64
-      const uint8 = new Uint8Array(decryptedData);
-      let binary = "";
-      for (let i = 0; i < uint8.length; i++) {
-        binary += String.fromCharCode(uint8[i]);
-      }
-      await cacheFile.write(btoa(binary), { encoding: "base64" });
+      // Write the decrypted bytes directly to the cache file
+      await cacheFile.write(new Uint8Array(decryptedData));
 
       cachedFileRef.current = cacheFile.uri;
       setLocalUri(cacheFile.uri);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load file";
+      const message =
+        err instanceof Error ? err.message : "Failed to load file";
       logger.error("E2EE: Failed to load encrypted file", err);
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [fileId, files, crypto, mimeType]);
+  }, [fileId, files, crypto, mimeType, cryptoReady, downloadUrl]);
 
-  // Load file on mount / fileId change
+  // Load file on mount / fileId change — wait for crypto to be ready
   useEffect(() => {
-    if (fileId) {
+    if (fileId && cryptoReady) {
       loadFile();
     }
     return () => cleanupCache();
-  }, [fileId, loadFile, cleanupCache]);
+  }, [fileId, cryptoReady, loadFile, cleanupCache]);
 
   // Clean up cache when app goes to background
   useEffect(() => {

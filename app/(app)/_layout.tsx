@@ -12,13 +12,14 @@ import Loader from "@/components/ui/Loader";
 import { Menu } from "@/components/ui/Menu";
 import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { colors, spacing, typography } from "@/constants/theme";
-import { logger } from "@/lib/logger";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
+import { useCreateEntry } from "@/hooks/queries";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
-import { useCreateEntry } from "@/hooks/queries";
+import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { logger } from "@/lib/logger";
 
 // Custom header that doesn't add safe area inset (our parent Header handles it)
 // Supports custom options: headerDescription for subtitle text
@@ -148,6 +149,9 @@ export default function AppLayout() {
     }
   }, [pendingContact, planId, createContactMutation, clearPendingContact]);
 
+  // Access crypto context for recovery detection
+  const crypto = useCrypto();
+
   if (!isSignedIn) {
     return <Redirect href="/(auth)" />;
   }
@@ -155,6 +159,11 @@ export default function AppLayout() {
   // Show loading while plan is being fetched
   if (isPlanLoading && !planId) {
     return <Loader branded />;
+  }
+
+  // Redirect to recovery screen if user needs key recovery
+  if (crypto.needsRecovery) {
+    return <Redirect href="/settings/recovery" />;
   }
 
   // Log and show error screen if plan failed to load and we have no data

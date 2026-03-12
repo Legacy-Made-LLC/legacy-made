@@ -24,7 +24,9 @@ import {
   useUpdateTrustedContact,
 } from "@/hooks/queries";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
+import { useRevokeDEK, useShareDEK } from "@/hooks/useShareDEK";
 import { toast } from "@/hooks/useToast";
+import { logger } from "@/lib/logger";
 
 const ACCESS_LEVEL_LABELS: Record<string, string> = {
   full_edit: "Can Edit",
@@ -57,6 +59,8 @@ export default function TrustedContactDetailScreen() {
   const updateMutation = useUpdateTrustedContact();
   const deleteMutation = useDeleteTrustedContact();
   const resendMutation = useResendInvitation();
+  const shareDEK = useShareDEK();
+  const revokeDEK = useRevokeDEK();
   const { guardOverlay } = usePillarGuard({
     pillar: "family_access",
     featureName: "Family Access",
@@ -78,6 +82,7 @@ export default function TrustedContactDetailScreen() {
   const initials =
     `${contact.firstName.charAt(0)}${contact.lastName.charAt(0)}`.toUpperCase();
   const isPending = contact.accessStatus === "pending";
+  const isAccepted = contact.accessStatus === "accepted";
   const isActive =
     contact.accessStatus === "pending" || contact.accessStatus === "accepted";
   const isRevoked =
@@ -85,6 +90,7 @@ export default function TrustedContactDetailScreen() {
     contact.accessStatus === "revoked_by_contact";
   const statusDate =
     contact.acceptedAt || contact.declinedAt || contact.revokedAt;
+  const needsDEKShare = isAccepted && contact.dekShared === false;
 
   const handleAccessLevelChange = async (
     newLevel: TrustedContactAccessLevel,
@@ -100,6 +106,16 @@ export default function TrustedContactDetailScreen() {
       toast.success({ message: "Access level updated." });
     } catch {
       toast.error({ message: "Couldn\u2019t update access level." });
+    }
+  };
+
+  const handleShareDEK = async () => {
+    if (!contact.clerkUserId) return;
+    try {
+      await shareDEK.mutateAsync({ recipientUserId: contact.clerkUserId });
+      toast.success({ message: "Encryption key shared." });
+    } catch {
+      toast.error({ message: "Couldn\u2019t share encryption key." });
     }
   };
 
@@ -127,6 +143,10 @@ export default function TrustedContactDetailScreen() {
           onPress: async () => {
             try {
               await deleteMutation.mutateAsync(contact.id);
+              // Revoke DEK access if the contact had encryption keys shared
+              if (contact.clerkUserId) {
+                revokeDEK.mutate(contact.clerkUserId);
+              }
               toast.success({ message: "Access has been revoked." });
               router.back();
             } catch {
@@ -150,7 +170,7 @@ export default function TrustedContactDetailScreen() {
           text: "Restore",
           onPress: async () => {
             try {
-              await createMutation.mutateAsync({
+              const restored = await createMutation.mutateAsync({
                 email: contact.email,
                 firstName: contact.firstName,
                 lastName: contact.lastName,
@@ -159,6 +179,22 @@ export default function TrustedContactDetailScreen() {
                 accessTiming: contact.accessTiming,
                 notes: contact.notes ?? undefined,
               });
+
+              // Auto-share DEK — use restored clerkUserId or fall back to
+              // the pre-revoke contact's clerkUserId (the backend create
+              // response may not always include it)
+              const recipientUserId =
+                restored.clerkUserId || contact.clerkUserId;
+              if (recipientUserId) {
+                try {
+                  await shareDEK.mutateAsync({
+                    recipientUserId,
+                  });
+                } catch (dekError) {
+                  logger.error("DEK auto-share failed on restore", dekError);
+                }
+              }
+
               toast.success({
                 title: "Invitation sent",
                 message: `A new invitation has been sent to ${contact.email}.`,
@@ -192,6 +228,36 @@ export default function TrustedContactDetailScreen() {
           <Text style={styles.relationship}>{contact.relationship}</Text>
         )}
       </View>
+
+      {/* DEK Sharing Banner */}
+      {needsDEKShare && (
+        <Card style={styles.dekBanner}>
+          <View style={styles.dekBannerContent}>
+            <View style={styles.dekBannerIcon}>
+              <Ionicons name="key-outline" size={22} color={colors.featureFamily} />
+            </View>
+            <View style={styles.dekBannerText}>
+              <Text style={styles.dekBannerTitle}>Share encryption access</Text>
+              <Text style={styles.dekBannerDescription}>
+                {fullName} has accepted your invitation but can&apos;t view your plan
+                until you share your encryption key.
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={handleShareDEK}
+            disabled={shareDEK.isPending}
+            style={({ pressed }) => [
+              styles.dekShareButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.dekShareButtonText}>
+              {shareDEK.isPending ? "Sharing..." : "Share Encryption Key"}
+            </Text>
+          </Pressable>
+        </Card>
+      )}
 
       {/* Detail Card */}
       <Card style={styles.detailCard}>
@@ -405,6 +471,52 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  // DEK Sharing Banner
+  dekBanner: {
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.featureFamily,
+    backgroundColor: colors.featureFamilyTint,
+  },
+  dekBannerContent: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  dekBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dekBannerText: {
+    flex: 1,
+  },
+  dekBannerTitle: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.titleMedium,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  dekBannerDescription: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
+  },
+  dekShareButton: {
+    backgroundColor: colors.featureFamily,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.pill,
+    alignItems: "center",
+  },
+  dekShareButtonText: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.body,
+    color: colors.surface,
   },
   // Detail Card
   detailCard: {

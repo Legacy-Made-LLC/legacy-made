@@ -18,7 +18,10 @@ import type {
   UpdateEntryRequest,
 } from "@/api/types";
 import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
-import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
+import {
+  encryptForCreate,
+  encryptForUpdate,
+} from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
@@ -93,7 +96,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
   const crypto = useOptionalCrypto();
 
   return useMutation({
-    mutationFn: (data: CreateEntryData<T>) => {
+    mutationFn: async (data: CreateEntryData<T>) => {
       if (isReadOnly) {
         throw new Error("This plan is read-only");
       }
@@ -118,15 +121,15 @@ export function useCreateEntry<T = Record<string, unknown>>(
       };
 
       // Encrypt sensitive fields if crypto is available
-      if (crypto?.dekCryptoKey) {
+      if (crypto?.activeDEK) {
         const encrypted = await encryptForCreate(
           { title: data.title, notes: data.notes, metadata: data.metadata },
-          crypto.dekCryptoKey,
+          crypto.activeDEK,
         );
         return entries.create({
           ...baseRequest,
           ...encrypted,
-        } as CreateEntryRequest);
+        } as unknown as CreateEntryRequest);
       }
 
       return entries.create<T>(baseRequest);
@@ -235,7 +238,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
   const crypto = useOptionalCrypto();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       entryId,
       data,
     }: {
@@ -258,7 +261,7 @@ export function useUpdateEntry<T = Record<string, unknown>>(
       };
 
       // Encrypt sensitive fields if crypto is available
-      if (crypto?.dekCryptoKey) {
+      if (crypto?.activeDEK) {
         // Get current entry to merge metadata for encryption
         const currentEntries = queryClient.getQueryData<Entry<T>[]>(
           queryKeys.entries.byTaskKey(planId, taskKey!),
@@ -269,18 +272,18 @@ export function useUpdateEntry<T = Record<string, unknown>>(
         const encrypted = await encryptForUpdate(
           { title: data.title, notes: data.notes, metadata: data.metadata },
           currentMetadata,
-          crypto.dekCryptoKey,
+          crypto.activeDEK,
         );
         return entries.update(planId, entryId, {
           ...baseRequest,
           ...encrypted,
-        } as UpdateEntryRequest);
+        } as unknown as UpdateEntryRequest);
       }
 
       return entries.update<T>(planId, entryId, baseRequest);
     },
     onMutate: async ({ entryId, data }) => {
-      if (!planId || !taskKey) return;
+      if (!planId || !taskKey) return {};
 
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
@@ -305,7 +308,9 @@ export function useUpdateEntry<T = Record<string, unknown>>(
                   ...(data.metadata && {
                     metadata: { ...entry.metadata, ...data.metadata },
                   }),
-                  ...(data.completionStatus !== undefined && { completionStatus: data.completionStatus }),
+                  ...(data.completionStatus !== undefined && {
+                    completionStatus: data.completionStatus,
+                  }),
                 }
               : entry,
           ),
@@ -465,22 +470,25 @@ export function useDeleteEntry<T = Record<string, unknown>>(
 
       // If last entry was deleted successfully, delete the progress record
       if (!error && context?.remainingCount === 0) {
-        progress.delete(planId, taskKey).then(() => {
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.progress.all(planId),
+        progress
+          .delete(planId, taskKey)
+          .then(() => {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.progress.all(planId),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.progress.byKey(planId, taskKey),
+            });
+          })
+          .catch(() => {
+            // Progress deletion failed — refresh to get actual state
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.progress.all(planId),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.progress.byKey(planId, taskKey),
+            });
           });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.progress.byKey(planId, taskKey),
-          });
-        }).catch(() => {
-          // Progress deletion failed — refresh to get actual state
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.progress.all(planId),
-          });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.progress.byKey(planId, taskKey),
-          });
-        });
       }
     },
   });

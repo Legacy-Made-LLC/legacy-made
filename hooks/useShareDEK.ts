@@ -2,9 +2,9 @@
  * useShareDEK - Share encryption key with a trusted contact
  *
  * When a trusted contact accepts an invitation, the plan owner
- * wraps their DEK with the contact's public key (RSA-OAEP) and
- * stores the wrapped key on the server. The contact can then
- * unwrap it with their private key to decrypt shared plan data.
+ * wraps their DEK with each of the contact's device public keys
+ * (RSA-OAEP) and stores the wrapped keys on the server.
+ * The contact can then unwrap with their private key on any device.
  */
 
 import { useApi } from "@/api";
@@ -20,9 +20,9 @@ import { queryKeys } from "@/lib/queryKeys";
  * Hook to share the plan owner's DEK with a trusted contact.
  *
  * Flow:
- * 1. Fetch the contact's public key from server
- * 2. Wrap the plan DEK with their public key (RSA-OAEP)
- * 3. Upload the wrapped DEK to the server
+ * 1. Fetch ALL of the contact's public keys (multiple devices)
+ * 2. Wrap the plan DEK with each public key (RSA-OAEP)
+ * 3. Store each wrapped DEK copy on the server
  */
 export function useShareDEK() {
   const { keys } = useApi();
@@ -31,13 +31,7 @@ export function useShareDEK() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      trustedContactId,
-      recipientUserId,
-    }: {
-      trustedContactId: string;
-      recipientUserId: string;
-    }) => {
+    mutationFn: async ({ recipientUserId }: { recipientUserId: string }) => {
       if (!dekCryptoKey) {
         throw new Error("Encryption keys not ready");
       }
@@ -45,29 +39,31 @@ export function useShareDEK() {
         throw new Error("Plan ID is required");
       }
 
-      // 1. Get the recipient's public key
-      const { publicKey: recipientPubKeyB64, keyId: recipientKeyId } =
-        await keys.getPublicKey(recipientUserId);
+      // 1. Get ALL of the recipient's public keys (one per device)
+      const recipientKeys = await keys.getPublicKeys(recipientUserId);
 
-      // 2. Import the recipient's public key
-      const recipientPubKey = await importPublicKey(recipientPubKeyB64);
+      if (recipientKeys.length === 0) {
+        throw new Error("Recipient has no registered encryption keys");
+      }
 
-      // 3. Export our DEK as raw bytes, then wrap with recipient's public key
-      const wrappedDEK = await wrapDEK(dekCryptoKey, recipientPubKey);
+      // 2. Wrap DEK for each device key and store on server
+      for (const key of recipientKeys) {
+        const recipientPubKey = await importPublicKey(key.publicKey);
+        const wrappedDEK = await wrapDEK(dekCryptoKey, recipientPubKey);
 
-      // 4. Upload the wrapped DEK to the server
-      const result = await keys.shareDEK(planId, {
-        trustedContactId,
-        recipientUserId,
-        encryptedDek: wrappedDEK,
-        recipientKeyId,
-      });
+        await keys.storeDek({
+          planId,
+          recipientId: recipientUserId,
+          dekType: "contact",
+          encryptedDek: wrappedDEK,
+          keyVersion: key.keyVersion,
+        });
+      }
 
       logger.info("E2EE: DEK shared with trusted contact", {
-        trustedContactId,
+        recipientUserId,
+        deviceCount: recipientKeys.length,
       });
-
-      return result;
     },
     onSettled: () => {
       if (planId) {
@@ -89,13 +85,13 @@ export function useRevokeDEK() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (trustedContactId: string) => {
+    mutationFn: async (recipientUserId: string) => {
       if (!planId) {
         throw new Error("Plan ID is required");
       }
-      await keys.revokeSharedDEK(planId, trustedContactId);
-      logger.info("E2EE: DEK access revoked for trusted contact", {
-        trustedContactId,
+      await keys.deleteDek(planId, "contact", undefined, recipientUserId);
+      logger.info("E2EE: DEK access revoked for user", {
+        recipientUserId,
       });
     },
     onSettled: () => {
@@ -107,4 +103,3 @@ export function useRevokeDEK() {
     },
   });
 }
-

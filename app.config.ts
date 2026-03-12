@@ -15,9 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: IS_PROD
-      ? "com.mylegacymade.legacymade"
-      : "com.gibsonops.legacymade.dev1",
+    bundleIdentifier: IS_PROD ? "com.mylegacymade.legacymade" : "com.mylegacymade.legacymadedev",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: true,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",

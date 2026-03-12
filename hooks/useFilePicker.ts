@@ -149,6 +149,19 @@ export function useFilePicker(
       const mimeType = asset.mimeType || (isVideo ? "video/mp4" : "image/jpeg");
       const fileType = getFileType(mimeType);
 
+      // Ensure filename has the correct extension (camera captures often
+      // return null for fileName, and we need the extension for sharing)
+      let fileName = asset.fileName;
+      if (!fileName) {
+        const ext = mimeType === "image/png" ? "png"
+          : mimeType === "image/heic" ? "heic"
+          : mimeType === "video/mp4" ? "mp4"
+          : mimeType === "video/quicktime" ? "mov"
+          : isVideo ? "mp4"
+          : "jpg";
+        fileName = `photo_${Date.now()}.${ext}`;
+      }
+
       let thumbnailUri: string | undefined;
       if (isVideo) {
         thumbnailUri = await generateVideoThumbnail(asset.uri);
@@ -156,7 +169,7 @@ export function useFilePicker(
 
       return {
         uri: asset.uri,
-        fileName: asset.fileName || `file_${Date.now()}`,
+        fileName,
         fileSize: asset.fileSize || 0,
         mimeType,
         type: fileType,

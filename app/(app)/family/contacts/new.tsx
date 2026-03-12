@@ -17,12 +17,15 @@ import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCreateTrustedContact } from "@/hooks/queries";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
+import { useShareDEK } from "@/hooks/useShareDEK";
 import { toast } from "@/hooks/useToast";
+import { logger } from "@/lib/logger";
 
 export default function NewTrustedContactScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const createMutation = useCreateTrustedContact();
+  const shareDEKMutation = useShareDEK();
   const { guardOverlay } = usePillarGuard({
     pillar: "family_access",
     featureName: "Family Access",
@@ -48,7 +51,7 @@ export default function NewTrustedContactScreen() {
       }
 
       try {
-        await createMutation.mutateAsync({
+        const contact = await createMutation.mutateAsync({
           email: value.email.trim(),
           firstName: value.firstName.trim(),
           lastName: value.lastName.trim(),
@@ -57,6 +60,18 @@ export default function NewTrustedContactScreen() {
           accessTiming: value.accessTiming,
           notes: value.notes.trim() || undefined,
         });
+
+        // Fast path: if the contact already has an account, share DEK immediately
+        if (contact.clerkUserId) {
+          try {
+            await shareDEKMutation.mutateAsync({
+              recipientUserId: contact.clerkUserId,
+            });
+          } catch (dekError) {
+            logger.error("DEK auto-share failed on create", dekError);
+          }
+        }
+
         toast.success({
           title: "Invitation sent",
           message: `An invitation has been sent to ${value.email.trim()}.`,

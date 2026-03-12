@@ -26,8 +26,8 @@ export function UpgradePromptProvider({ children }: { children: React.ReactNode 
   const [isVisible, setIsVisible] = useState(false);
   const [options, setOptions] = useState<UpgradePromptOptions>({});
 
-  const showUpgradePrompt = useCallback((opts: UpgradePromptOptions = {}) => {
-    setOptions(opts);
+  const showUpgradePrompt = useCallback((opts?: UpgradePromptOptions) => {
+    setOptions(opts ?? {});
     setIsVisible(true);
   }, []);
 

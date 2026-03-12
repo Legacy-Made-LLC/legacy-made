@@ -100,6 +100,7 @@ export const contactSchemaWithRequiredPhone = z.object({
   phone: phoneRequired,
   email: emailOptional,
   reason: optionalString,
+  isPrimary: z.boolean(),
 });
 export type ContactFormValuesWithRequiredPhone = z.infer<
   typeof contactSchemaWithRequiredPhone

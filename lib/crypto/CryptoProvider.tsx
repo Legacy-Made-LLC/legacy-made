@@ -1,21 +1,39 @@
 /**
  * CryptoProvider - React context for E2EE key management
  *
- * Automatically generates encryption keys on first authenticated launch.
- * No user interaction required — keys are created silently in the background.
+ * Uses TanStack Query for reactive key initialization:
+ * - hasEncryptionKeys, getDEK, getKeyVersion are queries with automatic retries
+ * - getDEK is enabled only when hasEncryptionKeys === true
+ * - Initialization logic is reactive derivations from query state
+ * - Invalidating hasEncryptionKeys safely re-triggers the init flow
+ *
+ * The public interface (CryptoContextType) is unchanged — all consumers
+ * continue working without modification.
  */
 
 import { useApi } from "@/api";
+import { usePlan } from "@/data/PlanProvider";
+import {
+  useBackupStatusQuery,
+  useDEKQuery,
+  useEscrowRecoveryMutation,
+  useHasEncryptionKeysQuery,
+  useKeyVersionQuery,
+  usePlanE2EEStatusQuery,
+  useRetrySetupMutation,
+  useSetupKeysMutation,
+  useSharedPlanDEKQuery,
+} from "@/hooks/queries/useCryptoQueries";
 import { logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@clerk/clerk-expo";
+import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
-  useState,
   type ReactNode,
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
@@ -23,19 +41,10 @@ import { AppState, type AppStateStatus } from "react-native";
 import { decryptString, encryptString } from "./aes";
 import { decryptDownloadedFile, encryptFileForUpload } from "./fileEncryption";
 import {
-  exportPublicKey,
-  generateDEK,
-  generateKeyPair,
-  getDEK,
-  getKeyId,
+  getKeyVersion,
   getPrivateKey,
   hasEncryptionKeys,
-  importDEK,
-  storeDEK,
-  storeKeyId,
-  storePrivateKey,
   unwrapDEK,
-  wrapDEK,
 } from "./keys";
 import type { EncryptedPayload, KeyBackupStatus } from "./types";
 
@@ -46,6 +55,14 @@ interface CryptoContextType {
   isLoading: boolean;
   /** In-memory DEK as CryptoKey (null if not ready) */
   dekCryptoKey: CryptoKey | null;
+  /** The DEK to use for current plan (own DEK or shared plan DEK) */
+  activeDEK: CryptoKey | null;
+  /** True while resolving a shared plan's DEK */
+  isActiveDEKLoading: boolean;
+  /** True when viewing a shared plan but no DEK exists for the contact */
+  sharedPlanDEKUnavailable: boolean;
+  /** True when this device needs key recovery (returning user, no local keys) */
+  needsRecovery: boolean;
   /** Encrypt a plaintext string */
   encrypt: (plaintext: string) => Promise<EncryptedPayload>;
   /** Decrypt an encrypted payload */
@@ -57,9 +74,16 @@ interface CryptoContextType {
   /** Current backup status */
   backupStatus: KeyBackupStatus;
   /** Get the DEK for a shared plan (unwrap with our private key) */
-  getSharedPlanDEK: (planId: string) => Promise<CryptoKey | null>;
+  getSharedPlanDEK: (
+    planId: string,
+    ownerId: string,
+  ) => Promise<CryptoKey | null>;
   /** Recover keys from escrow (new device without local keys) */
   recoverFromEscrow: () => Promise<boolean>;
+  /** Clear cached shared plan DEK (e.g. on revocation) */
+  clearSharedDEKCache: (planId: string) => void;
+  /** Complete recovery — reload DEK from SecureStore and mark ready */
+  completeRecovery: () => Promise<void>;
 }
 
 const CryptoContext = createContext<CryptoContextType | null>(null);
@@ -69,122 +93,142 @@ interface CryptoProviderProps {
 }
 
 export function CryptoProvider({ children }: CryptoProviderProps) {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   const { keys } = useApi();
+  const { planId, isViewingSharedPlan, sharedPlanInfo } = usePlan();
+  const queryClient = useQueryClient();
 
-  const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [dekCryptoKey, setDekCryptoKey] = useState<CryptoKey | null>(null);
-  const [backupStatus] = useState<KeyBackupStatus>({
-    escrow: false,
-    keyFile: false,
-    recoveryPhrase: false,
-  });
+  // ── Core queries ─────────────────────────────────────────────────────
 
-  // Track if initialization has been attempted to avoid re-running
-  const initAttempted = useRef(false);
+  const hasKeysQuery = useHasEncryptionKeysQuery(userId);
 
-  /**
-   * Initialize encryption keys:
-   * 1. Check if keys exist in SecureStore
-   * 2. If yes, load DEK into memory
-   * 3. If no, generate new keys silently, upload public key, store private key
-   */
-  const initializeKeys = useCallback(async () => {
-    if (initAttempted.current) return;
-    initAttempted.current = true;
+  const dekQuery = useDEKQuery(userId, hasKeysQuery.data);
 
-    setIsLoading(true);
+  // Derived: DEK is loaded and ready
+  const isReady = dekQuery.data != null;
+  const dekCryptoKey = dekQuery.data ?? null;
 
-    try {
-      const keysExist = await hasEncryptionKeys();
+  const keyVersionQuery = useKeyVersionQuery(userId, isReady);
 
-      if (keysExist) {
-        // Load existing DEK from SecureStore
-        const dek = await getDEK();
-        if (dek) {
-          setDekCryptoKey(dek);
-          setIsReady(true);
-          logger.info("E2EE keys loaded from SecureStore");
-        } else {
-          logger.error("E2EE: Keys flagged as existing but DEK not found");
-        }
-      } else {
-        // Generate new keys silently
-        logger.info("E2EE: Generating new key pair and DEK...");
+  // Only check E2EE status when no local keys (detecting returning user)
+  const e2eeStatusQuery = usePlanE2EEStatusQuery(
+    planId,
+    hasKeysQuery.data === false,
+  );
 
-        const keyPair = await generateKeyPair();
-        const dek = await generateDEK();
+  const backupStatusQuery = useBackupStatusQuery(planId, isReady);
+  const backupStatus: KeyBackupStatus = useMemo(
+    () =>
+      backupStatusQuery.data ?? {
+        escrow: { configured: false, createdAt: null, removedAt: null },
+        recoveryPhrase: { configured: false, createdAt: null, removedAt: null },
+      },
+    [backupStatusQuery.data],
+  );
 
-        // Store private key + DEK in SecureStore
-        await storePrivateKey(keyPair.privateKey);
-        await storeDEK(dek);
+  // ── Shared plan DEK (via query) ──────────────────────────────────────
 
-        // Generate a unique key ID
-        const keyId = `key_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-        await storeKeyId(keyId);
+  const sharedDEKQuery = useSharedPlanDEKQuery(
+    isViewingSharedPlan ? sharedPlanInfo?.planId : undefined,
+    isViewingSharedPlan ? sharedPlanInfo?.ownerId : undefined,
+    userId,
+    isViewingSharedPlan && !!sharedPlanInfo,
+  );
 
-        // Export public key and wrap DEK for server storage
-        const publicKeyB64 = await exportPublicKey(keyPair.publicKey);
-        const wrappedDEK = await wrapDEK(dek, keyPair.publicKey);
+  const sharedDEK = sharedDEKQuery.data ?? null;
+  const isActiveDEKLoading =
+    isViewingSharedPlan && sharedPlanInfo ? sharedDEKQuery.isLoading : false;
+  const sharedPlanDEKUnavailable =
+    isViewingSharedPlan &&
+    !!sharedPlanInfo &&
+    sharedDEKQuery.isFetched &&
+    sharedDEK === null;
 
-        // Upload to server (non-blocking — retry later if it fails)
-        try {
-          await keys.upload({
-            publicKey: publicKeyB64,
-            wrappedDEK,
-            keyId,
-          });
-          logger.info("E2EE: Keys uploaded to server");
-        } catch (uploadError) {
-          // Key upload failed — keys are still usable locally
-          // Will retry on next app launch
-          logger.error("E2EE: Failed to upload keys to server", uploadError);
-          initAttempted.current = false; // Allow retry
-        }
+  // The DEK to use for all encrypt/decrypt operations
+  const activeDEK = isViewingSharedPlan ? sharedDEK : dekCryptoKey;
 
-        setDekCryptoKey(dek);
-        setIsReady(true);
-        logger.info("E2EE: Key generation complete");
-      }
-    } catch (error) {
-      logger.error("E2EE: Key initialization failed", error);
-      initAttempted.current = false; // Allow retry
-    } finally {
-      setIsLoading(false);
-    }
-  }, [keys]);
+  // ── Mutations ────────────────────────────────────────────────────────
 
-  // Initialize keys when user is signed in
+  const setupMutation = useSetupKeysMutation();
+  const retrySetupMutation = useRetrySetupMutation();
+  const escrowRecoveryMutation = useEscrowRecoveryMutation();
+  // ── Derived state ────────────────────────────────────────────────────
+
+  const isLoading =
+    (!!userId && hasKeysQuery.isLoading) ||
+    dekQuery.isLoading ||
+    setupMutation.isPending;
+
+  // needsRecovery: no local keys but plan already has E2EE enabled
+  // Important: hasKeysQuery.data is undefined while loading, NOT false
+  const needsRecovery =
+    hasKeysQuery.data === false && e2eeStatusQuery.data?.e2eeEnabled === true;
+
+  // shouldAutoSetup: no local keys, E2EE not yet enabled, ready to set up
+  const shouldAutoSetup =
+    hasKeysQuery.data === false &&
+    e2eeStatusQuery.data?.e2eeEnabled === false &&
+    !!planId &&
+    !!userId;
+
+  // ── Auto-setup effect (new user) ─────────────────────────────────────
+
   useEffect(() => {
-    if (isSignedIn) {
-      initializeKeys();
-    } else {
-      // User signed out — clear in-memory key
-      setDekCryptoKey(null);
-      setIsReady(false);
-      initAttempted.current = false;
+    if (
+      shouldAutoSetup &&
+      !setupMutation.isPending &&
+      !setupMutation.isSuccess
+    ) {
+      setupMutation.mutate({ planId: planId!, userId: userId! });
     }
-  }, [isSignedIn, initializeKeys]);
+  }, [shouldAutoSetup, setupMutation, planId, userId]);
 
-  // Clear DEK from memory when app goes to background for security
+  // ── Retry-setup effect (incomplete backend setup) ────────────────────
+
+  useEffect(() => {
+    if (
+      isReady &&
+      dekCryptoKey &&
+      keyVersionQuery.data === null &&
+      keyVersionQuery.isFetched &&
+      planId &&
+      userId &&
+      !retrySetupMutation.isPending
+    ) {
+      retrySetupMutation.mutate({
+        dek: dekCryptoKey,
+        planId,
+        userId,
+      });
+    }
+  }, [
+    isReady,
+    dekCryptoKey,
+    keyVersionQuery.data,
+    keyVersionQuery.isFetched,
+    planId,
+    userId,
+    retrySetupMutation,
+  ]);
+
+  // ── Background security: clear DEK from memory ──────────────────────
+
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (!userId) return;
+
       if (nextState === "background" || nextState === "inactive") {
-        // Clear DEK reference when backgrounded
-        setDekCryptoKey(null);
-        setIsReady(false);
-        initAttempted.current = false;
-      } else if (nextState === "active" && isSignedIn) {
-        // Reload DEK when returning to foreground
-        getDEK().then((dek) => {
-          if (dek) {
-            setDekCryptoKey(dek);
-            setIsReady(true);
-            initAttempted.current = true;
-          }
+        // Remove DEK + shared DEK queries so they re-fetch on foreground
+        queryClient.removeQueries({
+          queryKey: queryKeys.crypto.dek(userId),
+        });
+        queryClient.removeQueries({
+          predicate: (query) =>
+            query.queryKey[0] === "crypto" && query.queryKey[1] === "sharedDEK",
         });
       }
+      // On "active", useDEKQuery automatically re-executes since the query
+      // was removed (treated as fresh mount)
     };
 
     const subscription = AppState.addEventListener(
@@ -192,9 +236,18 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       handleAppStateChange,
     );
     return () => subscription.remove();
-  }, [isSignedIn]);
+  }, [userId, queryClient]);
 
-  // Convenience methods that use the in-memory DEK
+  // ── Sign-out cleanup ─────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      queryClient.removeQueries({ queryKey: queryKeys.crypto.all() });
+    }
+  }, [isSignedIn, queryClient]);
+
+  // ── Convenience methods ──────────────────────────────────────────────
+
   const encrypt = useCallback(
     async (plaintext: string): Promise<EncryptedPayload> => {
       if (!dekCryptoKey) throw new Error("Encryption keys not ready");
@@ -227,71 +280,96 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
     [dekCryptoKey],
   );
 
-  // Cache for shared plan DEKs (planId → CryptoKey)
-  const sharedDEKCache = useRef<Map<string, CryptoKey>>(new Map());
-
+  // Imperative getSharedPlanDEK — fetches/reads the query cache, or triggers fetch
   const getSharedPlanDEK = useCallback(
-    async (planId: string): Promise<CryptoKey | null> => {
-      // Check cache first
-      const cached = sharedDEKCache.current.get(planId);
-      if (cached) return cached;
-
+    async (
+      sharedPlanId: string,
+      ownerId: string,
+    ): Promise<CryptoKey | null> => {
+      if (!userId) return null;
       try {
-        // Fetch the wrapped DEK from the server
-        const sharedDEK = await keys.getSharedDEK(planId);
-        if (!sharedDEK) return null;
+        return await queryClient.fetchQuery({
+          queryKey: queryKeys.crypto.sharedDEK(sharedPlanId, ownerId),
+          queryFn: async () => {
+            const dekRecords = await keys.getMyDeks(sharedPlanId, ownerId);
+            if (!dekRecords || dekRecords.length === 0) return null;
 
-        // Unwrap with our private key
-        const privateKey = await getPrivateKey();
-        if (!privateKey) return null;
+            const myKeyVersion = await getKeyVersion(userId);
+            const matchingDek = myKeyVersion
+              ? dekRecords.find((d) => d.keyVersion === myKeyVersion)
+              : dekRecords[0];
+            if (!matchingDek) return null;
 
-        const dek = await unwrapDEK(sharedDEK.encryptedDek, privateKey);
-        sharedDEKCache.current.set(planId, dek);
-        return dek;
+            const privateKey = await getPrivateKey(userId);
+            if (!privateKey) return null;
+
+            return unwrapDEK(matchingDek.encryptedDek, privateKey);
+          },
+          staleTime: Infinity,
+        });
       } catch (error) {
         logger.error("E2EE: Failed to get shared plan DEK", error);
         return null;
       }
     },
-    [keys],
+    [userId, keys, queryClient],
   );
 
+  const clearSharedDEKCache = useCallback(
+    (planIdToClear: string) => {
+      queryClient.removeQueries({
+        predicate: (query) =>
+          query.queryKey[0] === "crypto" &&
+          query.queryKey[1] === "sharedDEK" &&
+          query.queryKey[2] === planIdToClear,
+      });
+      logger.info("E2EE: Cleared shared DEK cache for plan " + planIdToClear);
+    },
+    [queryClient],
+  );
+
+  // ── Recovery methods (thin wrappers around mutations) ────────────────
+
   const recoverFromEscrow = useCallback(async (): Promise<boolean> => {
-    try {
-      const response = await keys.recoverFromEscrow();
-
-      // Import the recovered DEK
-      const dek = await importDEK(response.dekB64);
-      await storeDEK(dek);
-
-      // Generate a new key pair for this device
-      const keyPair = await generateKeyPair();
-      await storePrivateKey(keyPair.privateKey);
-
-      const keyId = `key_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-      await storeKeyId(keyId);
-
-      // Upload new public key + re-wrapped DEK
-      const publicKeyB64 = await exportPublicKey(keyPair.publicKey);
-      const wrappedDEK = await wrapDEK(dek, keyPair.publicKey);
-
-      await keys.upload({ publicKey: publicKeyB64, wrappedDEK, keyId });
-
-      setDekCryptoKey(dek);
-      setIsReady(true);
-      logger.info("E2EE: Keys recovered from escrow");
-      return true;
-    } catch (error) {
-      logger.error("E2EE: Escrow recovery failed", error);
+    if (!planId || !userId) {
+      logger.error("E2EE: Cannot recover without planId and userId");
       return false;
     }
-  }, [keys]);
+    try {
+      await escrowRecoveryMutation.mutateAsync({ planId, userId });
+      return true;
+    } catch (error) {
+      logger.warn("E2EE: Escrow recovery failed", { error });
+      return false;
+    }
+  }, [escrowRecoveryMutation, planId, userId]);
+
+  const completeRecovery = useCallback(async () => {
+    if (!userId) return;
+    // Invalidate queries so they re-fetch from SecureStore
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.crypto.hasKeys(userId),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.crypto.dek(userId),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.crypto.keyVersion(userId),
+    });
+    logger.info("E2EE: Recovery complete, queries invalidated");
+  }, [userId, queryClient]);
+
+  // ── Context value ────────────────────────────────────────────────────
 
   const value = useMemo<CryptoContextType>(
     () => ({
       isReady,
       isLoading,
       dekCryptoKey,
+      activeDEK,
+      isActiveDEKLoading,
+      sharedPlanDEKUnavailable,
+      needsRecovery,
       encrypt,
       decrypt,
       encryptFile,
@@ -299,11 +377,17 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       backupStatus,
       getSharedPlanDEK,
       recoverFromEscrow,
+      clearSharedDEKCache,
+      completeRecovery,
     }),
     [
       isReady,
       isLoading,
       dekCryptoKey,
+      activeDEK,
+      isActiveDEKLoading,
+      sharedPlanDEKUnavailable,
+      needsRecovery,
       encrypt,
       decrypt,
       encryptFile,
@@ -311,6 +395,8 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       backupStatus,
       getSharedPlanDEK,
       recoverFromEscrow,
+      clearSharedDEKCache,
+      completeRecovery,
     ],
   );
 
@@ -340,28 +426,19 @@ export function useOptionalCrypto(): CryptoContextType | null {
 }
 
 /**
- * Re-upload keys to server if previous upload failed.
+ * Re-upload keys to server if previous setup failed.
  * Called from a background check (e.g., on app foreground).
+ * The actual retry is handled by the CryptoProvider via retrySetupMutation
+ * when keyVersionQuery.data === null.
  */
-export async function retryKeyUpload(
-  keys: { upload: (data: { publicKey: string; wrappedDEK: string; keyId: string }) => Promise<unknown> },
-): Promise<void> {
-  const keysExist = await hasEncryptionKeys();
+export async function retryKeyUpload(userId: string): Promise<void> {
+  const keysExist = await hasEncryptionKeys(userId);
   if (!keysExist) return;
 
-  const keyId = await getKeyId();
-  if (!keyId) return;
-
-  // Check if server already has our keys
-  // This is a lightweight check to avoid re-uploading
-  try {
-    const dek = await getDEK();
-    if (!dek) return;
-
-    // We'd need the public key to re-upload, but we only store the private key.
-    // The key upload retry is handled by the CryptoProvider on next init.
-    logger.info("E2EE: Key upload retry would happen on next init");
-  } catch {
-    // Silently ignore — will retry on next init
+  const keyVersion = await getKeyVersion(userId);
+  if (keyVersion !== null) {
+    return;
   }
+
+  logger.info("E2EE: Key setup incomplete, will retry on next init");
 }

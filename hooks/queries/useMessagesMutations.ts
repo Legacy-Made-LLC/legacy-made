@@ -121,15 +121,15 @@ export function useCreateMessage<T = Record<string, unknown>>(
       };
 
       // Encrypt sensitive fields if crypto is available
-      if (crypto?.dekCryptoKey) {
+      if (crypto?.activeDEK) {
         const encrypted = await encryptForCreate(
           { title: data.title, notes: data.notes, metadata: data.metadata },
-          crypto.dekCryptoKey,
+          crypto.activeDEK,
         );
         return messages.create({
           ...baseRequest,
           ...encrypted,
-        } as CreateMessageRequest);
+        } as unknown as CreateMessageRequest);
       }
 
       return messages.create<T>(baseRequest);
@@ -197,11 +197,12 @@ export function useCreateMessage<T = Record<string, unknown>>(
     onSuccess: (newMessage) => {
       if (!planId || !taskKey) return;
 
+      const typedMessage = newMessage as Message<T>;
       queryClient.setQueryData<Message<T>[]>(
         queryKeys.messages.byTaskKey(planId, taskKey),
         (old) => {
-          if (!old) return [newMessage];
-          return [...old.filter((m) => !m.id.startsWith("temp-")), newMessage];
+          if (!old) return [typedMessage];
+          return [...old.filter((m) => !m.id.startsWith("temp-")), typedMessage];
         },
       );
 
@@ -262,7 +263,7 @@ export function useUpdateMessage<T = Record<string, unknown>>(
       }
 
       // Encrypt sensitive fields if crypto is available
-      if (crypto?.dekCryptoKey) {
+      if (crypto?.activeDEK) {
         // Get current message to merge metadata for encryption
         const currentMessages = queryClient.getQueryData<Message<T>[]>(
           taskKey
@@ -275,14 +276,14 @@ export function useUpdateMessage<T = Record<string, unknown>>(
         const encrypted = await encryptForUpdate(
           { title: data.title, notes: data.notes, metadata: data.metadata },
           currentMetadata,
-          crypto.dekCryptoKey,
+          crypto.activeDEK,
         );
 
         return messages.update(planId, messageId, {
           completionStatus: data.completionStatus,
           metadataSchema: data.metadataSchema,
           ...encrypted,
-        } as UpdateMessageRequest);
+        } as unknown as UpdateMessageRequest);
       }
 
       const request: UpdateMessageRequest<T> = {
@@ -343,13 +344,14 @@ export function useUpdateMessage<T = Record<string, unknown>>(
 
       // The update response may not include `files` — preserve them from the
       // previous cache so file attachments aren't lost between saves.
+      const typedMessage = updatedMessage as Message<T>;
       queryClient.setQueryData<Message<T>[]>(
         queryKeys.messages.byTaskKey(planId, taskKey),
         (old) => {
-          if (!old) return [updatedMessage];
+          if (!old) return [typedMessage];
           return old.map((m) => {
             if (m.id !== variables.messageId) return m;
-            return { ...updatedMessage, files: updatedMessage.files ?? m.files };
+            return { ...typedMessage, files: typedMessage.files ?? m.files };
           });
         },
       );
@@ -359,7 +361,7 @@ export function useUpdateMessage<T = Record<string, unknown>>(
       );
       queryClient.setQueryData(
         queryKeys.messages.single(planId, variables.messageId),
-        { ...updatedMessage, files: updatedMessage.files ?? oldSingle?.files },
+        { ...typedMessage, files: typedMessage.files ?? oldSingle?.files },
       );
 
       queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {

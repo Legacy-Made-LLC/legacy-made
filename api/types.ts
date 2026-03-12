@@ -149,6 +149,12 @@ export interface FileAttachment {
   isRemote?: boolean;
   /** Whether this file is encrypted (E2EE) */
   isEncrypted?: boolean;
+  /** File ID of the thumbnail (for decrypting encrypted thumbnails) */
+  thumbnailFileId?: string;
+  /** Whether the thumbnail file is encrypted */
+  isThumbnailEncrypted?: boolean;
+  /** Whether this file is still being processed (e.g., video transcoding) */
+  isProcessing?: boolean;
 }
 
 /**
@@ -184,13 +190,20 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
 export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
   // Separate primary files from thumbnails
   const primaryFiles: ApiFile[] = [];
-  const thumbnailsByParent = new Map<string, string>();
+  const thumbnailsByParent = new Map<
+    string,
+    { id: string; downloadUrl: string; isEncrypted?: boolean }
+  >();
 
   for (const file of files) {
     if (file.role === "thumbnail" && file.parentFileId) {
-      // Store the thumbnail's download URL keyed by parent file ID
+      // Store the thumbnail info keyed by parent file ID
       if (file.downloadUrl) {
-        thumbnailsByParent.set(file.parentFileId, file.downloadUrl);
+        thumbnailsByParent.set(file.parentFileId, {
+          id: file.id,
+          downloadUrl: file.downloadUrl,
+          isEncrypted: file.isEncrypted,
+        });
       }
     } else {
       primaryFiles.push(file);
@@ -200,9 +213,14 @@ export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
   return primaryFiles.map((file) => {
     const attachment = apiFileToAttachment(file);
     // If there's a matched thumbnail from a separate file, use it
-    const thumbnailUrl = thumbnailsByParent.get(file.id);
-    if (thumbnailUrl) {
-      return { ...attachment, thumbnailUri: thumbnailUrl };
+    const thumbnail = thumbnailsByParent.get(file.id);
+    if (thumbnail) {
+      return {
+        ...attachment,
+        thumbnailUri: thumbnail.downloadUrl,
+        thumbnailFileId: thumbnail.id,
+        isThumbnailEncrypted: thumbnail.isEncrypted,
+      };
     }
     return attachment;
   });
@@ -223,6 +241,8 @@ export interface InitUploadRequest {
   role?: FileRole;
   /** Parent file ID for associating thumbnails with their video */
   parentFileId?: string;
+  /** Whether the file data is encrypted with E2EE */
+  isEncrypted?: boolean;
 }
 
 
@@ -443,6 +463,8 @@ export interface SharedPlan {
   ownerFirstName: string;
   ownerLastName: string;
   ownerAvatarUrl: string | null;
+  /** The plan owner's Clerk user ID (needed for DEK retrieval) */
+  ownerId: string;
   accessLevel: TrustedContactAccessLevel;
   accessTiming: TrustedContactAccessTiming;
   accessStatus: TrustedContactStatus;
@@ -593,6 +615,8 @@ export interface TrustedContact {
   accessTiming: TrustedContactAccessTiming;
   accessStatus: TrustedContactStatus;
   clerkUserId?: string;
+  /** Whether the DEK has been shared with this contact (server-computed) */
+  dekShared?: boolean;
   notes?: string;
   invitedAt: string;
   acceptedAt?: string;

@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { vaultSections } from '@/constants/vault-structure';
 import { useTranslations, usePerspective } from '@/contexts/LocaleContext';
-import type { VaultSection as StructuralVaultSection } from '@/constants/vault-structure';
+import type { SectionText } from '@/locales/types';
 
 // ============================================================================
 // Example 1: Dashboard with Vault Sections
@@ -29,7 +29,7 @@ export function VaultDashboard() {
       data={vaultSections}
       keyExtractor={(section) => section.id}
       renderItem={({ item: section }) => {
-        const text = t.vault[section.id];
+        const text = (t.vault as Record<string, SectionText>)[section.id];
         return (
           <SectionCard
             icon={section.ionIcon}
@@ -60,7 +60,7 @@ export function TaskDetailScreen({
   const t = useTranslations();
 
   // Type-safe access to task text
-  const taskText = t.vault[sectionId].tasks[taskId];
+  const taskText = (t.vault as Record<string, SectionText>)[sectionId].tasks[taskId];
 
   return (
     <View style={styles.container}>
@@ -76,7 +76,7 @@ export function TaskDetailScreen({
       {taskText.tips && taskText.tips.length > 0 && (
         <View style={styles.tipsContainer}>
           <Text style={styles.tipsHeading}>What else should I know?</Text>
-          {taskText.tips.map((tip, index) => (
+          {taskText.tips.map((tip: string, index: number) => (
             <Text key={index} style={styles.tip}>
               • {tip}
             </Text>
@@ -183,12 +183,12 @@ export function SectionDetailScreen({ sectionId }: { sectionId: string }) {
   if (!section) return null;
 
   // Get translated text
-  const sectionText = t.vault[sectionId];
+  const sectionText = (t.vault as Record<string, SectionText>)[sectionId];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name={section.ionIcon} size={32} color="#8a9785" />
+        <Ionicons name={section.ionIcon as keyof typeof Ionicons.glyphMap} size={32} color="#8a9785" />
         <Text style={styles.sectionTitle}>{sectionText.title}</Text>
       </View>
 
@@ -259,7 +259,7 @@ export function WishesTaskScreen({
   const t = useTranslations();
 
   // Access wishes translations
-  const taskText = t.wishes[sectionId].tasks[taskId];
+  const taskText = (t.wishes as Record<string, SectionText>)[sectionId].tasks[taskId];
 
   return (
     <View style={styles.container}>
@@ -285,7 +285,7 @@ function SectionCard({
 }) {
   return (
     <View style={styles.card}>
-      <Ionicons name={icon as any} size={24} color="#8a9785" />
+      <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={24} color="#8a9785" />
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={styles.cardDescription}>{description}</Text>

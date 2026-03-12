@@ -22,21 +22,25 @@ export function useEntriesQuery<T = Record<string, unknown>>(taskKey: string | u
   const { planId } = usePlan();
   const { entries } = useApi();
   const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.entries.byTaskKey(planId!, taskKey!),
     queryFn: async () => {
       const raw = await entries.listByTaskKey<T>(planId!, taskKey!);
-      if (!crypto?.dekCryptoKey) return raw;
+      if (!crypto?.activeDEK) return raw;
       return Promise.all(
-        raw.map((e) =>
-          isEncryptedEntry(e)
-            ? decryptEntry<T>(e, crypto.dekCryptoKey!)
-            : e,
-        ),
-      ) as Promise<Entry<T>[]>;
+        raw.map(async (e) => {
+          if (!isEncryptedEntry(e)) return e;
+          const decrypted = await decryptEntry<T>(
+            e as unknown as Parameters<typeof decryptEntry>[0],
+            crypto.activeDEK!,
+          );
+          return decrypted as unknown as Entry<T>;
+        }),
+      );
     },
-    enabled: !!planId && !!taskKey,
+    enabled: !!planId && !!taskKey && cryptoReady,
   });
 }
 
@@ -54,15 +58,20 @@ export function useEntryQuery<T = Record<string, unknown>>(
   const { planId } = usePlan();
   const { entries } = useApi();
   const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.entries.single(planId!, entryId!),
     queryFn: async () => {
       const raw = await entries.get<T>(planId!, entryId!);
-      if (!crypto?.dekCryptoKey || !isEncryptedEntry(raw)) return raw;
-      return decryptEntry<T>(raw, crypto.dekCryptoKey) as Promise<Entry<T>>;
+      if (!crypto?.activeDEK || !isEncryptedEntry(raw)) return raw;
+      const decrypted = await decryptEntry<T>(
+        raw as unknown as Parameters<typeof decryptEntry>[0],
+        crypto.activeDEK,
+      );
+      return decrypted as unknown as Entry<T>;
     },
-    enabled: !!planId && !!entryId,
+    enabled: !!planId && !!entryId && cryptoReady,
     // Use cached data from list query as initial data for instant display
     initialData: () => {
       if (!planId || !entryId) return undefined;
@@ -159,10 +168,16 @@ export function usePrefetchEntriesByTaskKeys(taskKeys: string[]) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
 
   // Prefetch on mount and when taskKeys change
   useEffect(() => {
     if (!planId || taskKeys.length === 0) return;
+
+    // Skip prefetch when crypto is active — the prefetch queryFn doesn't
+    // decrypt, so it would cache encrypted data under the same key the
+    // decrypting query reads from, causing blank fields.
+    if (crypto) return;
 
     // Prefetch entries for each task key
     taskKeys.forEach((taskKey) => {
@@ -173,6 +188,6 @@ export function usePrefetchEntriesByTaskKeys(taskKeys: string[]) {
         staleTime: 30000,
       });
     });
-  }, [planId, taskKeys, queryClient, entries]);
+  }, [planId, taskKeys, queryClient, entries, crypto]);
 }
 

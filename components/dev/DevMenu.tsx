@@ -21,6 +21,9 @@ import {
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { GUIDANCE_DISMISSED_KEY_PREFIX } from "@/hooks/useGuidanceDismissals";
+import { clearEncryptionKeys } from "@/lib/crypto/keys";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@clerk/clerk-expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DevAction {
@@ -43,6 +46,7 @@ export function DevMenu() {
   const isFetching = useIsFetching();
   const isLoading = isFetching > 0;
   const { planId } = usePlan();
+  const { userId } = useAuth();
 
   const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
 
@@ -93,6 +97,32 @@ export function DevMenu() {
     Alert.alert("Cleared", "Contact guidance dismissal reset for this plan.");
   };
 
+  const handleEraseKeys = () => {
+    if (!userId) {
+      Alert.alert("No user", "Not signed in.");
+      return;
+    }
+    Alert.alert(
+      "Erase encryption keys?",
+      "This will delete local keys and trigger the recovery flow on next load.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Erase Keys",
+          style: "destructive",
+          onPress: async () => {
+            await clearEncryptionKeys(userId);
+            await queryClient.invalidateQueries({
+              queryKey: queryKeys.crypto.hasKeys(userId),
+            });
+            setIsOpen(false);
+            router.replace("/");
+          },
+        },
+      ],
+    );
+  };
+
   const actions: DevAction[] = [
     {
       id: "skip-onboarding",
@@ -125,6 +155,13 @@ export function DevMenu() {
       label: isOnline ? "Simulate Offline" : "Go Back Online",
       icon: isOnline ? "cloud-offline-outline" : "cloud-done-outline",
       onPress: handleToggleOnline,
+    },
+    {
+      id: "erase-keys",
+      label: "Erase Keys (Trigger Recovery)",
+      icon: "key-outline",
+      onPress: handleEraseKeys,
+      destructive: true,
     },
     {
       id: "test-error",

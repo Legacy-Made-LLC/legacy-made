@@ -136,6 +136,7 @@ export default function LegacyTaskScreen() {
 
   // Guard against concurrent file uploads (onSaveComplete + handleAttachmentsChange race)
   const isUploadingRef = useRef(false);
+  const attachmentsRef = useRef<FileAttachment[]>([]);
 
   // File attachments management
   const {
@@ -144,6 +145,7 @@ export default function LegacyTaskScreen() {
     deletingFileIds,
     handleRemoteFileDeletions,
   } = useFileAttachments();
+  attachmentsRef.current = attachments;
 
   // Form reference for auto-save integration (singleton only)
   const formRef = useRef<AnyFormApi | null>(null);
@@ -254,7 +256,11 @@ export default function LegacyTaskScreen() {
         autoSave.status === "pending" || autoSave.status === "saving";
       const isDirty = form?.state.isDirty ?? false;
 
-      if (!hasPendingSave && !isDirty) {
+      // Check for pending file attachments (added but not yet uploaded)
+      const hasPendingFiles = attachmentsRef.current.some(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      if (!hasPendingSave && !isDirty && !hasPendingFiles) {
         return;
       }
 
@@ -344,7 +350,6 @@ export default function LegacyTaskScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    useStandardUploadForVideo: true,
     onFileUploaded: (file, fileId, downloadUrl) => {
       filesChangedRef.current = true;
       setAttachments((prev) =>

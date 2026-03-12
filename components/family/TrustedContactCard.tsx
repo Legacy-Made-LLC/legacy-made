@@ -59,7 +59,16 @@ export function TrustedContactCard({
             {" \u00B7 "}
             {ACCESS_TIMING_LABELS[contact.accessTiming]}
           </Text>
-          <StatusBadge status={contact.accessStatus} />
+          <View style={styles.statusRow}>
+            <StatusBadge status={contact.accessStatus} />
+            {contact.accessStatus === "accepted" &&
+              contact.dekShared === false && (
+                <View style={styles.needsKeyBadge}>
+                  <Ionicons name="key-outline" size={10} color={colors.featureFamilyDark} />
+                  <Text style={styles.needsKeyText}>Needs key</Text>
+                </View>
+              )}
+          </View>
         </View>
         <Ionicons
           name="chevron-forward"
@@ -112,6 +121,25 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  needsKeyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: colors.featureFamilyTint,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  needsKeyText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.caption - 1,
+    color: colors.featureFamilyDark,
   },
   chevron: {
     marginLeft: spacing.sm,

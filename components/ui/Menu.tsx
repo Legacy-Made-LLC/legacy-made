@@ -158,7 +158,7 @@ function AccountView({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageSuccess, setImageSuccess] = useState(false);
-  const imageSuccessTimer = useRef<ReturnType<typeof setTimeout>>();
+  const imageSuccessTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const showImageSuccess = useCallback(() => {
     setImageSuccess(true);
@@ -576,6 +576,20 @@ export function Menu({ visible, onClose }: MenuProps) {
     },
   ];
 
+  // Security items
+  const securityItems = [
+    {
+      label: "Key Backup",
+      route: "/settings/key-backup",
+      icon: "key-outline" as const,
+    },
+    {
+      label: "Link Device",
+      route: "/settings/device-linking",
+      icon: "phone-portrait-outline" as const,
+    },
+  ];
+
   // Support items with external links
   const supportItems = [
     {
@@ -728,6 +742,18 @@ export function Menu({ visible, onClose }: MenuProps) {
                 {/* Your Plan Section */}
                 <MenuSection title="YOUR PLAN">
                   {planItems.map((item) => (
+                    <MenuItem
+                      key={item.label}
+                      label={item.label}
+                      icon={item.icon}
+                      onPress={() => handleNavigation(item.route)}
+                    />
+                  ))}
+                </MenuSection>
+
+                {/* Security Section */}
+                <MenuSection title="SECURITY">
+                  {securityItems.map((item) => (
                     <MenuItem
                       key={item.label}
                       label={item.label}

@@ -8,6 +8,7 @@
 import type {
   Entry,
   CreateEntryRequest,
+  MetadataSchema,
   ContactMetadata,
   FinancialMetadata,
   InsuranceMetadata,
@@ -15,6 +16,71 @@ import type {
   HomeMetadata,
   DigitalAccessMetadata,
 } from './types';
+
+// ============================================================================
+// Metadata Schemas for Mappers
+// ============================================================================
+
+const CONTACT_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    firstName: { label: "First Name", order: 1 },
+    lastName: { label: "Last Name", order: 2 },
+    relationship: { label: "Relationship", order: 3 },
+    phone: { label: "Phone", order: 4 },
+    email: { label: "Email", order: 5 },
+    reason: { label: "Why This Person?", order: 6 },
+    isPrimary: { label: "Contact First", order: 7, valueLabels: { true: "Yes", false: "No" } },
+  },
+};
+
+const FINANCIAL_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    institution: { label: "Institution", order: 1 },
+    accountType: { label: "Account Type", order: 2 },
+    accountNumber: { label: "Account Number (last 4)", order: 3 },
+    notes: { label: "Notes", order: 4 },
+  },
+};
+
+const INSURANCE_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    provider: { label: "Provider", order: 1 },
+    policyType: { label: "Policy Type", order: 2 },
+    policyNumber: { label: "Policy Number", order: 3 },
+    coverageDetails: { label: "Coverage Details", order: 4 },
+  },
+};
+
+const DOCUMENT_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    documentType: { label: "Document Type", order: 1 },
+    location: { label: "Location", order: 2 },
+    notes: { label: "Notes", order: 3 },
+  },
+};
+
+const HOME_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    responsibilityType: { label: "Type", order: 1 },
+    accountInfo: { label: "Details", order: 2 },
+    notes: { label: "Notes", order: 3 },
+  },
+};
+
+const DIGITAL_SCHEMA: MetadataSchema = {
+  version: 1,
+  fields: {
+    service: { label: "Service", order: 1 },
+    username: { label: "Username", order: 2 },
+    importance: { label: "Importance", order: 3, valueLabels: { critical: "Critical", high: "High", medium: "Medium", low: "Low" } },
+    notes: { label: "Notes", order: 4 },
+  },
+};
 
 import type {
   Contact,
@@ -71,6 +137,7 @@ export function contactToCreateRequest(
       reason: contact.notes,
       isPrimary: contact.isPrimary,
     },
+    metadataSchema: CONTACT_SCHEMA,
   };
 }
 
@@ -124,6 +191,7 @@ export function financialAccountToCreateRequest(
       accountNumber: account.accountNumberLast4,
       notes: account.notes,
     },
+    metadataSchema: FINANCIAL_SCHEMA,
   };
 }
 
@@ -165,6 +233,7 @@ export function insurancePolicyToCreateRequest(
       policyNumber: policy.policyNumber,
       coverageDetails: policy.coverageAmount,
     },
+    metadataSchema: INSURANCE_SCHEMA,
   };
 }
 
@@ -203,6 +272,7 @@ export function legalDocumentToCreateRequest(
       location: doc.location,
       notes: doc.notes,
     },
+    metadataSchema: DOCUMENT_SCHEMA,
   };
 }
 
@@ -254,6 +324,7 @@ export function homeResponsibilityToCreateRequest(
       accountInfo: item.details,
       notes: item.notes,
     },
+    metadataSchema: HOME_SCHEMA,
   };
 }
 
@@ -294,6 +365,7 @@ export function digitalAccountToCreateRequest(
       notes: account.accessNotes,
       importance: account.importance,
     },
+    metadataSchema: DIGITAL_SCHEMA,
   };
 }
 

@@ -9,12 +9,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface KeyBackupNudgeProps {
   onDismiss: () => void;
@@ -27,7 +22,11 @@ export function KeyBackupNudge({ onDismiss }: KeyBackupNudgeProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.iconContainer}>
-          <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={20}
+            color={colors.primary}
+          />
         </View>
         <Pressable
           onPress={onDismiss}
@@ -41,13 +40,13 @@ export function KeyBackupNudge({ onDismiss }: KeyBackupNudgeProps) {
 
       <Text style={styles.title}>Protect your data</Text>
       <Text style={styles.description}>
-        If you ever switch devices, you&apos;ll need your encryption key to access
-        your information. Take a moment to back it up.
+        If you ever switch devices, you&apos;ll need your encryption key to
+        access your information. Take a moment to back it up.
       </Text>
 
       <Pressable
         style={styles.button}
-        onPress={() => router.push("/(app)/settings/key-backup" as never)}
+        onPress={() => router.push("/settings/key-backup" as never)}
         accessibilityRole="button"
         accessibilityLabel="Back up encryption key"
       >

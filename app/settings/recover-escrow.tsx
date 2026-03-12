@@ -1,14 +1,12 @@
 /**
- * Key Backup - Legacy Made Escrow
+ * Escrow Recovery Screen
  *
- * The user opts in to having Legacy Made store their DEK (encrypted with AWS KMS).
- * Includes clear disclosure about what this means for privacy.
+ * Restores encryption keys from Legacy Made's server-side escrow backup.
+ * The server decrypts the DEK via AWS KMS and returns it over TLS.
  */
 
-import { useApi } from "@/api";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
-import { exportDEK, getDEK } from "@/lib/crypto/keys";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -22,54 +20,43 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function KeyBackupEscrowScreen() {
+export default function RecoverEscrowScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { backupStatus } = useCrypto();
-  const { keys } = useApi();
+  const { recoverFromEscrow, completeRecovery } = useCrypto();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isComplete, setIsComplete] = useState(backupStatus.escrow);
+  const [isComplete, setIsComplete] = useState(false);
 
-  const handleEnable = useCallback(async () => {
-    setIsSubmitting(true);
+  const handleRecover = useCallback(async () => {
+    setIsRecovering(true);
     setError(null);
 
     try {
-      const dek = await getDEK();
-      if (!dek) {
-        throw new Error("No encryption key found");
+      const success = await recoverFromEscrow();
+      if (success) {
+        await completeRecovery();
+        setIsComplete(true);
+      } else {
+        setError(
+          "We couldn\u2019t find a saved key for your account. You may not have turned on Legacy Made Recovery, or it may not be available yet.",
+        );
       }
-
-      const dekB64 = await exportDEK(dek);
-
-      // Send DEK to server over TLS — server encrypts with KMS
-      await keys.upload({
-        publicKey: "", // Not needed for escrow
-        wrappedDEK: dekB64,
-        keyId: "escrow",
-      });
-
-      setIsComplete(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to enable recovery",
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during recovery.",
       );
     } finally {
-      setIsSubmitting(false);
+      setIsRecovering(false);
     }
-  }, [keys]);
+  }, [recoverFromEscrow, completeRecovery]);
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: "Legacy Made Recovery",
-          headerBackTitle: "Back",
-        }}
-      />
+      <Stack.Screen options={{ title: "Recover from Backup" }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -86,39 +73,36 @@ export default function KeyBackupEscrowScreen() {
                 color={colors.success}
               />
             </View>
-            <Text style={styles.successTitle}>Recovery enabled</Text>
+            <Text style={styles.successTitle}>You&apos;re all set</Text>
             <Text style={styles.successDescription}>
-              If you lose your device, you can recover your data by signing in
-              to your Legacy Made account on a new device.
+              Your key has been restored. All of your information is unlocked
+              and ready on this device.
             </Text>
             <Pressable
               style={styles.doneButton}
-              onPress={() => router.back()}
+              onPress={() => router.replace("/(app)")}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>Continue</Text>
             </Pressable>
           </View>
         ) : (
           <>
-            <Text style={styles.heading}>How it works</Text>
+            <Text style={styles.heading}>Restore your key</Text>
             <Text style={styles.body}>
-              Legacy Made will store a secure copy of your encryption key,
-              protected by AWS encryption (KMS). If you lose your device, you
-              can recover your data by signing in to your account.
+              Your information is locked with a private key. If you turned on
+              Legacy Made Recovery, we saved a protected copy of that key so you
+              can get back in.
             </Text>
 
-            <View style={styles.disclosureCard}>
+            <View style={styles.infoCard}>
               <Ionicons
-                name="information-circle-outline"
+                name="shield-checkmark-outline"
                 size={20}
-                color={colors.warning}
+                color={colors.primary}
               />
-              <Text style={styles.disclosureText}>
-                <Text style={styles.disclosureBold}>Privacy note: </Text>
-                Opting into recovery gives Legacy Made the technical ability to
-                decrypt your data. We will never access your information without
-                your explicit consent, but this is an important trade-off to
-                understand.
+              <Text style={styles.infoText}>
+                We hold on to a protected copy of your key so we can restore it
+                to your account when you need it.
               </Text>
             </View>
 
@@ -131,18 +115,16 @@ export default function KeyBackupEscrowScreen() {
 
             <Pressable
               style={[
-                styles.enableButton,
-                isSubmitting && styles.enableButtonDisabled,
+                styles.recoverButton,
+                isRecovering && styles.recoverButtonDisabled,
               ]}
-              onPress={handleEnable}
-              disabled={isSubmitting}
+              onPress={handleRecover}
+              disabled={isRecovering}
             >
-              {isSubmitting ? (
+              {isRecovering ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.enableButtonText}>
-                  Enable Legacy Made Recovery
-                </Text>
+                <Text style={styles.recoverButtonText}>Restore My Key</Text>
               )}
             </Pressable>
           </>
@@ -172,24 +154,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
   },
-  disclosureCard: {
+  infoCard: {
     flexDirection: "row",
     gap: spacing.sm,
-    backgroundColor: `${colors.warning}10`,
+    backgroundColor: `${colors.primary}10`,
     borderRadius: 12,
     padding: spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.warning,
+    alignItems: "flex-start",
   },
-  disclosureText: {
+  infoText: {
     flex: 1,
     fontFamily: "DMSans_400Regular",
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
-  },
-  disclosureBold: {
-    fontFamily: "DMSans_600SemiBold",
   },
   errorCard: {
     flexDirection: "row",
@@ -205,7 +183,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     color: colors.error,
   },
-  enableButton: {
+  recoverButton: {
     backgroundColor: colors.primary,
     borderRadius: 25,
     height: 52,
@@ -213,10 +191,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: spacing.sm,
   },
-  enableButtonDisabled: {
+  recoverButtonDisabled: {
     opacity: 0.7,
   },
-  enableButtonText: {
+  recoverButtonText: {
     fontFamily: "DMSans_600SemiBold",
     fontSize: typography.sizes.body,
     color: "#FFFFFF",

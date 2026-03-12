@@ -32,21 +32,25 @@ export function useWishesQuery<T = Record<string, unknown>>(
   const { planId } = usePlan();
   const { wishes } = useApi();
   const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.wishes.byTaskKey(planId!, taskKey!),
     queryFn: async () => {
       const raw = await wishes.listByTaskKey<T>(planId!, taskKey!);
-      if (!crypto?.dekCryptoKey) return raw;
+      if (!crypto?.activeDEK) return raw;
       return Promise.all(
-        raw.map((w) =>
-          isEncryptedEntry(w)
-            ? decryptEntry<T>(w, crypto.dekCryptoKey!)
-            : w,
-        ),
-      ) as Promise<Wish<T>[]>;
+        raw.map(async (w) => {
+          if (!isEncryptedEntry(w)) return w;
+          const decrypted = await decryptEntry<T>(
+            w as unknown as Parameters<typeof decryptEntry>[0],
+            crypto.activeDEK!,
+          );
+          return decrypted as unknown as Wish<T>;
+        }),
+      );
     },
-    enabled: !!planId && !!taskKey,
+    enabled: !!planId && !!taskKey && cryptoReady,
   });
 }
 
@@ -73,15 +77,20 @@ export function useWishQuery<T = Record<string, unknown>>(
   const { planId } = usePlan();
   const { wishes } = useApi();
   const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.wishes.single(planId!, wishId!),
     queryFn: async () => {
       const raw = await wishes.get<T>(planId!, wishId!);
-      if (!crypto?.dekCryptoKey || !isEncryptedEntry(raw)) return raw;
-      return decryptEntry<T>(raw, crypto.dekCryptoKey) as Promise<Wish<T>>;
+      if (!crypto?.activeDEK || !isEncryptedEntry(raw)) return raw;
+      const decrypted = await decryptEntry<T>(
+        raw as unknown as Parameters<typeof decryptEntry>[0],
+        crypto.activeDEK,
+      );
+      return decrypted as unknown as Wish<T>;
     },
-    enabled: !!planId && !!wishId,
+    enabled: !!planId && !!wishId && cryptoReady,
     // Use cached data from list query as initial data for instant display
     initialData: () => {
       if (!planId || !wishId) return undefined;
@@ -157,6 +166,7 @@ export function useWishCountsQuery() {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { wishes } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.wishes.counts(planId!),
@@ -177,17 +187,20 @@ export function useWishCountsQuery() {
         }
       }
 
-      // Seed individual task caches for instant navigation
-      // This eliminates the need for separate prefetch calls
-      for (const [taskKey, taskWishes] of Object.entries(groupedByTaskKey)) {
-        queryClient.setQueryData(
-          queryKeys.wishes.byTaskKey(planId!, taskKey),
-          taskWishes,
-        );
-      }
+      // Seed individual task caches for instant navigation —
+      // but NOT when crypto is active, since this raw data is encrypted
+      // and would poison the cache for decrypting queries.
+      if (!crypto) {
+        for (const [taskKey, taskWishes] of Object.entries(groupedByTaskKey)) {
+          queryClient.setQueryData(
+            queryKeys.wishes.byTaskKey(planId!, taskKey),
+            taskWishes,
+          );
+        }
 
-      // Also seed the all wishes cache
-      queryClient.setQueryData(queryKeys.wishes.all(planId!), allWishes);
+        // Also seed the all wishes cache
+        queryClient.setQueryData(queryKeys.wishes.all(planId!), allWishes);
+      }
 
       return countMap;
     },
@@ -213,10 +226,14 @@ export function usePrefetchWishesByTaskKeys(taskKeys: string[]) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { wishes } = useApi();
+  const crypto = useOptionalCrypto();
 
   // Prefetch on mount and when taskKeys change
   useEffect(() => {
     if (!planId || taskKeys.length === 0) return;
+
+    // Skip prefetch when crypto is active — would cache encrypted data
+    if (crypto) return;
 
     // Prefetch wishes for each task key
     // Use same staleTime as global config (5 minutes) so prefetched data
@@ -227,5 +244,5 @@ export function usePrefetchWishesByTaskKeys(taskKeys: string[]) {
         queryFn: () => wishes.listByTaskKey(planId, taskKey),
       });
     });
-  }, [planId, taskKeys, queryClient, wishes]);
+  }, [planId, taskKeys, queryClient, wishes, crypto]);
 }

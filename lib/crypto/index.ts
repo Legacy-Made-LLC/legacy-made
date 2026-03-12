@@ -11,7 +11,11 @@ export type {
   EncryptedPayload,
   KeyBackupStatus,
 } from "./types";
-export { ALGORITHM_ID } from "./types";
+export {
+  ALGORITHM_ID,
+  RECOVERY_DOCUMENT_PBKDF2_ITERATIONS,
+  RECOVERY_DOCUMENT_PBKDF2_SALT,
+} from "./types";
 
 // AES-256-GCM
 export {
@@ -54,9 +58,6 @@ export {
   encryptForUpdate,
   isEncryptedEntry,
 } from "./entryEncryption";
-
-// BIP-39 Recovery Phrase
-export { entropyToMnemonic, mnemonicToEntropy } from "./bip39";
 
 // CryptoProvider
 export { CryptoProvider, useCrypto, useOptionalCrypto } from "./CryptoProvider";

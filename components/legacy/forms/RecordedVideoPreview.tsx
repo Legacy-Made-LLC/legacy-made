@@ -9,6 +9,7 @@
 import type { FileAttachment } from "@/api/types";
 import { FilePreviewModal } from "@/components/forms/FilePreviewModal";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useEncryptedFileView } from "@/hooks/useEncryptedFileView";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -36,9 +37,23 @@ export function RecordedVideoPreview({
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
+  // Decrypt encrypted video thumbnails (backend-stored files)
+  const needsThumbnailDecryption =
+    video.isThumbnailEncrypted === true &&
+    video.isRemote === true &&
+    !!video.thumbnailFileId;
+  const { localUri: decryptedThumbnailUri } = useEncryptedFileView(
+    needsThumbnailDecryption ? video.thumbnailFileId : undefined,
+    "image/jpeg",
+    video.thumbnailUri,
+  );
+
   const isUploading = video.uploadStatus === "uploading";
   const hasError = video.uploadStatus === "error";
-  const showThumbnail = !!video.thumbnailUri && !thumbnailFailed;
+  const thumbnailUri = needsThumbnailDecryption
+    ? decryptedThumbnailUri
+    : video.thumbnailUri;
+  const showThumbnail = !!thumbnailUri && !thumbnailFailed;
 
   return (
     <>
@@ -52,7 +67,7 @@ export function RecordedVideoPreview({
         >
           {showThumbnail ? (
             <Image
-              source={{ uri: video.thumbnailUri }}
+              source={{ uri: thumbnailUri! }}
               style={styles.thumbnail}
               resizeMode="cover"
               onError={() => setThumbnailFailed(true)}
