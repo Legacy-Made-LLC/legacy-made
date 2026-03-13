@@ -351,7 +351,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   planId: string;
   taskKey: string;
   /** Optional title - may be omitted since each entry type presents data differently */
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;
@@ -363,7 +363,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
  * Request type for updating entries
  */
 export interface UpdateEntryRequest<T = Record<string, unknown>> {
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;
@@ -887,7 +887,7 @@ export interface Wish<T = Record<string, unknown>> {
 export interface CreateWishRequest<T = Record<string, unknown>> {
   planId: string;
   taskKey: string;
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   metadata: T;
@@ -899,7 +899,7 @@ export interface CreateWishRequest<T = Record<string, unknown>> {
  * Request type for updating wishes
  */
 export interface UpdateWishRequest<T = Record<string, unknown>> {
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   metadata?: Partial<T>;
@@ -962,7 +962,7 @@ export interface Message<T = Record<string, unknown>> {
 export interface CreateMessageRequest<T = Record<string, unknown>> {
   planId: string;
   taskKey: string;
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;
@@ -975,7 +975,7 @@ export interface CreateMessageRequest<T = Record<string, unknown>> {
  * Request type for updating messages
  */
 export interface UpdateMessageRequest<T = Record<string, unknown>> {
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;

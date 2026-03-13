@@ -29,6 +29,27 @@ export function isEncryptedEntry(
 }
 
 /**
+ * Build a metadata object that nulls out all existing plaintext keys
+ * so the server's shallow merge clears them alongside the encrypted blob.
+ */
+function buildNulledMetadata(
+  plaintextMetadata: Record<string, unknown>,
+  encrypted: EncryptedPayload,
+): EncryptedEntryMetadata {
+  const nulled: Record<string, null> = {};
+  for (const key of Object.keys(plaintextMetadata)) {
+    if (key !== "encrypted" && key !== "isEncrypted") {
+      nulled[key] = null;
+    }
+  }
+  return {
+    ...nulled,
+    encrypted,
+    isEncrypted: true,
+  } as EncryptedEntryMetadata;
+}
+
+/**
  * Encrypt the sensitive fields of a create request.
  * Returns a new request object with encrypted metadata replacing the plaintext fields.
  */
@@ -40,8 +61,8 @@ export async function encryptForCreate<T>(
   },
   dek: CryptoKey,
 ): Promise<{
-  title: undefined;
-  notes: undefined;
+  title: null;
+  notes: null;
   metadata: EncryptedEntryMetadata;
 }> {
   const sensitive: SensitiveFields<T> = {
@@ -53,12 +74,12 @@ export async function encryptForCreate<T>(
   const encrypted = await encryptString(JSON.stringify(sensitive), dek);
 
   return {
-    title: undefined,
-    notes: undefined,
-    metadata: {
+    title: null,
+    notes: null,
+    metadata: buildNulledMetadata(
+      fields.metadata as Record<string, unknown>,
       encrypted,
-      isEncrypted: true,
-    },
+    ),
   };
 }
 
@@ -75,8 +96,8 @@ export async function encryptForUpdate<T>(
   currentMetadata: T | EncryptedEntryMetadata,
   dek: CryptoKey,
 ): Promise<{
-  title: undefined;
-  notes: undefined;
+  title: null;
+  notes: null;
   metadata: EncryptedEntryMetadata;
 }> {
   // If current metadata is encrypted, decrypt it first to merge updates
@@ -106,13 +127,16 @@ export async function encryptForUpdate<T>(
 
   const encrypted = await encryptString(JSON.stringify(sensitive), dek);
 
+  // Null out old plaintext keys from the original metadata so the server's
+  // shallow merge clears them (instead of leaving plaintext alongside the blob).
+  const originalPlaintext = isEncryptedEntry({ metadata: currentMetadata })
+    ? {} // Already encrypted — no plaintext keys to clear
+    : (currentMetadata as Record<string, unknown>);
+
   return {
-    title: undefined,
-    notes: undefined,
-    metadata: {
-      encrypted,
-      isEncrypted: true,
-    },
+    title: null,
+    notes: null,
+    metadata: buildNulledMetadata(originalPlaintext, encrypted),
   };
 }
 

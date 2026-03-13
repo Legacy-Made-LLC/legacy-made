@@ -34,10 +34,10 @@ export default function EncryptDataScreen() {
     }
   }, [startMigration]);
 
-  const totalItems = progress.totalEntries + progress.totalWishes;
-  const migratedItems = progress.migratedEntries + progress.migratedWishes;
+  const totalItems = progress.totalEntries + progress.totalWishes + progress.totalMessages;
+  const migratedItems = progress.migratedEntries + progress.migratedWishes + progress.migratedMessages;
   const failedItems =
-    progress.failedEntries.length + progress.failedWishes.length;
+    progress.failedEntries.length + progress.failedWishes.length + progress.failedMessages.length;
   const progressPercent =
     totalItems > 0 ? Math.round((migratedItems / totalItems) * 100) : 0;
 

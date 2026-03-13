@@ -16,6 +16,7 @@ import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateEntry } from "@/hooks/queries";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { useAutoMigration } from "@/hooks/useAutoMigration";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
@@ -116,6 +117,9 @@ export default function AppLayout() {
 
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();
+
+  // Silently migrate pre-E2EE data (temporary — remove after all users migrated)
+  useAutoMigration();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
