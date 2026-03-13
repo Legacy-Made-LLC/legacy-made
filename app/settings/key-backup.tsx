@@ -5,6 +5,7 @@
  * The user can configure one or more methods.
  */
 
+import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { Ionicons } from "@expo/vector-icons";
@@ -61,6 +62,8 @@ export default function KeyBackupScreen() {
           Your encryption key keeps your data private. If you lose access to
           your device without a backup, your data cannot be recovered.
         </Text>
+
+        <EncryptionBadge />
 
         <Text style={styles.sectionLabel}>CHOOSE A METHOD</Text>
 

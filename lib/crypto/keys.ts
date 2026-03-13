@@ -30,11 +30,20 @@ function fromQC(key: QCCryptoKey): CryptoKey {
 }
 
 // SecureStore key prefixes (scoped per user to prevent cross-account key leakage)
-const PRIVATE_KEY_PREFIX = "e2ee_private_key";
-const PUBLIC_KEY_PREFIX = "e2ee_public_key";
-const DEK_PREFIX = "e2ee_dek";
-const KEY_ID_PREFIX = "e2ee_key_id";
-const KEY_VERSION_PREFIX = "e2ee_key_version";
+//
+// ⚠️  FROZEN — These alias strings are persisted in the iOS Keychain / Android
+// Keystore. Changing a value will orphan existing user keys on every device that
+// has already stored them, silently locking users out of their encrypted data.
+//
+// If you need a new alias, add a *versioned* constant (e.g. PRIVATE_KEY_PREFIX_V2)
+// and write a migration that copies the value from the old alias to the new one
+// before deleting the old entry. See the stability test in keys.test.ts for a
+// CI guard against accidental renames.
+export const PRIVATE_KEY_PREFIX = "e2ee_private_key";
+export const PUBLIC_KEY_PREFIX = "e2ee_public_key";
+export const DEK_PREFIX = "e2ee_dek";
+export const KEY_ID_PREFIX = "e2ee_key_id";
+export const KEY_VERSION_PREFIX = "e2ee_key_version";
 
 /** Build a user-scoped SecureStore key */
 function scopedKey(prefix: string, userId: string): string {

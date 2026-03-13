@@ -32,6 +32,7 @@ export type GuidanceType =
   | "wishes_complete"
   | "legacy_complete"
   | "making_progress"
+  | "backup_key"
   | "add_trusted_contact"
   | "continue"
   | "started_vault"
@@ -66,7 +67,12 @@ export interface HomeGuidanceResult {
   onDismissContactGuidance: () => void;
 }
 
-export function useHomeGuidance(): HomeGuidanceResult {
+export interface HomeGuidanceOptions {
+  /** When true, backup_key guidance takes Priority 1 */
+  showBackupKeyGuidance?: boolean;
+}
+
+export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult {
   const translations = useTranslations();
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
@@ -167,7 +173,22 @@ export function useHomeGuidance(): HomeGuidanceResult {
     const allWishesDone = wishesTotal > 0 && wishesCompleted === wishesTotal;
     const allLegacyDone = legacyTotal > 0 && legacyCompleted === legacyTotal;
 
-    // Priority 1: Nudge to add a trusted contact (dismissable)
+    // Priority 1: Nudge to back up encryption key (dismissable)
+    if (opts?.showBackupKeyGuidance) {
+      return {
+        type: "backup_key",
+        title: g.backupKey.title,
+        body: g.backupKey.body,
+        cta: g.backupKey.cta,
+        ctaRoute: "/settings/key-backup" as Href,
+        secondaryCta: g.backupKey.secondaryCta,
+        tintColor: `${colors.primary}12`,
+        accentColor: colors.primary,
+        icon: "shield-checkmark-outline",
+      };
+    }
+
+    // Priority 2: Nudge to add a trusted contact (dismissable)
     if (
       totalTouched > 0 &&
       totalCompleted >= 3 &&
@@ -415,6 +436,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
       icon: "leaf-outline",
     };
   }, [
+    opts?.showBackupKeyGuidance,
     isViewingSharedPlan,
     sharedPlanInfo,
     vaultSections,

@@ -1,111 +1,210 @@
 /**
- * KeyBackupNudge - Home screen card encouraging key backup
+ * KeyBackupNudge - Bottom sheet modal encouraging key backup
  *
- * Shown after the user has created meaningful data. Dismissible but persistent
- * until the user configures at least one backup method.
+ * Follows the NotificationPermissionPrompt pattern: BottomSheetModal with
+ * dynamic sizing, pan-to-close, and FullWindowOverlay on iOS.
  */
 
-import { colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { forwardRef, useCallback } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FullWindowOverlay } from "react-native-screens";
+
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 
 interface KeyBackupNudgeProps {
-  onDismiss: () => void;
+  /** Called when the modal is dismissed (swipe or after navigating to backup) */
+  onModalDismissed: () => void;
+  /** Called when user taps "Maybe later" */
+  onSilence: () => void;
 }
 
-export function KeyBackupNudge({ onDismiss }: KeyBackupNudgeProps) {
-  const router = useRouter();
+export const KeyBackupNudge = forwardRef<BottomSheetModal, KeyBackupNudgeProps>(
+  function KeyBackupNudge({ onModalDismissed, onSilence }, ref) {
+    const insets = useSafeAreaInsets();
+    const router = useRouter();
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={20}
-            color={colors.primary}
-          />
-        </View>
-        <Pressable
-          onPress={onDismiss}
-          hitSlop={12}
-          style={styles.dismissButton}
-          accessibilityLabel="Dismiss backup reminder"
-        >
-          <Ionicons name="close" size={18} color={colors.textTertiary} />
-        </Pressable>
-      </View>
+    const handleSheetChanges = useCallback(
+      (index: number) => {
+        if (index === -1) {
+          onModalDismissed();
+        }
+      },
+      [onModalDismissed],
+    );
 
-      <Text style={styles.title}>Protect your data</Text>
-      <Text style={styles.description}>
-        If you ever switch devices, you&apos;ll need your encryption key to
-        access your information. Take a moment to back it up.
-      </Text>
+    const renderBackdrop = useCallback(
+      (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
+        <BottomSheetBackdrop
+          {...props}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+          opacity={0.4}
+        />
+      ),
+      [],
+    );
 
-      <Pressable
-        style={styles.button}
-        onPress={() => router.push("/settings/key-backup" as never)}
-        accessibilityRole="button"
-        accessibilityLabel="Back up encryption key"
+    const containerComponent = useCallback(
+      ({ children }: { children?: React.ReactNode }) =>
+        Platform.OS === "ios" ? (
+          <FullWindowOverlay>{children}</FullWindowOverlay>
+        ) : (
+          <>{children}</>
+        ),
+      [],
+    );
+
+    const handleBackUp = () => {
+      // Dismiss the sheet first — handleSheetChanges(-1) will call onModalDismissed
+      if (typeof ref === "object" && ref?.current) {
+        ref.current.dismiss();
+      }
+      router.push("/settings/key-backup" as never);
+    };
+
+    const handleMaybeLater = () => {
+      onSilence();
+      if (typeof ref === "object" && ref?.current) {
+        ref.current.dismiss();
+      }
+    };
+
+    return (
+      <BottomSheetModal
+        ref={ref}
+        enableDynamicSizing
+        onChange={handleSheetChanges}
+        backdropComponent={renderBackdrop}
+        containerComponent={containerComponent}
+        enablePanDownToClose
+        handleIndicatorStyle={styles.handleIndicator}
+        backgroundStyle={styles.sheetBackground}
       >
-        <Text style={styles.buttonText}>Back up key</Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-      </Pressable>
-    </View>
-  );
-}
+        <BottomSheetView
+          style={[
+            styles.content,
+            { paddingBottom: insets.bottom + spacing.lg },
+          ]}
+        >
+          {/* Shield icon */}
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={32}
+              color={colors.primary}
+            />
+          </View>
+
+          <Text style={styles.title}>Protect your data</Text>
+
+          <Text style={styles.body}>
+            Back up your encryption key so you never lose access to your
+            information — even if you switch devices.
+          </Text>
+
+          {/* Primary action */}
+          <Pressable
+            onPress={handleBackUp}
+            style={({ pressed }) => [
+              styles.backUpButton,
+              pressed && styles.backUpButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Back up encryption key"
+          >
+            <Text style={styles.backUpButtonText}>Back up key</Text>
+          </Pressable>
+
+          {/* Subtle dismiss */}
+          <Pressable
+            onPress={handleMaybeLater}
+            style={({ pressed }) => [
+              styles.dismissButton,
+              pressed && styles.dismissButtonPressed,
+            ]}
+          >
+            <Text style={styles.dismissButtonText}>Maybe later</Text>
+          </Pressable>
+        </BottomSheetView>
+      </BottomSheetModal>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+  handleIndicator: {
+    backgroundColor: colors.border,
+    width: 36,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
+  sheetBackground: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+  },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: `${colors.primary}15`,
-    alignItems: "center",
     justifyContent: "center",
-  },
-  dismissButton: {
-    padding: spacing.xs,
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: spacing.lg,
   },
   title: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.titleMedium,
+    fontFamily: typography.fontFamily.serif,
+    fontSize: typography.sizes.displayMedium,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    textAlign: "center",
+    marginBottom: spacing.sm,
   },
-  description: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.bodySmall,
+  body: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
     color: colors.textSecondary,
-    lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
+    textAlign: "center",
+    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
+    marginBottom: spacing.xl,
+  },
+  backUpButton: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  backUpButtonPressed: {
+    opacity: 0.9,
   },
-  buttonText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.bodySmall,
-    color: colors.primary,
+  backUpButtonText: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.body,
+    color: colors.surface,
+  },
+  dismissButton: {
+    paddingVertical: spacing.md,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dismissButtonPressed: {
+    opacity: 0.7,
+  },
+  dismissButtonText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
   },
 });

@@ -65,6 +65,12 @@ export const familyPages: Translations["pages"] = {
         body: "They\u2019ve been organizing important information.",
         cta: "See details",
       },
+      backupKey: {
+        title: "Protect your data",
+        body: "Back up your encryption key so you never lose access to your information.",
+        cta: "Back up key",
+        secondaryCta: "Not now",
+      },
       addTrustedContact: {
         title: "Share their plan with someone they trust",
         body: "Adding a trusted contact means the right person can access their plan when it matters most.",

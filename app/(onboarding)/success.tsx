@@ -43,7 +43,7 @@ export default function SuccessScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={4} />
+      <OnboardingHeader showBackButton currentStep={5} />
 
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>

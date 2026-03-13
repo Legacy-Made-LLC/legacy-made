@@ -7,6 +7,7 @@
 
 import { useApi } from "@/api";
 import type { UserKeyRecord } from "@/api/keys";
+import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { colors, spacing, typography } from "@/constants/theme";
 import { getKeyVersion } from "@/lib/crypto/keys";
 import { logger } from "@/lib/logger";
@@ -126,6 +127,8 @@ export default function DevicesScreen() {
         These are the devices linked to your account. Each device has its own
         encryption key.
       </Text>
+
+      <EncryptionBadge />
 
       <Pressable
         onPress={() => router.push("/settings/device-linking" as never)}

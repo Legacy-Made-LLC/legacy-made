@@ -6,6 +6,11 @@ import { Redirect, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import {
+  EncryptionMigrationModal,
+  EncryptionMigrationModalRef,
+} from "@/components/home/EncryptionMigrationModal";
+
 import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
 import Loader from "@/components/ui/Loader";
@@ -118,8 +123,9 @@ export default function AppLayout() {
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();
 
-  // Silently migrate pre-E2EE data (temporary — remove after all users migrated)
-  useAutoMigration();
+  // Migrate pre-E2EE data with user-facing modal (temporary — remove after all users migrated)
+  const { phase: migrationPhase, progress: migrationProgress, retry: retryMigration, dismiss: dismissMigration } = useAutoMigration();
+  const migrationModalRef = useRef<EncryptionMigrationModalRef>(null);
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
@@ -190,6 +196,13 @@ export default function AppLayout() {
     <View style={styles.container}>
       <Header onMenuPress={() => setMenuVisible(true)} />
       <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
+      <EncryptionMigrationModal
+        ref={migrationModalRef}
+        phase={migrationPhase}
+        progress={migrationProgress}
+        onRetry={retryMigration}
+        onDismiss={dismissMigration}
+      />
       <View style={styles.content}>
         <Stack
           screenOptions={{

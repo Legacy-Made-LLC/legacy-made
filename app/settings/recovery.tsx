@@ -10,6 +10,7 @@
  */
 
 import { useApi } from "@/api/useApi";
+import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { usePlan } from "@/data/PlanProvider";
@@ -183,6 +184,7 @@ export default function RecoveryScreen() {
           Your information is protected by a private key that this device
           doesn&apos;t have yet. Choose how you&apos;d like to restore it.
         </Text>
+        <EncryptionBadge variant="subtle" />
       </View>
 
       {autoState === "failed" && errorMessage && (
