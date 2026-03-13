@@ -17,13 +17,14 @@ import Loader from "@/components/ui/Loader";
 import { Menu } from "@/components/ui/Menu";
 import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateEntry } from "@/hooks/queries";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
 import { useAutoMigration } from "@/hooks/useAutoMigration";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { logger } from "@/lib/logger";
@@ -112,6 +113,7 @@ export default function AppLayout() {
     error: planError,
     refetch: refetchPlan,
   } = usePlan();
+  const entitlements = useEntitlements();
 
   // Guard against revoked shared plan access
   useAccessRevocationGuard();
@@ -124,7 +126,12 @@ export default function AppLayout() {
   usePendingInvitation();
 
   // Migrate pre-E2EE data with user-facing modal (temporary — remove after all users migrated)
-  const { phase: migrationPhase, progress: migrationProgress, retry: retryMigration, dismiss: dismissMigration } = useAutoMigration();
+  const {
+    phase: migrationPhase,
+    progress: migrationProgress,
+    retry: retryMigration,
+    dismiss: dismissMigration,
+  } = useAutoMigration();
   const migrationModalRef = useRef<EncryptionMigrationModalRef>(null);
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -171,7 +178,7 @@ export default function AppLayout() {
   }
 
   // Show loading while plan is being fetched
-  if (isPlanLoading && !planId) {
+  if ((isPlanLoading && !planId) || entitlements.isLoading) {
     return <Loader branded />;
   }
 

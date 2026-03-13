@@ -42,12 +42,7 @@ import { AppState, type AppStateStatus } from "react-native";
 
 import { decryptString, encryptString } from "./aes";
 import { decryptDownloadedFile, encryptFileForUpload } from "./fileEncryption";
-import {
-  getKeyVersion,
-  getPrivateKey,
-  hasEncryptionKeys,
-  unwrapDEK,
-} from "./keys";
+import { getKeyVersion, getPrivateKey, unwrapDEK } from "./keys";
 import type { EncryptedPayload, KeyBackupStatus } from "./types";
 
 interface CryptoContextType {
@@ -482,22 +477,4 @@ export function useCrypto(): CryptoContextType {
  */
 export function useOptionalCrypto(): CryptoContextType | null {
   return useContext(CryptoContext);
-}
-
-/**
- * Re-upload keys to server if previous setup failed.
- * Called from a background check (e.g., on app foreground).
- * The actual retry is handled by the CryptoProvider via retrySetupMutation
- * when keyVersionQuery.data === null.
- */
-export async function retryKeyUpload(userId: string): Promise<void> {
-  const keysExist = await hasEncryptionKeys(userId);
-  if (!keysExist) return;
-
-  const keyVersion = await getKeyVersion(userId);
-  if (keyVersion !== null) {
-    return;
-  }
-
-  logger.info("E2EE: Key setup incomplete, will retry on next init");
 }

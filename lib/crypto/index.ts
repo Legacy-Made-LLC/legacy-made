@@ -6,15 +6,15 @@
  */
 
 // Types
-export type {
-  EncryptedEntryMetadata,
-  EncryptedPayload,
-  KeyBackupStatus,
-} from "./types";
 export {
   ALGORITHM_ID,
   RECOVERY_DOCUMENT_PBKDF2_ITERATIONS,
   RECOVERY_DOCUMENT_PBKDF2_SALT,
+} from "./types";
+export type {
+  EncryptedEntryMetadata,
+  EncryptedPayload,
+  KeyBackupStatus,
 } from "./types";
 
 // AES-256-GCM
@@ -34,14 +34,12 @@ export {
   generateDEK,
   generateKeyPair,
   getDEK,
-  getKeyId,
   getPrivateKey,
   hasEncryptionKeys,
   importDEK,
   importPrivateKey,
   importPublicKey,
   storeDEK,
-  storeKeyId,
   storePrivateKey,
   unwrapDEK,
   wrapDEK,

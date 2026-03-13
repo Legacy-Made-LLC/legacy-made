@@ -340,19 +340,6 @@ export function createKeysService(client: ApiClient) {
       return client.get<DekRecord[]>(`/encryption/deks${query}`);
     },
 
-    /**
-     * Check DEK sharing status between an owner and recipient for a plan.
-     */
-    getDekStatus: async (
-      ownerId: string,
-      recipientId: string,
-      planId: string,
-    ): Promise<DekStatusResponse> => {
-      return client.get<DekStatusResponse>(
-        `/encryption/deks/status/${ownerId}/${recipientId}?planId=${encodeURIComponent(planId)}`,
-      );
-    },
-
     // --- Device Linking (3-step session/deposit/claim) ---
 
     /**

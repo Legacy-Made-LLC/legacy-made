@@ -233,20 +233,6 @@ export async function getDEK(userId: string): Promise<CryptoKey | null> {
 }
 
 /**
- * Store key ID in SecureStore.
- */
-export async function storeKeyId(keyId: string, userId: string): Promise<void> {
-  await SecureStore.setItemAsync(scopedKey(KEY_ID_PREFIX, userId), keyId);
-}
-
-/**
- * Retrieve key ID from SecureStore.
- */
-export async function getKeyId(userId: string): Promise<string | null> {
-  return SecureStore.getItemAsync(scopedKey(KEY_ID_PREFIX, userId));
-}
-
-/**
  * Store the server-assigned key version in SecureStore.
  */
 export async function storeKeyVersion(
