@@ -92,7 +92,7 @@ interface CryptoProviderProps {
 export function CryptoProvider({ children }: CryptoProviderProps) {
   const { isSignedIn, userId } = useAuth();
   const { keys } = useApi();
-  const { planId, isViewingSharedPlan, sharedPlanInfo } = usePlan();
+  const { myPlanId, isViewingSharedPlan, sharedPlanInfo } = usePlan();
   const queryClient = useQueryClient();
 
   // ── Core queries ─────────────────────────────────────────────────────
@@ -114,13 +114,15 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
     keyVersionQuery.data,
   );
 
-  // Only check E2EE status when no local keys (detecting returning user)
+  // Only check E2EE status when no local keys (detecting returning user).
+  // Always uses the user's own plan — shared plans are irrelevant here.
   const e2eeStatusQuery = usePlanE2EEStatusQuery(
-    planId,
+    myPlanId,
     hasKeysQuery.data === false,
   );
 
-  const backupStatusQuery = useBackupStatusQuery(planId, isReady);
+  // Backup status is always for the user's own plan (not shared plans).
+  const backupStatusQuery = useBackupStatusQuery(myPlanId, isReady);
   const backupStatus: KeyBackupStatus = useMemo(
     () =>
       backupStatusQuery.data ?? {
@@ -175,7 +177,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
   const shouldAutoSetup =
     hasKeysQuery.data === false &&
     e2eeStatusQuery.data?.e2eeEnabled === false &&
-    !!planId &&
+    !!myPlanId &&
     !!userId;
 
   // ── Auto-setup effect (new user) ─────────────────────────────────────
@@ -186,9 +188,9 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       !setupMutation.isPending &&
       !setupMutation.isSuccess
     ) {
-      setupMutation.mutate({ planId: planId!, userId: userId! });
+      setupMutation.mutate({ planId: myPlanId!, userId: userId! });
     }
-  }, [shouldAutoSetup, setupMutation, planId, userId]);
+  }, [shouldAutoSetup, setupMutation, myPlanId, userId]);
 
   // ── Retry-setup effect (incomplete backend setup) ────────────────────
 
@@ -198,13 +200,13 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       dekCryptoKey &&
       keyVersionQuery.data === null &&
       keyVersionQuery.isFetched &&
-      planId &&
+      myPlanId &&
       userId &&
       !retrySetupMutation.isPending
     ) {
       retrySetupMutation.mutate({
         dek: dekCryptoKey,
-        planId,
+        planId: myPlanId,
         userId,
       });
     }
@@ -213,7 +215,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
     dekCryptoKey,
     keyVersionQuery.data,
     keyVersionQuery.isFetched,
-    planId,
+    myPlanId,
     userId,
     retrySetupMutation,
   ]);
@@ -227,7 +229,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       keyVersionQuery.data != null &&
       serverKeysQuery.isFetched &&
       serverKeysQuery.data &&
-      planId &&
+      myPlanId &&
       userId &&
       !isKeySyncPending &&
       !retrySetupMutation.isPending
@@ -245,7 +247,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
             serverKeysQuery.data.length +
             " keys). Re-syncing...",
         );
-        keySyncMutate({ dek: dekCryptoKey, planId, userId });
+        keySyncMutate({ dek: dekCryptoKey, planId: myPlanId, userId });
       }
     }
   }, [
@@ -254,7 +256,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
     keyVersionQuery.data,
     serverKeysQuery.isFetched,
     serverKeysQuery.data,
-    planId,
+    myPlanId,
     userId,
     isKeySyncPending,
     keySyncMutate,
@@ -297,37 +299,39 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
   }, [isSignedIn, queryClient]);
 
   // ── Convenience methods ──────────────────────────────────────────────
+  // These use `activeDEK` so they work correctly whether viewing the
+  // user's own plan or a shared (trusted contact) plan.
 
   const encrypt = useCallback(
     async (plaintext: string): Promise<EncryptedPayload> => {
-      if (!dekCryptoKey) throw new Error("Encryption keys not ready");
-      return encryptString(plaintext, dekCryptoKey);
+      if (!activeDEK) throw new Error("Encryption keys not ready");
+      return encryptString(plaintext, activeDEK);
     },
-    [dekCryptoKey],
+    [activeDEK],
   );
 
   const decrypt = useCallback(
     async (payload: EncryptedPayload): Promise<string> => {
-      if (!dekCryptoKey) throw new Error("Encryption keys not ready");
-      return decryptString(payload, dekCryptoKey);
+      if (!activeDEK) throw new Error("Encryption keys not ready");
+      return decryptString(payload, activeDEK);
     },
-    [dekCryptoKey],
+    [activeDEK],
   );
 
   const encryptFile = useCallback(
     async (data: ArrayBuffer): Promise<ArrayBuffer> => {
-      if (!dekCryptoKey) throw new Error("Encryption keys not ready");
-      return encryptFileForUpload(data, dekCryptoKey);
+      if (!activeDEK) throw new Error("Encryption keys not ready");
+      return encryptFileForUpload(data, activeDEK);
     },
-    [dekCryptoKey],
+    [activeDEK],
   );
 
   const decryptFile = useCallback(
     async (data: ArrayBuffer): Promise<ArrayBuffer> => {
-      if (!dekCryptoKey) throw new Error("Encryption keys not ready");
-      return decryptDownloadedFile(data, dekCryptoKey);
+      if (!activeDEK) throw new Error("Encryption keys not ready");
+      return decryptDownloadedFile(data, activeDEK);
     },
-    [dekCryptoKey],
+    [activeDEK],
   );
 
   // Imperative getSharedPlanDEK — fetches/reads the query cache, or triggers fetch
@@ -382,18 +386,18 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
   // ── Recovery methods (thin wrappers around mutations) ────────────────
 
   const recoverFromEscrow = useCallback(async (): Promise<boolean> => {
-    if (!planId || !userId) {
-      logger.error("E2EE: Cannot recover without planId and userId");
+    if (!myPlanId || !userId) {
+      logger.error("E2EE: Cannot recover without myPlanId and userId");
       return false;
     }
     try {
-      await escrowRecoveryMutation.mutateAsync({ planId, userId });
+      await escrowRecoveryMutation.mutateAsync({ planId: myPlanId, userId });
       return true;
     } catch (error) {
       logger.warn("E2EE: Escrow recovery failed", { error });
       return false;
     }
-  }, [escrowRecoveryMutation, planId, userId]);
+  }, [escrowRecoveryMutation, myPlanId, userId]);
 
   const completeRecovery = useCallback(async () => {
     if (!userId) return;

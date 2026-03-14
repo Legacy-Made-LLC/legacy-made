@@ -72,7 +72,7 @@ export default function RecoveryScreen() {
   const router = useRouter();
   const { recoverFromEscrow, completeRecovery } = useCrypto();
   const { keys } = useApi();
-  const { planId } = usePlan();
+  const { myPlanId: planId } = usePlan();
 
   const [autoState, setAutoState] = useState<AutoRecoveryState>("checking");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

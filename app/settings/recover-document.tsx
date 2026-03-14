@@ -60,7 +60,7 @@ export default function RecoverDocumentScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { keys } = useApi();
-  const { planId } = usePlan();
+  const { myPlanId: planId } = usePlan();
   const { userId } = useAuth();
   const { completeRecovery } = useCrypto();
   const [permission, requestPermission] = useCameraPermissions();

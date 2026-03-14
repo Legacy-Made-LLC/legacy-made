@@ -193,7 +193,7 @@ function generatePDFHtml(words: string[], qrSvg: string, date: string): string {
 
 export default function KeyBackupPhraseScreen() {
   const insets = useSafeAreaInsets();
-  const { planId } = usePlan();
+  const { myPlanId: planId } = usePlan();
   const { userId } = useAuth();
   const { backupStatus } = useCrypto();
 

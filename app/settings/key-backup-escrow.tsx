@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function KeyBackupEscrowScreen() {
   const insets = useSafeAreaInsets();
   const { backupStatus } = useCrypto();
-  const { planId } = usePlan();
+  const { myPlanId: planId } = usePlan();
   const { userId } = useAuth();
 
   const enableMutation = useEnableEscrowMutation();

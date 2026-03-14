@@ -54,7 +54,7 @@ export default function DeviceLinkingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
   const { keys } = useApi();
-  const { planId } = usePlan();
+  const { myPlanId: planId } = usePlan();
   const { userId } = useAuth();
   const { dekCryptoKey, completeRecovery, needsRecovery } = useCrypto();
 

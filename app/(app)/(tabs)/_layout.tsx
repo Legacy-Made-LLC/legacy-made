@@ -86,6 +86,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -105,6 +106,7 @@ export default function TabsLayout() {
         },
       }}
     >
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen
         name="information"
         options={{
@@ -136,7 +138,9 @@ export default function TabsLayout() {
         name="wishes"
         options={{
           title: "Wishes",
-          tabBarActiveTintColor: isWishesLocked ? colors.textTertiary : colors.featureWishes,
+          tabBarActiveTintColor: isWishesLocked
+            ? colors.textTertiary
+            : colors.featureWishes,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isWishesLocked}
@@ -168,7 +172,9 @@ export default function TabsLayout() {
         name="legacy"
         options={{
           title: "Legacy",
-          tabBarActiveTintColor: isLegacyLocked ? colors.textTertiary : colors.featureLegacy,
+          tabBarActiveTintColor: isLegacyLocked
+            ? colors.textTertiary
+            : colors.featureLegacy,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isLegacyLocked}
@@ -193,7 +199,9 @@ export default function TabsLayout() {
         name="family"
         options={{
           title: "Family",
-          tabBarActiveTintColor: isFamilyLocked ? colors.textTertiary : colors.featureFamily,
+          tabBarActiveTintColor: isFamilyLocked
+            ? colors.textTertiary
+            : colors.featureFamily,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isFamilyLocked}
