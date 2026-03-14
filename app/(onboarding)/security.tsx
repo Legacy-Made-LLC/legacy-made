@@ -13,19 +13,19 @@ const SECURITY_POINTS = [
     icon: "lock-closed-outline" as const,
     title: "Private by design",
     description:
-      "Your information is encrypted on your device before it ever leaves your phone. Not even we can read it.",
+      "Your information is secured on your device before it ever leaves your phone. Not even Legacy Made can read or access it.",
   },
   {
     icon: "eye-off-outline" as const,
-    title: "Only you hold the key",
+    title: "You decide who can access it",
     description:
-      "Your encryption key stays with you. No one at Legacy Made can access your data — ever.",
+      "Your information is only accessible from devices you allow.",
   },
   {
     icon: "shield-checkmark-outline" as const,
-    title: "Safe to share, when you\u2019re ready",
+    title: "Safe to share when you\u2019re ready",
     description:
-      "When you share with family, everything stays encrypted. Only the people you choose can see it.",
+      "When you share with family, your information stays protected. Only the people you choose can see it.",
   },
 ];
 
@@ -44,7 +44,7 @@ export default function SecurityScreen() {
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>
           <Text style={styles.headingSerif}>
-            Your privacy is built in, not bolted on.
+            Your information stays private.
           </Text>
 
           <View style={localStyles.points}>
@@ -68,6 +68,10 @@ export default function SecurityScreen() {
           </View>
 
           <EncryptionBadge />
+
+          <Text style={localStyles.ownershipText}>
+            Your information belongs to you — always.
+          </Text>
         </View>
 
         <View style={styles.bottomButtonContainer}>
@@ -113,6 +117,13 @@ const localStyles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
+  },
+  ownershipText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    textAlign: "center" as const,
+    marginTop: spacing.sm,
   },
   pointDescription: {
     fontFamily: typography.fontFamily.regular,

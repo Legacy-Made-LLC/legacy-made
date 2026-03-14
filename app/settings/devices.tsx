@@ -7,7 +7,6 @@
 
 import { useApi } from "@/api";
 import type { UserKeyRecord } from "@/api/keys";
-import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { colors, spacing, typography } from "@/constants/theme";
 import { getKeyVersion } from "@/lib/crypto/keys";
 import { logger } from "@/lib/logger";
@@ -67,7 +66,10 @@ export default function DevicesScreen() {
     },
     onError: (error) => {
       logger.error("Failed to deactivate key", error);
-      Alert.alert("Error", "Could not deactivate this device. Please try again.");
+      Alert.alert(
+        "Error",
+        "Could not deactivate this device. Please try again.",
+      );
     },
   });
 
@@ -96,14 +98,18 @@ export default function DevicesScreen() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }) + " at " + date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    return (
+      date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }) +
+      " at " +
+      date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    );
   };
 
   if (isLoading) {
@@ -128,8 +134,6 @@ export default function DevicesScreen() {
         encryption key.
       </Text>
 
-      <EncryptionBadge />
-
       <Pressable
         onPress={() => router.push("/settings/device-linking" as never)}
         style={({ pressed }) => [
@@ -139,7 +143,11 @@ export default function DevicesScreen() {
       >
         <Ionicons name="link-outline" size={20} color={colors.primary} />
         <Text style={styles.linkDeviceText}>Link a New Device</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={colors.textTertiary}
+        />
       </Pressable>
 
       {sortedDevices.length === 0 && (

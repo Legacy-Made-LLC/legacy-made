@@ -101,13 +101,13 @@ export default function KeyBackupEscrowScreen() {
           ? `Turned off ${formatDate(backupStatus.escrow.removedAt)}`
           : null,
         prompt: isRevoked
-          ? "Legacy Made no longer stores a copy of your key. If you lose access to your device, you\u2019ll need another recovery method to get back in."
-          : "Your data is encrypted with a key only your device holds. We\u2019ll securely store a copy so you can recover access if needed.",
+          ? "Legacy Made no longer stores a recovery backup. If you lose access to your device, you\u2019ll need another recovery method to get back in."
+          : "Legacy Made can securely store a protected recovery backup.",
         actionIcon: "checkmark-circle-outline" as const,
         actionIconColor: colors.primary,
-        actionTitle: "Turn on Legacy Made Recovery",
+        actionTitle: "Turn On Recovery",
         actionDescription:
-          "Entrusts Legacy Made with a protected copy of your private key, allowing us to restore your data if needed.",
+          "Legacy Made stores a protected recovery backup used only if you request help restoring your account.",
         actionOnPress: isRevoked
           ? () => {
               setIsRevoked(false);
@@ -119,7 +119,7 @@ export default function KeyBackupEscrowScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Legacy Made Recovery" }} />
+      <Stack.Screen options={{ title: "Recovery With Legacy Made" }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -186,6 +186,12 @@ export default function KeyBackupEscrowScreen() {
             style={styles.chevron}
           />
         </Pressable>
+
+        <Text style={styles.disclaimer}>
+          Your recovery backup is only used if you request help restoring your
+          account. Legacy Made will never access your information without your
+          permission.
+        </Text>
       </ScrollView>
     </>
   );
@@ -246,6 +252,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     marginTop: spacing.sm,
+  },
+  disclaimer: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: typography.sizes.caption,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.md,
   },
   optionCard: {
     flexDirection: "row",

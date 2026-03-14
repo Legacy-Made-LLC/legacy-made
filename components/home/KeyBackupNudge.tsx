@@ -103,11 +103,11 @@ export const KeyBackupNudge = forwardRef<BottomSheetModal, KeyBackupNudgeProps>(
             />
           </View>
 
-          <Text style={styles.title}>Protect your data</Text>
+          <Text style={styles.title}>Back Up Your Access</Text>
 
           <Text style={styles.body}>
-            Back up your encryption key so you never lose access to your
-            information — even if you switch devices.
+            Set up a recovery method so you can restore access to your
+            information if you lose your phone or switch devices.
           </Text>
 
           {/* Primary action */}
@@ -118,9 +118,9 @@ export const KeyBackupNudge = forwardRef<BottomSheetModal, KeyBackupNudgeProps>(
               pressed && styles.backUpButtonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Back up encryption key"
+            accessibilityLabel="Set up recovery"
           >
-            <Text style={styles.backUpButtonText}>Back up key</Text>
+            <Text style={styles.backUpButtonText}>Set Up Recovery</Text>
           </Pressable>
 
           {/* Subtle dismiss */}

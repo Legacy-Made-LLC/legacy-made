@@ -1,68 +1,72 @@
 /**
- * Escrow Recovery Screen
+ * Recovery Document — Manual Word Entry
  *
- * Restores encryption keys from Legacy Made's server-side escrow backup.
- * The server decrypts the DEK via AWS KMS and returns it over TLS.
+ * 12 text inputs for manually entering recovery words.
+ * Supports pasting all 12 words at once.
  */
 
 import { colors, spacing, typography } from "@/constants/theme";
-import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { useDocumentRecovery } from "@/hooks/useDocumentRecovery";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function RecoverEscrowScreen() {
+export default function RecoverDocumentWordsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { recoverFromEscrow, completeRecovery } = useCrypto();
+  const { recoverFromMnemonic, isRecovering, error, isComplete } =
+    useDocumentRecovery();
 
-  const [isRecovering, setIsRecovering] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
+  const [wordInputs, setWordInputs] = useState<string[]>(Array(12).fill(""));
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  const handleRecover = useCallback(async () => {
-    setIsRecovering(true);
-    setError(null);
+  const updateWord = useCallback((index: number, value: string) => {
+    setWordInputs((prev) => {
+      const next = [...prev];
+      next[index] = value.toLowerCase().trim();
+      return next;
+    });
+  }, []);
 
-    try {
-      const success = await recoverFromEscrow();
-      if (success) {
-        await completeRecovery();
-        setIsComplete(true);
-      } else {
-        setError(
-          "We couldn\u2019t find a saved key for your account. You may not have turned on Legacy Made Recovery, or it may not be available yet.",
-        );
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An unexpected error occurred during recovery.",
-      );
-    } finally {
-      setIsRecovering(false);
+  const handlePaste = useCallback((text: string) => {
+    const pastedWords = text
+      .trim()
+      .split(/[\s,]+/)
+      .map((w) => w.toLowerCase().trim())
+      .filter(Boolean);
+
+    if (pastedWords.length === 12) {
+      setWordInputs(pastedWords);
     }
-  }, [recoverFromEscrow, completeRecovery]);
+  }, []);
+
+  const handleManualSubmit = useCallback(() => {
+    const mnemonicString = wordInputs.join(" ");
+    recoverFromMnemonic(mnemonicString);
+  }, [wordInputs, recoverFromMnemonic]);
+
+  const allWordsFilled = wordInputs.every((w) => w.length > 0);
 
   return (
     <>
-      <Stack.Screen options={{ title: "Recover from Backup" }} />
+      <Stack.Screen options={{ title: "Enter Recovery Words" }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + spacing.xl },
         ]}
+        keyboardShouldPersistTaps="handled"
       >
         {isComplete ? (
           <View style={styles.successContainer}>
@@ -75,8 +79,8 @@ export default function RecoverEscrowScreen() {
             </View>
             <Text style={styles.successTitle}>You&apos;re all set</Text>
             <Text style={styles.successDescription}>
-              Your key has been restored. All of your information is unlocked
-              and ready on this device.
+              Your access has been restored. All of your information is unlocked
+              and ready for you.
             </Text>
             <Pressable
               style={styles.doneButton}
@@ -87,23 +91,43 @@ export default function RecoverEscrowScreen() {
           </View>
         ) : (
           <>
-            <Text style={styles.heading}>Restore your access</Text>
+            <Text style={styles.heading}>Enter recovery words</Text>
             <Text style={styles.body}>
-              Legacy Made stored a protected recovery backup for your account.
-              We can use it to restore access on this device.
+              Enter the 12 words from your recovery document in order. You can
+              also paste all 12 words at once.
             </Text>
 
-            <View style={styles.infoCard}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color={colors.primary}
-              />
-              <Text style={styles.infoText}>
-                Your recovery backup is only used if you request help restoring
-                your account. Legacy Made will never access your information
-                without your permission.
-              </Text>
+            <View style={styles.wordsInputGrid}>
+              {wordInputs.map((word, index) => (
+                <View key={index} style={styles.wordInputRow}>
+                  <Text style={styles.wordInputNumber}>{index + 1}.</Text>
+                  <TextInput
+                    ref={(ref) => {
+                      inputRefs.current[index] = ref;
+                    }}
+                    style={styles.wordInput}
+                    value={word}
+                    onChangeText={(text) => {
+                      if (text.includes(" ") && index === 0) {
+                        handlePaste(text);
+                      } else {
+                        updateWord(index, text);
+                      }
+                    }}
+                    placeholder={`Word ${index + 1}`}
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType={index < 11 ? "next" : "done"}
+                    onSubmitEditing={() => {
+                      if (index < 11) {
+                        inputRefs.current[index + 1]?.focus();
+                      }
+                    }}
+                    blurOnSubmit={index === 11}
+                  />
+                </View>
+              ))}
             </View>
 
             {error && (
@@ -116,10 +140,11 @@ export default function RecoverEscrowScreen() {
             <Pressable
               style={[
                 styles.recoverButton,
-                isRecovering && styles.recoverButtonDisabled,
+                (!allWordsFilled || isRecovering) &&
+                  styles.recoverButtonDisabled,
               ]}
-              onPress={handleRecover}
-              disabled={isRecovering}
+              onPress={handleManualSubmit}
+              disabled={!allWordsFilled || isRecovering}
             >
               {isRecovering ? (
                 <ActivityIndicator color="#FFFFFF" />
@@ -154,20 +179,32 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
   },
-  infoCard: {
-    flexDirection: "row",
+  wordsInputGrid: {
     gap: spacing.sm,
-    backgroundColor: `${colors.primary}10`,
-    borderRadius: 12,
-    padding: spacing.md,
-    alignItems: "flex-start",
   },
-  infoText: {
-    flex: 1,
-    fontFamily: "DMSans_400Regular",
+  wordInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  wordInputNumber: {
+    fontFamily: "DMSans_500Medium",
     fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
+    color: colors.textTertiary,
+    width: 24,
+    textAlign: "right",
+  },
+  wordInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    fontFamily: "DMSans_400Regular",
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
   },
   errorCard: {
     flexDirection: "row",
@@ -189,10 +226,9 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: spacing.sm,
   },
   recoverButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
   recoverButtonText: {
     fontFamily: "DMSans_600SemiBold",

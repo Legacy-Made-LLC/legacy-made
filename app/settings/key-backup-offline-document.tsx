@@ -355,10 +355,10 @@ export default function KeyBackupPhraseScreen() {
     : ("close-circle" as const);
   const bannerIconColor = isOn ? colors.success : colors.textTertiary;
   const bannerTitle = isOn
-    ? "Offline recovery is set up"
+    ? "Recovery document is set up"
     : isRemoved
-      ? "Offline recovery is disabled"
-      : "Offline recovery is not set up";
+      ? "Recovery document is disabled"
+      : "Recovery document is not set up";
   const bannerDate = isOn
     ? backupStatus.recoveryPhrase.createdAt
       ? `Created ${formatDate(backupStatus.recoveryPhrase.createdAt)}`
@@ -372,14 +372,14 @@ export default function KeyBackupPhraseScreen() {
     : isOn
       ? "Lost your recovery document, or worried it\u2019s in the wrong hands?"
       : isRemoved
-        ? "Your recovery document has been permanently disabled and can no longer recover your account."
-        : "Your data is fully encrypted with a key only your device holds. Save a recovery document you can print or store to restore access if needed.";
+        ? "If you lose this document, Legacy Made cannot restore your account."
+        : "Your recovery document allows you to restore access to your account if you lose your device.";
 
   const modalError = generateMutation.error?.message ?? pdfError;
 
   return (
     <>
-      <Stack.Screen options={{ title: "Offline Recovery" }} />
+      <Stack.Screen options={{ title: "Create Your Recovery Document" }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -505,10 +505,10 @@ export default function KeyBackupPhraseScreen() {
             </View>
             <View style={styles.optionContent}>
               <Text style={styles.optionTitle}>
-                Generate recovery document
+                Create Recovery Document
               </Text>
               <Text style={styles.optionDescription}>
-                Creates a PDF with a QR code and 12 recovery words that you can
+                This document includes a QR code and recovery words you can
                 print or store somewhere safe.
               </Text>
             </View>

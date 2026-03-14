@@ -23,9 +23,12 @@ export default function KeyBackupScreen() {
     {
       id: "escrow" as const,
       icon: "cloud" as const,
-      title: "Legacy Made Recovery",
-      description:
-        "We securely store a copy of your key so you can recover your data if you lose your device.",
+      title: backupStatus.escrow.configured
+        ? "Legacy Made Recovery is on"
+        : "Let Legacy Made handle recovery for me",
+      description: backupStatus.escrow.configured
+        ? "Legacy Made is safeguarding a backup so we can help restore access if you lose your device."
+        : "Legacy Made safeguards a backup of your key so we can help restore access if you lose your device.",
       isConfigured: backupStatus.escrow.configured,
       createdAt: backupStatus.escrow.createdAt,
       removedAt: backupStatus.escrow.removedAt,
@@ -36,9 +39,12 @@ export default function KeyBackupScreen() {
     {
       id: "phrase" as const,
       icon: "cloud-offline" as const,
-      title: "Offline Recovery",
-      description:
-        "Save a recovery key that you keep — print it, store it somewhere safe, and use it to get back in on your own.",
+      title: backupStatus.recoveryPhrase.configured
+        ? "Recovery document is set up"
+        : "I want to handle recovery myself",
+      description: backupStatus.recoveryPhrase.configured
+        ? "Your recovery document is saved. Only you can restore access to your account."
+        : "Create a recovery document that you keep somewhere safe. Only you can restore access to your account.",
       isConfigured: backupStatus.recoveryPhrase.configured,
       createdAt: backupStatus.recoveryPhrase.createdAt,
       removedAt: backupStatus.recoveryPhrase.removedAt,
@@ -50,7 +56,7 @@ export default function KeyBackupScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Back Up Your Key" }} />
+      <Stack.Screen options={{ title: "Choose Recovery Method" }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -58,14 +64,17 @@ export default function KeyBackupScreen() {
           { paddingBottom: insets.bottom + spacing.xl },
         ]}
       >
-        <Text style={styles.intro}>
-          Your encryption key keeps your data private. If you lose access to
-          your device without a backup, your data cannot be recovered.
-        </Text>
-
-        <EncryptionBadge />
-
-        <Text style={styles.sectionLabel}>CHOOSE A METHOD</Text>
+        <View style={styles.infoCard}>
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={colors.primary}
+          />
+          <Text style={styles.infoText}>
+            If you ever lose your phone, you&apos;ll need a recovery method to
+            restore access to your account.
+          </Text>
+        </View>
 
         {options.map((option) => (
           <Pressable
@@ -137,9 +146,10 @@ export default function KeyBackupScreen() {
         ))}
 
         <Text style={styles.footer}>
-          We recommend setting up at least one backup method. You can always
-          change or add methods later.
+          You can always change or add recovery methods later.
         </Text>
+
+        <EncryptionBadge />
       </ScrollView>
     </>
   );
@@ -154,19 +164,20 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
-  intro: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
-    lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
-    marginBottom: spacing.sm,
+  infoCard: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    backgroundColor: `${colors.primary}08`,
+    borderRadius: 12,
+    padding: spacing.md,
+    alignItems: "flex-start",
   },
-  sectionLabel: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.label,
+  infoText: {
+    flex: 1,
+    fontFamily: "DMSans_400Regular",
+    fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
-    letterSpacing: 1,
-    marginTop: spacing.sm,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
   },
   optionCard: {
     flexDirection: "row",

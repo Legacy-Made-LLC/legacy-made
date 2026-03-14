@@ -155,7 +155,7 @@ export default function RecoveryScreen() {
         <Text style={styles.loadingText}>
           {autoState === "checking"
             ? "Checking your account\u2026"
-            : "Restoring your key\u2026"}
+            : "Restoring access\u2026"}
         </Text>
       </View>
     );
@@ -179,10 +179,10 @@ export default function RecoveryScreen() {
           resizeMode="contain"
         />
         <Text style={styles.brandName}>Legacy Made</Text>
-        <Text style={styles.heading}>Welcome back</Text>
+        <Text style={styles.heading}>Welcome Back</Text>
         <Text style={styles.body}>
-          Your information is protected by a private key that this device
-          doesn&apos;t have yet. Choose how you&apos;d like to restore it.
+          This device doesn&apos;t have access to your encrypted information
+          yet. Choose how you&apos;d like to restore access.
         </Text>
         <EncryptionBadge variant="subtle" />
       </View>
@@ -206,7 +206,7 @@ export default function RecoveryScreen() {
       {hasRecoveryDoc && (
         <RecoveryOption
           icon="document-text-outline"
-          title="Recover from Offline Document"
+          title="Recover from Recovery Document"
           description="Use the recovery document you saved when you set up your account"
           onPress={() => router.push("/settings/recover-document" as never)}
         />

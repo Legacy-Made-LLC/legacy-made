@@ -66,9 +66,9 @@ export const familyPastPages: Translations["pages"] = {
         cta: "See details",
       },
       backupKey: {
-        title: "Protect your data",
-        body: "Back up your encryption key so you never lose access to your information.",
-        cta: "Back up key",
+        title: "Back Up Your Access",
+        body: "Set up a recovery method so you can restore access to your information if you lose your phone or switch devices.",
+        cta: "Set Up Recovery",
         secondaryCta: "Not now",
       },
       addTrustedContact: {
