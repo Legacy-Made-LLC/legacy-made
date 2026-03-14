@@ -95,6 +95,28 @@ export {
 export {
   useCreateTrustedContact,
   useUpdateTrustedContact,
+  useRevokeTrustedContact,
   useDeleteTrustedContact,
   useResendInvitation,
 } from './useTrustedContactsMutations';
+
+// Key Backup
+export {
+  useGenerateRecoveryDocumentMutation,
+  useDisableRecoveryDocumentMutation,
+  useEnableEscrowMutation,
+  useRevokeEscrowMutation,
+} from './useKeyBackupMutations';
+
+// Crypto
+export {
+  useHasEncryptionKeysQuery,
+  useDEKQuery,
+  useKeyVersionQuery,
+  usePlanE2EEStatusQuery,
+  useBackupStatusQuery,
+  useSharedPlanDEKQuery,
+  useSetupKeysMutation,
+  useRetrySetupMutation,
+  useEscrowRecoveryMutation,
+} from './useCryptoQueries';

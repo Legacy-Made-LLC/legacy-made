@@ -32,6 +32,7 @@ export type GuidanceType =
   | "wishes_complete"
   | "legacy_complete"
   | "making_progress"
+  | "backup_key"
   | "add_trusted_contact"
   | "continue"
   | "started_vault"
@@ -66,7 +67,14 @@ export interface HomeGuidanceResult {
   onDismissContactGuidance: () => void;
 }
 
-export function useHomeGuidance(): HomeGuidanceResult {
+export interface HomeGuidanceOptions {
+  /** When true, backup_key guidance takes Priority 1 */
+  showBackupKeyGuidance?: boolean;
+}
+
+export function useHomeGuidance(
+  opts?: HomeGuidanceOptions,
+): HomeGuidanceResult {
   const translations = useTranslations();
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
@@ -167,7 +175,22 @@ export function useHomeGuidance(): HomeGuidanceResult {
     const allWishesDone = wishesTotal > 0 && wishesCompleted === wishesTotal;
     const allLegacyDone = legacyTotal > 0 && legacyCompleted === legacyTotal;
 
-    // Priority 1: Nudge to add a trusted contact (dismissable)
+    // Priority 1: Nudge to back up encryption key (dismissable)
+    if (opts?.showBackupKeyGuidance) {
+      return {
+        type: "backup_key",
+        title: g.backupKey.title,
+        body: g.backupKey.body,
+        cta: g.backupKey.cta,
+        ctaRoute: "/settings/key-backup" as Href,
+        secondaryCta: g.backupKey.secondaryCta,
+        tintColor: `${colors.primary}12`,
+        accentColor: colors.primary,
+        icon: "shield-checkmark-outline",
+      };
+    }
+
+    // Priority 2: Nudge to add a trusted contact (dismissable)
     if (
       totalTouched > 0 &&
       totalCompleted >= 3 &&
@@ -210,8 +233,8 @@ export function useHomeGuidance(): HomeGuidanceResult {
         body: g.vaultComplete.body,
         cta: g.vaultComplete.cta,
         ctaRoute: "/(app)/(tabs)/wishes" as Href,
-        tintColor: colors.featureInformationTint,
-        accentColor: colors.featureInformation,
+        tintColor: colors.featureWishesTint,
+        accentColor: colors.featureWishes,
         icon: "document-text-outline",
       };
     }
@@ -224,8 +247,8 @@ export function useHomeGuidance(): HomeGuidanceResult {
         body: g.wishesComplete.body,
         cta: g.wishesComplete.cta,
         ctaRoute: "/(app)/(tabs)/information" as Href,
-        tintColor: colors.featureWishesTint,
-        accentColor: colors.featureWishes,
+        tintColor: colors.featureInformationTint,
+        accentColor: colors.featureInformation,
         icon: "heart-outline",
       };
     }
@@ -255,8 +278,8 @@ export function useHomeGuidance(): HomeGuidanceResult {
         body: g.startedVault.body,
         cta: g.startedVault.cta,
         ctaRoute: "/(app)/(tabs)/wishes" as Href,
-        tintColor: colors.featureInformationTint,
-        accentColor: colors.featureInformation,
+        tintColor: colors.featureWishesTint,
+        accentColor: colors.featureWishes,
         icon: "document-text-outline",
       };
     }
@@ -269,8 +292,8 @@ export function useHomeGuidance(): HomeGuidanceResult {
         body: g.startedWishes.body,
         cta: g.startedWishes.cta,
         ctaRoute: "/(app)/(tabs)/information" as Href,
-        tintColor: colors.featureWishesTint,
-        accentColor: colors.featureWishes,
+        tintColor: colors.featureInformationTint,
+        accentColor: colors.featureInformation,
         icon: "heart-outline",
       };
     }
@@ -283,8 +306,8 @@ export function useHomeGuidance(): HomeGuidanceResult {
         body: g.startedLegacy.body,
         cta: g.startedLegacy.cta,
         ctaRoute: "/(app)/(tabs)/information" as Href,
-        tintColor: colors.featureLegacyTint,
-        accentColor: colors.featureLegacy,
+        tintColor: colors.featureInformationTint,
+        accentColor: colors.featureInformation,
         icon: "videocam-outline",
       };
     }
@@ -415,6 +438,7 @@ export function useHomeGuidance(): HomeGuidanceResult {
       icon: "leaf-outline",
     };
   }, [
+    opts?.showBackupKeyGuidance,
     isViewingSharedPlan,
     sharedPlanInfo,
     vaultSections,
@@ -430,5 +454,9 @@ export function useHomeGuidance(): HomeGuidanceResult {
     translations,
   ]);
 
-  return { guidance, isLoading, onDismissContactGuidance: dismissContactGuidance };
+  return {
+    guidance,
+    isLoading,
+    onDismissContactGuidance: dismissContactGuidance,
+  };
 }

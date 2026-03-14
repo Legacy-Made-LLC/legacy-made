@@ -6,19 +6,28 @@ import { Redirect, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import {
+  EncryptionMigrationModal,
+  EncryptionMigrationModalRef,
+} from "@/components/home/EncryptionMigrationModal";
+
 import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
 import Loader from "@/components/ui/Loader";
 import { Menu } from "@/components/ui/Menu";
 import { CONTACT_METADATA_SCHEMA } from "@/components/vault/forms/ContactForm";
 import { colors, spacing, typography } from "@/constants/theme";
-import { logger } from "@/lib/logger";
+import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
-import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
-import { usePendingInvitation } from "@/hooks/usePendingInvitation";
-import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCreateEntry } from "@/hooks/queries";
+import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { useAutoMigration } from "@/hooks/useAutoMigration";
+import { usePendingInvitation } from "@/hooks/usePendingInvitation";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
+import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { logger } from "@/lib/logger";
 
 // Custom header that doesn't add safe area inset (our parent Header handles it)
 // Supports custom options: headerDescription for subtitle text
@@ -104,13 +113,26 @@ export default function AppLayout() {
     error: planError,
     refetch: refetchPlan,
   } = usePlan();
+  const entitlements = useEntitlements();
 
   // Guard against revoked shared plan access
   useAccessRevocationGuard();
   useSharedPlanStatusPolling();
 
+  // Initialize push notification listeners and auto-register token
+  usePushNotifications();
+
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();
+
+  // Migrate pre-E2EE data with user-facing modal (temporary — remove after all users migrated)
+  const {
+    phase: migrationPhase,
+    progress: migrationProgress,
+    retry: retryMigration,
+    dismiss: dismissMigration,
+  } = useAutoMigration();
+  const migrationModalRef = useRef<EncryptionMigrationModalRef>(null);
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
@@ -148,13 +170,21 @@ export default function AppLayout() {
     }
   }, [pendingContact, planId, createContactMutation, clearPendingContact]);
 
+  // Access crypto context for recovery detection
+  const crypto = useCrypto();
+
   if (!isSignedIn) {
     return <Redirect href="/(auth)" />;
   }
 
   // Show loading while plan is being fetched
-  if (isPlanLoading && !planId) {
+  if ((isPlanLoading && !planId) || entitlements.isLoading) {
     return <Loader branded />;
+  }
+
+  // Redirect to recovery screen if user needs key recovery
+  if (crypto.needsRecovery) {
+    return <Redirect href="/settings/recovery" />;
   }
 
   // Log and show error screen if plan failed to load and we have no data
@@ -173,6 +203,13 @@ export default function AppLayout() {
     <View style={styles.container}>
       <Header onMenuPress={() => setMenuVisible(true)} />
       <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
+      <EncryptionMigrationModal
+        ref={migrationModalRef}
+        phase={migrationPhase}
+        progress={migrationProgress}
+        onRetry={retryMigration}
+        onDismiss={dismissMigration}
+      />
       <View style={styles.content}>
         <Stack
           screenOptions={{

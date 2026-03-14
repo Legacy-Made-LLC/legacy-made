@@ -104,7 +104,7 @@ export default function VerifyOtpScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={5} />
+      <OnboardingHeader showBackButton currentStep={6} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}

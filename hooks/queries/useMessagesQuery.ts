@@ -2,7 +2,8 @@
  * Messages Query Hooks
  *
  * TanStack Query hooks for fetching legacy messages data.
- * Follows same pattern as useWishesQuery.ts for consistency.
+ * Messages are automatically decrypted if they have encrypted metadata.
+ * Follows same pattern as useEntriesQuery.ts for consistency.
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +11,8 @@ import { useEffect } from "react";
 
 import { useApi } from "@/api";
 import type { Message } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { decryptEntry, isEncryptedEntry } from "@/lib/crypto/entryEncryption";
 import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -24,11 +27,26 @@ export function useMessagesQuery<T = Record<string, unknown>>(
 ) {
   const { planId } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.messages.byTaskKey(planId!, taskKey!),
-    queryFn: () => messages.listByTaskKey<T>(planId!, taskKey!),
-    enabled: !!planId && !!taskKey,
+    queryFn: async () => {
+      const raw = await messages.listByTaskKey<T>(planId!, taskKey!);
+      if (!crypto?.activeDEK) return raw;
+      return Promise.all(
+        raw.map(async (m) => {
+          if (!isEncryptedEntry(m)) return m;
+          const decrypted = await decryptEntry<T>(
+            m as unknown as Parameters<typeof decryptEntry>[0],
+            crypto.activeDEK!,
+          );
+          return decrypted as unknown as Message<T>;
+        }),
+      );
+    },
+    enabled: !!planId && !!taskKey && cryptoReady,
   });
 }
 
@@ -45,11 +63,21 @@ export function useMessageQuery<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.messages.single(planId!, messageId!),
-    queryFn: () => messages.get<T>(planId!, messageId!),
-    enabled: !!planId && !!messageId,
+    queryFn: async () => {
+      const raw = await messages.get<T>(planId!, messageId!);
+      if (!crypto?.activeDEK || !isEncryptedEntry(raw)) return raw;
+      const decrypted = await decryptEntry<T>(
+        raw as unknown as Parameters<typeof decryptEntry>[0],
+        crypto.activeDEK,
+      );
+      return decrypted as unknown as Message<T>;
+    },
+    enabled: !!planId && !!messageId && cryptoReady,
     initialData: () => {
       if (!planId || !messageId) return undefined;
 
@@ -105,6 +133,7 @@ export function useMessageCountsQuery() {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useQuery({
     queryKey: queryKeys.messages.counts(planId!),
@@ -124,16 +153,19 @@ export function useMessageCountsQuery() {
         }
       }
 
-      // Seed individual task caches for instant navigation
-      for (const [taskKey, taskMessages] of Object.entries(groupedByTaskKey)) {
-        queryClient.setQueryData(
-          queryKeys.messages.byTaskKey(planId!, taskKey),
-          taskMessages,
-        );
-      }
+      // Seed individual task caches for instant navigation —
+      // but NOT when crypto is active, since this raw data is encrypted.
+      if (!crypto) {
+        for (const [taskKey, taskMessages] of Object.entries(groupedByTaskKey)) {
+          queryClient.setQueryData(
+            queryKeys.messages.byTaskKey(planId!, taskKey),
+            taskMessages,
+          );
+        }
 
-      // Also seed the all messages cache
-      queryClient.setQueryData(queryKeys.messages.all(planId!), allMessages);
+        // Also seed the all messages cache
+        queryClient.setQueryData(queryKeys.messages.all(planId!), allMessages);
+      }
 
       return countMap;
     },
@@ -148,9 +180,13 @@ export function usePrefetchMessagesByTaskKeys(taskKeys: string[]) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { messages } = useApi();
+  const crypto = useOptionalCrypto();
 
   useEffect(() => {
     if (!planId || taskKeys.length === 0) return;
+
+    // Skip prefetch when crypto is active — would cache encrypted data
+    if (crypto) return;
 
     taskKeys.forEach((taskKey) => {
       queryClient.prefetchQuery({
@@ -158,5 +194,5 @@ export function usePrefetchMessagesByTaskKeys(taskKeys: string[]) {
         queryFn: () => messages.listByTaskKey(planId, taskKey),
       });
     });
-  }, [planId, taskKeys, queryClient, messages]);
+  }, [planId, taskKeys, queryClient, messages, crypto]);
 }

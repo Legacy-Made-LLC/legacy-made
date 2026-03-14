@@ -78,14 +78,15 @@ export default function TabsLayout() {
   const isInfoLocked = isEffectivelyLocked(TAB_TO_PILLAR.information);
   const isWishesLocked = isEffectivelyLocked(TAB_TO_PILLAR.wishes);
   const isLegacyLocked = isEffectivelyLocked(TAB_TO_PILLAR.legacy);
-  // Family tab is always locked on shared plans — you can't manage someone else's contacts
+  // Family tab lock: only when fully locked or viewing a shared plan.
+  // View-only users (free tier) can still access the tab to see shared plans —
+  // the screen itself handles restricting trusted contact creation.
   const isFamilyLocked =
-    isLockedPillar(TAB_TO_PILLAR.family) ||
-    isViewOnlyPillar(TAB_TO_PILLAR.family) ||
-    isViewingSharedPlan;
+    isLockedPillar(TAB_TO_PILLAR.family) || isViewingSharedPlan;
 
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -105,6 +106,7 @@ export default function TabsLayout() {
         },
       }}
     >
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen
         name="information"
         options={{
@@ -136,7 +138,9 @@ export default function TabsLayout() {
         name="wishes"
         options={{
           title: "Wishes",
-          tabBarActiveTintColor: isWishesLocked ? colors.textTertiary : colors.featureWishes,
+          tabBarActiveTintColor: isWishesLocked
+            ? colors.textTertiary
+            : colors.featureWishes,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isWishesLocked}
@@ -168,7 +172,9 @@ export default function TabsLayout() {
         name="legacy"
         options={{
           title: "Legacy",
-          tabBarActiveTintColor: isLegacyLocked ? colors.textTertiary : colors.featureLegacy,
+          tabBarActiveTintColor: isLegacyLocked
+            ? colors.textTertiary
+            : colors.featureLegacy,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isLegacyLocked}
@@ -193,7 +199,9 @@ export default function TabsLayout() {
         name="family"
         options={{
           title: "Family",
-          tabBarActiveTintColor: isFamilyLocked ? colors.textTertiary : colors.featureFamily,
+          tabBarActiveTintColor: isFamilyLocked
+            ? colors.textTertiary
+            : colors.featureFamily,
           tabBarIcon: ({ focused }) => (
             <TabIconWithLock
               isLocked={isFamilyLocked}

@@ -6,12 +6,14 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
+import { useEncryptedFileView } from "@/hooks/useEncryptedFileView";
+import { toast } from "@/hooks/useToast";
 import { Ionicons } from "@expo/vector-icons";
 import { Galeria } from "@nandorojo/galeria";
 import { Image } from "expo-image";
+import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useRef, useState } from "react";
-import { toast } from "@/hooks/useToast";
 import {
   ActivityIndicator,
   FlatList,
@@ -105,41 +107,90 @@ export function FilePreview({
   const isDocument = file.type === "document";
   const isUploading = file.uploadStatus === "uploading";
   const hasError = file.uploadStatus === "error";
-  const isProcessing = file.isProcessing === true;
-  const isBusy = isUploading || isProcessing || isDeleting || isSharing;
+  const isProcessing = false;
 
-  // Videos cannot be shared yet (no download URL until transcoding is complete)
-  const canShare = onShare && !isVideo;
+  // Decrypt encrypted remote files (images + documents)
+  const needsDecryption =
+    (isImage || isDocument) &&
+    file.isEncrypted === true &&
+    file.isRemote === true;
+  const { localUri: decryptedUri, isLoading: isDecrypting } =
+    useEncryptedFileView(needsDecryption ? file.id : undefined, file.mimeType, file.uri, file.isEncrypted);
+
+  // Decrypt encrypted video thumbnails
+  const needsThumbnailDecryption =
+    isVideo &&
+    file.isThumbnailEncrypted === true &&
+    file.isRemote === true &&
+    !!file.thumbnailFileId;
+  const { localUri: decryptedThumbnailUri, isLoading: isThumbnailDecrypting } =
+    useEncryptedFileView(
+      needsThumbnailDecryption ? file.thumbnailFileId : undefined,
+      "image/jpeg",
+      file.thumbnailUri,
+      file.isThumbnailEncrypted,
+    );
+
+  const isBusy =
+    isUploading || isDeleting || isSharing || isThumbnailDecrypting;
+
+  // Videos can now be shared since they're stored as regular files in R2
+  const canShare = onShare;
 
   // Whether to show the menu button (has at least one action available)
   const hasMenuActions = (canShare || onDelete) && !selectMode;
 
-  // Thumbnail URI for display (use generated thumbnail for videos, or file URI for images)
-  const thumbnailUri = isVideo ? file.thumbnailUri : isImage ? file.uri : null;
+  // Thumbnail URI for display:
+  // - Images: use decrypted local URI for encrypted files, original URI otherwise
+  // - Videos: use decrypted thumbnail URI for encrypted thumbnails, original URI otherwise
+  const thumbnailUri = isVideo
+    ? needsThumbnailDecryption
+      ? decryptedThumbnailUri
+      : file.thumbnailUri
+    : isImage
+      ? needsDecryption
+        ? decryptedUri
+        : file.uri
+      : null;
 
   // Whether this file type can be previewed in-app
   // Images use Galeria (handles tap internally), videos use our custom modal
-  const canPreviewImage = isImage && !isUploading;
+  const canPreviewImage = isImage && !isUploading && !isDecrypting;
   const canPreviewVideo = isVideo && onPress && !isUploading && !isProcessing;
 
   // Whether this document can be downloaded/opened externally
-  const canDownload = isDocument && file.isRemote && file.uri && !isBusy;
+  const canDownload =
+    isDocument && file.isRemote && file.uri && !isBusy && !isDecrypting;
 
-  // Handle opening a document externally using in-app browser
+  // Handle opening a document externally
+  // For encrypted documents: decrypt locally then use share sheet (Quick Look preview)
+  // For unencrypted documents: open the remote URL in an in-app browser
+  const documentUri = needsDecryption ? decryptedUri : file.uri;
   const handleOpenDocument = useCallback(async () => {
-    if (!file.uri) {
+    if (!documentUri) {
       toast.error({ message: "No download URL available for this file." });
       return;
     }
 
     try {
-      await WebBrowser.openBrowserAsync(file.uri, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
+      if (needsDecryption) {
+        // Encrypted files are decrypted to a local file:// URI.
+        // Use the share sheet which shows a Quick Look preview on iOS
+        // and lets the user open in any compatible app.
+        await Sharing.shareAsync(documentUri, {
+          mimeType: file.mimeType,
+          UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : undefined,
+        });
+      } else {
+        // Unencrypted remote files can be opened directly in the browser
+        await WebBrowser.openBrowserAsync(documentUri, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        });
+      }
     } catch {
       toast.error({ message: "Failed to open the file. Please try again." });
     }
-  }, [file.uri]);
+  }, [documentUri, needsDecryption, file.mimeType]);
 
   // Combined press handler - preview for videos, download for documents
   // Images use Galeria which handles tap internally
@@ -287,8 +338,10 @@ export function FilePreview({
           <Pressable
             ref={menuButtonRef}
             onPress={handleOpenMenu}
-            hitSlop={8}
+            hitSlop={10}
             style={styles.compactMenuButton}
+            accessibilityRole="button"
+            accessibilityLabel="File options menu"
           >
             <Ionicons
               name="ellipsis-vertical"
@@ -1025,6 +1078,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   compactMenuButton: {
-    padding: 2,
+    padding: 6,
   },
 });

@@ -96,6 +96,12 @@ export interface Translations {
         wishesComplete: { title: string; body: string; cta: string };
         legacyComplete: { title: string; body: string; cta: string };
         makingProgress: { title: string; body: string; cta: string };
+        backupKey: {
+          title: string;
+          body: string;
+          cta: string;
+          secondaryCta: string;
+        };
         addTrustedContact: {
           title: string;
           body: string;

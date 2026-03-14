@@ -15,11 +15,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: IS_PROD
-      ? "com.mylegacymade.legacymade"
-      : "com.gibsonops.legacymade.dev1",
+    bundleIdentifier: IS_PROD ? "com.mylegacymade.legacymade" : "com.mylegacymade.legacymadedev",
     infoPlist: {
-      ITSAppUsesNonExemptEncryption: false,
+      ITSAppUsesNonExemptEncryption: true,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
       NSCameraUsageDescription: "Record video messages for your loved ones",
       NSMicrophoneUsageDescription: "Record audio with your video messages",
@@ -83,6 +81,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-document-picker",
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/notification-icon.png",
+        color: "#8a9785",
+      },
+    ],
+    "react-native-quick-crypto",
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     [
       "expo-build-properties",

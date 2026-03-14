@@ -3,6 +3,15 @@
  */
 
 // ============================================================================
+// E2EE Types (re-exported from lib/crypto for API layer access)
+// ============================================================================
+
+export type {
+  EncryptedEntryMetadata,
+  EncryptedPayload,
+} from "@/lib/crypto/types";
+
+// ============================================================================
 // Metadata Types
 // ============================================================================
 
@@ -64,7 +73,7 @@ export interface DigitalAccessMetadata {
 
 export type FileRole = "primary" | "thumbnail";
 
-export type ApiFileStorageType = "r2" | "mux";
+export type ApiFileStorageType = "r2";
 export type ApiFileUploadStatus =
   | "pending"
   | "uploading"
@@ -87,18 +96,12 @@ export interface ApiFile {
   downloadUrl: string | null;
   /** Thumbnail URL for images/videos */
   thumbnailUrl: string | null;
-  /** Mux playback ID for videos */
-  playbackId: string | null;
-  /** Mux tokens for video playback (videos only) */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
   /** File role: primary file or a supporting thumbnail */
   role?: FileRole;
   /** ID of the parent file (e.g., the video this thumbnail belongs to) */
   parentFileId?: string | null;
+  /** Whether this file is encrypted (E2EE) */
+  isEncrypted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -144,16 +147,14 @@ export interface FileAttachment {
   errorMessage?: string;
   /** Whether this file exists on the server (vs local-only) */
   isRemote?: boolean;
-  /** Whether this video is still processing on the server (Mux) */
+  /** Whether this file is encrypted (E2EE) */
+  isEncrypted?: boolean;
+  /** File ID of the thumbnail (for decrypting encrypted thumbnails) */
+  thumbnailFileId?: string;
+  /** Whether the thumbnail file is encrypted */
+  isThumbnailEncrypted?: boolean;
+  /** Whether this file is still being processed (e.g., video transcoding) */
   isProcessing?: boolean;
-  /** Mux playback ID for videos */
-  playbackId?: string;
-  /** Mux tokens for video playback */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
 }
 
 /**
@@ -166,9 +167,6 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
       ? "video"
       : "document";
 
-  // Videos are "processing" if they're on the server but not yet complete (Mux transcoding)
-  const isProcessing = type === "video" && file.uploadStatus !== "complete";
-
   return {
     id: file.id,
     uri: file.downloadUrl || "",
@@ -179,9 +177,7 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
     thumbnailUri: file.thumbnailUrl || undefined,
     uploadStatus: file.uploadStatus === "complete" ? "complete" : "pending",
     isRemote: true,
-    isProcessing,
-    playbackId: file.playbackId || undefined,
-    tokens: file.tokens,
+    isEncrypted: file.isEncrypted,
   };
 }
 
@@ -194,13 +190,20 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
 export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
   // Separate primary files from thumbnails
   const primaryFiles: ApiFile[] = [];
-  const thumbnailsByParent = new Map<string, string>();
+  const thumbnailsByParent = new Map<
+    string,
+    { id: string; downloadUrl: string; isEncrypted?: boolean }
+  >();
 
   for (const file of files) {
     if (file.role === "thumbnail" && file.parentFileId) {
-      // Store the thumbnail's download URL keyed by parent file ID
+      // Store the thumbnail info keyed by parent file ID
       if (file.downloadUrl) {
-        thumbnailsByParent.set(file.parentFileId, file.downloadUrl);
+        thumbnailsByParent.set(file.parentFileId, {
+          id: file.id,
+          downloadUrl: file.downloadUrl,
+          isEncrypted: file.isEncrypted,
+        });
       }
     } else {
       primaryFiles.push(file);
@@ -210,9 +213,14 @@ export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
   return primaryFiles.map((file) => {
     const attachment = apiFileToAttachment(file);
     // If there's a matched thumbnail from a separate file, use it
-    const thumbnailUrl = thumbnailsByParent.get(file.id);
-    if (thumbnailUrl) {
-      return { ...attachment, thumbnailUri: thumbnailUrl };
+    const thumbnail = thumbnailsByParent.get(file.id);
+    if (thumbnail) {
+      return {
+        ...attachment,
+        thumbnailUri: thumbnail.downloadUrl,
+        thumbnailFileId: thumbnail.id,
+        isThumbnailEncrypted: thumbnail.isEncrypted,
+      };
     }
     return attachment;
   });
@@ -233,30 +241,10 @@ export interface InitUploadRequest {
   role?: FileRole;
   /** Parent file ID for associating thumbnails with their video */
   parentFileId?: string;
+  /** Whether the file data is encrypted with E2EE */
+  isEncrypted?: boolean;
 }
 
-/**
- * Request body for initializing a video upload (Mux)
- * Includes optional metadata fields that Mux supports for tracking
- */
-export interface InitVideoUploadRequest {
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-  /**
-   * Metadata to associate with the Mux asset for easier tracking.
-   * These are passed to Mux via the passthrough field and stored on the asset.
-   */
-  meta?: {
-    /** External ID from your system (e.g., entry ID, user ID combination) */
-    externalId?: string;
-    /** ID of the user who uploaded the video */
-    creatorId?: string;
-    /** Human-readable title for the video */
-    title?: string;
-  };
-  passthrough?: string;
-}
 
 /**
  * Response from POST /entries/:entryId/files/upload/init
@@ -273,32 +261,14 @@ export interface InitUploadResponse {
 }
 
 /**
- * Response from POST /entries/:entryId/files/video/init
- */
-export interface InitVideoUploadResponse {
-  fileId: string;
-  uploadUrl: string;
-}
-
-/**
  * Response from GET /files/:id/download
- * Returns either R2 download URL or Mux playback info
+ * Returns presigned R2 download URL
  */
 export interface DownloadUrlResponse {
   /** Presigned download URL for R2 files */
-  downloadUrl?: string;
+  downloadUrl: string;
   /** Seconds until URL expires */
   expiresIn?: number;
-  /** Mux playback URL for videos */
-  playbackUrl?: string;
-  /** Mux playback ID */
-  playbackId?: string;
-  /** Mux authentication tokens */
-  tokens?: {
-    playbackToken: string;
-    thumbnailToken: string;
-    storyboardToken: string;
-  };
 }
 
 // ============================================================================
@@ -381,7 +351,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
   planId: string;
   taskKey: string;
   /** Optional title - may be omitted since each entry type presents data differently */
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;
@@ -393,7 +363,7 @@ export interface CreateEntryRequest<T = Record<string, unknown>> {
  * Request type for updating entries
  */
 export interface UpdateEntryRequest<T = Record<string, unknown>> {
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;
@@ -445,10 +415,13 @@ export interface EntriesListResponse<T = Record<string, unknown>> {
 // Plan Type
 // ============================================================================
 
+export type PlanEncryptionStatus = "unencrypted" | "migrating" | "encrypted";
+
 export interface Plan {
   id: string;
   userId: string;
   name: string;
+  encryptionStatus?: PlanEncryptionStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -490,6 +463,8 @@ export interface SharedPlan {
   ownerFirstName: string;
   ownerLastName: string;
   ownerAvatarUrl: string | null;
+  /** The plan owner's Clerk user ID (needed for DEK retrieval) */
+  ownerId: string;
   accessLevel: TrustedContactAccessLevel;
   accessTiming: TrustedContactAccessTiming;
   accessStatus: TrustedContactStatus;
@@ -640,6 +615,8 @@ export interface TrustedContact {
   accessTiming: TrustedContactAccessTiming;
   accessStatus: TrustedContactStatus;
   clerkUserId?: string;
+  /** Whether the DEK has been shared with this contact (server-computed) */
+  dekShared?: boolean;
   notes?: string;
   invitedAt: string;
   acceptedAt?: string;
@@ -660,6 +637,18 @@ export interface CreateTrustedContactRequest {
   accessLevel: TrustedContactAccessLevel;
   accessTiming: TrustedContactAccessTiming;
   notes?: string;
+  /** @deprecated Use `deks` (plural) for multi-device support */
+  dek?: {
+    recipientId: string;
+    encryptedDek: string;
+    keyVersion: number;
+  };
+  /** Pre-shared DEKs for atomic encryption key sharing (one per recipient device) */
+  deks?: Array<{
+    recipientId: string;
+    encryptedDek: string;
+    keyVersion: number;
+  }>;
 }
 
 /**
@@ -898,7 +887,7 @@ export interface Wish<T = Record<string, unknown>> {
 export interface CreateWishRequest<T = Record<string, unknown>> {
   planId: string;
   taskKey: string;
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   metadata: T;
@@ -910,7 +899,7 @@ export interface CreateWishRequest<T = Record<string, unknown>> {
  * Request type for updating wishes
  */
 export interface UpdateWishRequest<T = Record<string, unknown>> {
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   metadata?: Partial<T>;
@@ -973,7 +962,7 @@ export interface Message<T = Record<string, unknown>> {
 export interface CreateMessageRequest<T = Record<string, unknown>> {
   planId: string;
   taskKey: string;
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;
@@ -986,7 +975,7 @@ export interface CreateMessageRequest<T = Record<string, unknown>> {
  * Request type for updating messages
  */
 export interface UpdateMessageRequest<T = Record<string, unknown>> {
-  title?: string;
+  title?: string | null;
   notes?: string | null;
   sortOrder?: number;
   completionStatus?: EntryCompletionStatus;

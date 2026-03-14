@@ -1,6 +1,6 @@
-import { useSignIn, useSignUp } from '@clerk/clerk-expo';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { isClerkAPIResponseError, useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,75 +9,85 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { colors, spacing, typography } from '@/constants/theme';
-import { useOnboardingContext } from '@/data/OnboardingContext';
-import { logger } from '@/lib/logger';
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { colors, spacing, typography } from "@/constants/theme";
+import { useOnboardingContext } from "@/data/OnboardingContext";
+import { logger } from "@/lib/logger";
 
 export default function VerifyOtpScreen() {
-  const { signIn, setActive: setSignInActive, isLoaded: isSignInLoaded } = useSignIn();
-  const { signUp, setActive: setSignUpActive, isLoaded: isSignUpLoaded } = useSignUp();
+  const {
+    signIn,
+    setActive: setSignInActive,
+    isLoaded: isSignInLoaded,
+  } = useSignIn();
+  const {
+    signUp,
+    setActive: setSignUpActive,
+    isLoaded: isSignUpLoaded,
+  } = useSignUp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ email: string; mode: 'sign-in' | 'sign-up' }>();
+  const params = useLocalSearchParams<{
+    email: string;
+    mode: "sign-in" | "sign-up";
+  }>();
 
   const { setHasCompletedInitialOnboarding } = useOnboardingContext();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const email = params.email || '';
-  const mode = params.mode || 'sign-in';
-  const isSignIn = mode === 'sign-in';
+  const email = params.email || "";
+  const mode = params.mode || "sign-in";
+  const isSignIn = mode === "sign-in";
 
   const onVerifyPress = async () => {
     if (isSignIn && !isSignInLoaded) return;
     if (!isSignIn && !isSignUpLoaded) return;
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       if (isSignIn) {
         // Verify sign-in OTP
         const result = await signIn!.attemptFirstFactor({
-          strategy: 'email_code',
+          strategy: "email_code",
           code,
         });
 
-        if (result.status === 'complete') {
+        if (result.status === "complete") {
           await setSignInActive!({ session: result.createdSessionId });
           setHasCompletedInitialOnboarding(true);
-          router.replace('/(app)');
+          router.replace("/(app)");
         } else {
-          setError('Verification could not be completed. Please try again.');
+          setError("Verification could not be completed. Please try again.");
         }
       } else {
         // Verify sign-up OTP
         const result = await signUp!.attemptEmailAddressVerification({ code });
 
-        if (result.status === 'complete') {
+        if (result.status === "complete") {
           await setSignUpActive!({ session: result.createdSessionId });
           setHasCompletedInitialOnboarding(true);
-          router.replace('/(app)');
+          router.replace("/(app)");
         } else {
-          setError('Verification could not be completed. Please try again.');
+          setError("Verification could not be completed. Please try again.");
         }
       }
     } catch (err: unknown) {
-      const clerkError = err as { errors?: { message: string }[] };
-      if (clerkError.errors && clerkError.errors.length > 0) {
-        setError(clerkError.errors[0].message);
+      if (isClerkAPIResponseError(err) && err.errors.length > 0) {
+        setError(err.errors[0].longMessage ?? err.errors[0].message);
       } else {
-        setError('Invalid code. Please try again.');
+        setError("Invalid code. Please try again.");
       }
-      logger.error("OTP verification failed", err);
+      logger.info("OTP verification failed", { error: err });
     } finally {
       setIsLoading(false);
     }
@@ -85,27 +95,29 @@ export default function VerifyOtpScreen() {
 
   const onResendCode = async () => {
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       if (isSignIn && signIn) {
         const { supportedFirstFactors } = signIn;
         const emailCodeFactor = supportedFirstFactors?.find(
-          (factor) => factor.strategy === 'email_code'
+          (factor) => factor.strategy === "email_code",
         );
-        if (emailCodeFactor && 'emailAddressId' in emailCodeFactor) {
+        if (emailCodeFactor && "emailAddressId" in emailCodeFactor) {
           await signIn.prepareFirstFactor({
-            strategy: 'email_code',
+            strategy: "email_code",
             emailAddressId: emailCodeFactor.emailAddressId,
           });
         }
       } else if (signUp) {
-        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        await signUp.prepareEmailAddressVerification({
+          strategy: "email_code",
+        });
       }
-      setError('');
-      setCode('');
+      setError("");
+      setCode("");
     } catch (err) {
-      setError('Could not resend code. Please try again.');
+      setError("Could not resend code. Please try again.");
       logger.error("OTP resend failed", err);
     } finally {
       setIsLoading(false);
@@ -115,18 +127,24 @@ export default function VerifyOtpScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg },
+          {
+            paddingTop: insets.top + spacing.xxl,
+            paddingBottom: insets.bottom + spacing.lg,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable
           onPress={router.back}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && styles.backButtonPressed,
+          ]}
           hitSlop={12}
         >
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
@@ -135,11 +153,12 @@ export default function VerifyOtpScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Check your email</Text>
           <Text style={styles.subtitle}>
-            We sent a verification code to{' '}
+            We sent a verification code to{" "}
             <Text style={styles.emailText}>{email}</Text>
           </Text>
           <Text style={styles.explanation}>
-            This helps us verify that it&apos;s really you and keeps your information secure.
+            This helps us verify that it&apos;s really you and keeps your
+            information secure.
           </Text>
         </View>
 
@@ -161,7 +180,7 @@ export default function VerifyOtpScreen() {
           />
 
           <Button
-            title={isLoading ? 'Verifying...' : 'Verify'}
+            title={isLoading ? "Verifying..." : "Verify"}
             onPress={onVerifyPress}
             disabled={isLoading || code.length < 6}
             style={styles.button}
@@ -196,7 +215,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   backButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     padding: spacing.xs,
     borderRadius: 8,
     marginBottom: spacing.md,
@@ -234,14 +253,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: spacing.md,
   },
   form: {
     flex: 1,
   },
   errorContainer: {
-    backgroundColor: colors.error + '10',
+    backgroundColor: colors.error + "10",
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -255,7 +274,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: spacing.xl,
   },
   footerText: {

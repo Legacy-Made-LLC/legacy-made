@@ -83,6 +83,19 @@ The MVP focuses on the **primary entry point** — helping users organize critic
 - **No eslint-disable comments** — Do not suppress linter warnings with `eslint-disable` comments. Fix the underlying issue instead.
 - **Data-driven animations** — When animating lists of items (stanzas, cards, list items, etc.), create animation values dynamically based on the data array length. Never hardcode animation values for a fixed number of items. This ensures animations automatically adapt when items are added or removed. Extract timing constants to a configuration object for easy tuning.
 
+### End-to-End Encryption (E2EE)
+
+All user data is end-to-end encrypted. Before making any decisions about encryption — including how data is encrypted/decrypted, how keys are managed, how files are handled, how sharing works, or how backup/recovery operates — **read `docs/e2ee-security-strategy.md`**. That document is the authoritative reference for the security architecture as implemented.
+
+Key things to know:
+- **All personal data** (text fields, files, images, video) is encrypted client-side before transmission
+- **AES-256-GCM** for content encryption, **RSA-OAEP-2048** for DEK wrapping
+- Crypto implementation lives in `lib/crypto/` — `CryptoProvider.tsx` is the central orchestrator
+- Files are encrypted with a binary IV header format: `[12-byte IV][ciphertext + GCM tag]`
+- Text fields use an `EncryptedPayload` JSON format: `{ ct, iv, v }`
+- Each device has its own RSA key pair; the DEK is wrapped per-device
+- Pre-E2EE data is handled gracefully — decryption failures fall back to raw data
+
 ### Linting
 
 **Always run the linter after making changes:**

@@ -12,9 +12,9 @@ import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
-  apiFileToAttachment,
-  type EntryCompletionStatus,
+  apiFilesToAttachments,
   MetadataSchema,
+  type EntryCompletionStatus,
   type FileAttachment,
 } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
@@ -32,13 +32,13 @@ import {
 } from "@/hooks/queries";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { toast } from "@/hooks/useToast";
 import {
   isQuotaExceededError,
   isStorageQuotaError,
 } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { toast } from "@/hooks/useToast";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
@@ -57,6 +57,7 @@ export default function EntryScreen() {
   // Unsaved-changes guard refs
   const formRef = useRef<AnyFormApi | null>(null);
   const allowNavigationRef = useRef(false);
+  const attachmentsRef = useRef<FileAttachment[]>([]);
 
   const handleFormReady = useCallback((form: AnyFormApi) => {
     formRef.current = form;
@@ -79,8 +80,12 @@ export default function EntryScreen() {
       if (allowNavigationRef.current) return;
       // Skip guard in read-only mode
       if (isReadOnly) return;
-      // Allow navigation if form has no unsaved changes
-      if (!formRef.current?.state.isDirty && !attachmentsDirtyRef.current) return;
+      // Check for pending file attachments (added but not yet saved/uploaded)
+      const hasPendingFiles = attachmentsRef.current.some(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      // Allow navigation if form has no unsaved changes and no pending files
+      if (!formRef.current?.state.isDirty && !hasPendingFiles) return;
 
       e.preventDefault();
 
@@ -127,6 +132,7 @@ export default function EntryScreen() {
     deletingFileIds,
     handleRemoteFileDeletions,
   } = useFileAttachments();
+  attachmentsRef.current = attachments;
 
   // Track if we're currently saving to prevent entry refetch from overwriting local attachments
   const isSavingRef = useRef(false);
@@ -143,7 +149,7 @@ export default function EntryScreen() {
       return;
     }
     if (entry?.files) {
-      setAttachments(entry.files.map(apiFileToAttachment));
+      setAttachments(apiFilesToAttachments(entry.files));
     }
   }, [entry?.files, setAttachments]);
 
@@ -313,7 +319,7 @@ export default function EntryScreen() {
         }
       }
     },
-    [handleRemoteFileDeletions, setAttachments]
+    [handleRemoteFileDeletions, setAttachments],
   );
 
   // Handle save
@@ -370,7 +376,10 @@ export default function EntryScreen() {
           };
 
           try {
-            const uploadResults = await uploadFiles({ entryId: savedEntryId }, attachments);
+            const uploadResults = await uploadFiles(
+              { entryId: savedEntryId },
+              attachments,
+            );
 
             // Invalidate entry cache after uploads so it includes the new files
             await queryClient.invalidateQueries({
@@ -507,11 +516,15 @@ export default function EntryScreen() {
         readOnly={isReadOnly}
         onFormReady={handleFormReady}
       />
-      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureInformation} />}
+      {!isReadOnly && (
+        <KeyboardDoneButton accentColor={colors.featureInformation} />
+      )}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
-        title={isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"}
+        title={
+          isViewingSharedPlan ? "Limit Reached" : "You've Reached Your Limit"
+        }
         message={
           isViewingSharedPlan
             ? `This plan has reached its entry limit. Contact ${sharedPlanInfo?.ownerFirstName ?? "the plan owner"} for more information.`

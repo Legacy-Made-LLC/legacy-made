@@ -43,7 +43,7 @@ export default function PillarsScreen() {
   const insets = useSafeAreaInsets();
 
   const handleContinue = () => {
-    router.push("/(onboarding)/contact-intro");
+    router.push("/(onboarding)/security");
   };
 
   return (

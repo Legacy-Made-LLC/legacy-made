@@ -1,15 +1,18 @@
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { TaskProgressData } from "@/api/types";
 import { GuidanceSection } from "@/components/home/GuidanceSection";
+import { KeyBackupNudge } from "@/components/home/KeyBackupNudge";
 import { QuickActions } from "@/components/home/QuickActions";
 import { PressableCard } from "@/components/ui/Card";
 import { CircularProgress } from "@/components/ui/CircularProgress";
+import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { useLegacySections } from "@/constants/legacy";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
@@ -18,6 +21,7 @@ import { useTranslations } from "@/contexts/LocaleContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useAllProgressQuery } from "@/hooks/queries";
 import { useHomeGuidance } from "@/hooks/useHomeGuidance";
+import { useKeyBackupNudge } from "@/hooks/useKeyBackupNudge";
 import { useQuickActions } from "@/hooks/useQuickActions";
 
 /** Build pillar definitions using current section data */
@@ -209,11 +213,33 @@ export default function HomeScreen() {
   const { isViewingSharedPlan } = usePlan();
   const t = useTranslations();
   const {
+    showModal,
+    showGuidanceCard,
+    onModalDismissed,
+    onSilence,
+  } = useKeyBackupNudge();
+  const {
     guidance,
     isLoading: guidanceLoading,
     onDismissContactGuidance,
-  } = useHomeGuidance();
+  } = useHomeGuidance({ showBackupKeyGuidance: showGuidanceCard });
   const quickActions = useQuickActions();
+
+  // Bottom sheet ref for key backup modal
+  const backupSheetRef = useRef<BottomSheetModal>(null);
+  const hasPresented = useRef(false);
+
+  // Present modal when showModal becomes true (guard against re-presenting)
+  useEffect(() => {
+    if (showModal && !hasPresented.current) {
+      hasPresented.current = true;
+      backupSheetRef.current?.present();
+    }
+    // Reset guard when showModal goes false (e.g. after re-nudge cycle)
+    if (!showModal) {
+      hasPresented.current = false;
+    }
+  }, [showModal]);
 
   const firstName = user?.firstName;
 
@@ -239,58 +265,73 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: insets.bottom + spacing.lg + 80 },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Welcome Section */}
-      <View style={styles.welcome}>
-        <View style={styles.brand}>
-          <Image
-            source={require("@/assets/images/muted-green-circle-logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + spacing.lg + 80 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Welcome Section */}
+        <View style={styles.welcome}>
+          <View style={styles.brand}>
+            <Image
+              source={require("@/assets/images/muted-green-circle-logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.pageTitle}>
+            {firstName ? `Hi, ${firstName}` : t.pages.home.pageTitle}
+          </Text>
+          <Text style={styles.greeting}>{greeting}</Text>
         </View>
-        <Text style={styles.pageTitle}>
-          {firstName ? `Hi, ${firstName}` : t.pages.home.pageTitle}
-        </Text>
-        <Text style={styles.greeting}>{greeting}</Text>
-      </View>
 
-      {/* Adaptive Guidance Section */}
-      <GuidanceSection
-        guidance={guidance}
-        isLoading={guidanceLoading}
-        onSecondaryCta={
-          guidance.type === "add_trusted_contact"
-            ? onDismissContactGuidance
-            : undefined
-        }
+        {/* Adaptive Guidance Section */}
+        <GuidanceSection
+          guidance={guidance}
+          isLoading={guidanceLoading}
+          onSecondaryCta={
+            guidance.type === "add_trusted_contact"
+              ? onDismissContactGuidance
+              : guidance.type === "backup_key"
+                ? onSilence
+                : undefined
+          }
+        />
+
+        {/* Quick Actions */}
+        {showQuickActions && (
+          <QuickActions actions={quickActions} isLoading={guidanceLoading} />
+        )}
+
+        {/* Pillar Cards */}
+        <View style={styles.pillars}>
+          {pillars.map((pillar) => (
+            <PillarCard
+              key={pillar.id}
+              pillar={pillar}
+              currentProgress={getPillarProgress(pillar)}
+              onPress={() => router.push(pillar.route)}
+              comingSoonLabel={t.pages.home.pillarActions.comingSoon}
+            />
+          ))}
+        </View>
+
+        <View style={styles.encryptionBadgeContainer}>
+          <EncryptionBadge />
+        </View>
+      </ScrollView>
+
+      {/* Key Backup Modal (renders in overlay, outside ScrollView) */}
+      <KeyBackupNudge
+        ref={backupSheetRef}
+        onModalDismissed={onModalDismissed}
+        onSilence={onSilence}
       />
-
-      {/* Quick Actions */}
-      {showQuickActions && (
-        <QuickActions actions={quickActions} isLoading={guidanceLoading} />
-      )}
-
-      {/* Pillar Cards */}
-      <View style={styles.pillars}>
-        {pillars.map((pillar) => (
-          <PillarCard
-            key={pillar.id}
-            pillar={pillar}
-            currentProgress={getPillarProgress(pillar)}
-            onPress={() => router.push(pillar.route)}
-            comingSoonLabel={t.pages.home.pillarActions.comingSoon}
-          />
-        ))}
-      </View>
-    </ScrollView>
+    </>
   );
 }
 
@@ -388,5 +429,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
+  },
+  encryptionBadgeContainer: {
+    marginTop: spacing.lg,
+    alignItems: "center",
   },
 });

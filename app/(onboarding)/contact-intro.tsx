@@ -24,7 +24,7 @@ export default function ContactIntroScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={2} />
+      <OnboardingHeader showBackButton currentStep={3} />
 
       <View style={styles.screenContainer}>
         <View style={styles.centerContent}>

@@ -18,7 +18,7 @@ import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
 import type { FileAttachment } from "@/api/types";
-import { apiFileToAttachment } from "@/api/types";
+import { apiFilesToAttachments } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
 import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { SavedIndicator } from "@/components/ui/SavedIndicator";
@@ -130,6 +130,7 @@ export default function WishesTaskScreen() {
 
   // Track if files were changed during this session (to invalidate cache on unmount)
   const filesChangedRef = useRef(false);
+  const attachmentsRef = useRef<FileAttachment[]>([]);
 
   // File attachments management (shared hook for deletion logic)
   const {
@@ -138,6 +139,7 @@ export default function WishesTaskScreen() {
     deletingFileIds,
     handleRemoteFileDeletions,
   } = useFileAttachments();
+  attachmentsRef.current = attachments;
 
   // Form reference for auto-save integration
   const formRef = useRef<AnyFormApi | null>(null);
@@ -247,8 +249,12 @@ export default function WishesTaskScreen() {
         autoSave.status === "pending" || autoSave.status === "saving";
       const isDirty = form?.state.isDirty ?? false;
 
-      // Allow navigation if nothing to save
-      if (!hasPendingSave && !isDirty) {
+      // Check for pending file attachments (added but not yet uploaded)
+      const hasPendingFiles = attachmentsRef.current.some(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      // Allow navigation if nothing to save and no pending files
+      if (!hasPendingSave && !isDirty && !hasPendingFiles) {
         return;
       }
 
@@ -303,7 +309,7 @@ export default function WishesTaskScreen() {
   // Initialize attachments when wish data loads
   useEffect(() => {
     if (existingWish?.files) {
-      setAttachments(existingWish.files.map(apiFileToAttachment));
+      setAttachments(apiFilesToAttachments(existingWish.files));
     }
   }, [existingWish?.files, setAttachments]);
 

@@ -20,7 +20,11 @@ import {
 } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
+import { MIGRATION_COMPLETE_KEY } from "@/hooks/useAutoMigration";
 import { GUIDANCE_DISMISSED_KEY_PREFIX } from "@/hooks/useGuidanceDismissals";
+import { clearEncryptionKeys } from "@/lib/crypto/keys";
+import { queryKeys } from "@/lib/queryKeys";
+import { useAuth } from "@clerk/clerk-expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DevAction {
@@ -43,6 +47,7 @@ export function DevMenu() {
   const isFetching = useIsFetching();
   const isLoading = isFetching > 0;
   const { planId } = usePlan();
+  const { userId } = useAuth();
 
   const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
 
@@ -93,6 +98,52 @@ export function DevMenu() {
     Alert.alert("Cleared", "Contact guidance dismissal reset for this plan.");
   };
 
+  const handleResetBackupNudge = async () => {
+    if (!planId) {
+      Alert.alert("No plan", "No active plan to reset nudge for.");
+      return;
+    }
+    await AsyncStorage.multiRemove([
+      `e2ee_backup_nudge_state_${planId}`,
+      `e2ee_backup_nudge_silenced_at_count_${planId}`,
+    ]);
+    await queryClient.invalidateQueries();
+    setIsOpen(false);
+    Alert.alert("Cleared", "Backup nudge state reset for this plan.");
+  };
+
+  const handleClearMigrationFlag = async () => {
+    await AsyncStorage.removeItem(MIGRATION_COMPLETE_KEY);
+    setIsOpen(false);
+    Alert.alert("Cleared", "Migration flag removed. Will re-run on next launch.");
+  };
+
+  const handleEraseKeys = () => {
+    if (!userId) {
+      Alert.alert("No user", "Not signed in.");
+      return;
+    }
+    Alert.alert(
+      "Erase encryption keys?",
+      "This will delete local keys and trigger the recovery flow on next load.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Erase Keys",
+          style: "destructive",
+          onPress: async () => {
+            await clearEncryptionKeys(userId);
+            await queryClient.invalidateQueries({
+              queryKey: queryKeys.crypto.hasKeys(userId),
+            });
+            setIsOpen(false);
+            router.replace("/");
+          },
+        },
+      ],
+    );
+  };
+
   const actions: DevAction[] = [
     {
       id: "skip-onboarding",
@@ -115,6 +166,12 @@ export function DevMenu() {
       onPress: handleClearContactGuidanceDismissal,
     },
     {
+      id: "reset-backup-nudge",
+      label: "Reset Backup Nudge",
+      icon: "shield-outline",
+      onPress: handleResetBackupNudge,
+    },
+    {
       id: "refresh-data",
       label: isLoading ? "Refreshing..." : "Refresh Data",
       icon: "sync-outline",
@@ -125,6 +182,19 @@ export function DevMenu() {
       label: isOnline ? "Simulate Offline" : "Go Back Online",
       icon: isOnline ? "cloud-offline-outline" : "cloud-done-outline",
       onPress: handleToggleOnline,
+    },
+    {
+      id: "clear-migration-flag",
+      label: "Clear Migration Flag",
+      icon: "swap-horizontal-outline",
+      onPress: handleClearMigrationFlag,
+    },
+    {
+      id: "erase-keys",
+      label: "Erase Keys (Trigger Recovery)",
+      icon: "key-outline",
+      onPress: handleEraseKeys,
+      destructive: true,
     },
     {
       id: "test-error",

@@ -44,8 +44,8 @@ export function KeyboardDoneButton({
   const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const [status, setStatus] = useState<DoneStatus>("idle");
   const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Mount when keyboard shows, stay mounted briefly after hide for fade-out
   useEffect(() => {

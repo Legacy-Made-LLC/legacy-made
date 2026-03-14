@@ -4,6 +4,9 @@ import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { PickerMode, useFilePicker } from "@/hooks/useFilePicker";
 import { toast } from "@/hooks/useToast";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { decryptDownloadedFile } from "@/lib/crypto/fileEncryption";
+import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -83,6 +86,7 @@ export function FilePicker({
   const [sharingIds, setSharingIds] = useState<Set<string>>(new Set());
   const { isLoading, pickFromLibrary, pickFromCamera, pickDocument } =
     useFilePicker({ mode });
+  const crypto = useOptionalCrypto();
 
   // Check entitlements for upload permissions
   const { canUpload, isStorageFull } = useEntitlements();
@@ -95,6 +99,11 @@ export function FilePicker({
   const handleFilePicked = useCallback(
     async (pickerFn: () => Promise<FileAttachment | null>) => {
       setShowOptions(false);
+      // Wait for the options modal dismiss animation to complete before
+      // presenting the native picker. On iOS, presenting a system picker
+      // while a React Native Modal is still animating out can cause the
+      // picker to never appear, leaving isLoading stuck forever.
+      await new Promise((resolve) => setTimeout(resolve, 400));
       const file = await pickerFn();
       if (file) {
         onChange([...value, file]);
@@ -127,26 +136,36 @@ export function FilePicker({
       try {
         let fileUri = file.uri;
 
-        // If it's a remote URL, download it first
+        // If it's a remote URL, download and (if encrypted) decrypt first
         if (!file.uri.startsWith("file://")) {
-          const extension = file.mimeType.includes("png")
-            ? "png"
-            : file.mimeType.includes("pdf")
-              ? "pdf"
-              : "jpg";
-          const uniqueFileName = `share_${Date.now()}_${file.fileName || `file.${extension}`}`;
-          const destination = new File(Paths.cache, uniqueFileName);
-
-          const downloadedFile = await File.downloadFileAsync(
-            file.uri,
-            destination,
-          );
-
-          if (!downloadedFile.exists) {
+          const response = await fetch(file.uri);
+          if (!response.ok) {
             throw new Error(`Failed to download ${file.fileName}`);
           }
 
-          fileUri = downloadedFile.uri;
+          let fileData = await response.arrayBuffer();
+
+          // Decrypt if the file is encrypted
+          if (file.isEncrypted && crypto?.dekCryptoKey) {
+            try {
+              fileData = await decryptDownloadedFile(
+                fileData,
+                crypto.dekCryptoKey,
+              );
+            } catch {
+              logger.warn(
+                "E2EE: Share decryption failed, using raw data (may be pre-migration file)",
+              );
+            }
+          }
+
+          // Write to cache for sharing (ensure filename has extension for share sheet)
+          const ext = file.mimeType.split("/").pop() || "bin";
+          const baseName = file.fileName || `file.${ext}`;
+          const uniqueFileName = `share_${Date.now()}_${baseName}`;
+          const cacheFile = new File(Paths.cache, uniqueFileName);
+          await cacheFile.write(new Uint8Array(fileData));
+          fileUri = cacheFile.uri;
         }
 
         await Sharing.shareAsync(fileUri, {
@@ -164,7 +183,7 @@ export function FilePicker({
         });
       }
     },
-    [value],
+    [value, crypto],
   );
 
   /**

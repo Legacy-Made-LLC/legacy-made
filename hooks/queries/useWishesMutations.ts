@@ -17,6 +17,8 @@ import type {
   UpdateWishRequest,
   Wish,
 } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
@@ -103,9 +105,10 @@ export function useCreateWish<T = Record<string, unknown>>(
   const { wishes } = useApi();
   const { canCreate, getQuotaInfo } = useEntitlements();
   const { setIfNew } = useSetProgressIfNew();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
-    mutationFn: (data: CreateWishData<T>) => {
+    mutationFn: async (data: CreateWishData<T>) => {
       if (isReadOnly) {
         throw new Error("This plan is read-only");
       }
@@ -123,7 +126,7 @@ export function useCreateWish<T = Record<string, unknown>>(
         );
       }
 
-      const request: CreateWishRequest<T> = {
+      const baseRequest: CreateWishRequest<T> = {
         planId,
         taskKey,
         title: data.title,
@@ -132,10 +135,22 @@ export function useCreateWish<T = Record<string, unknown>>(
         metadataSchema: data.metadataSchema,
       };
 
-      return wishes.create<T>(request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.activeDEK) {
+        const encrypted = await encryptForCreate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          crypto.activeDEK,
+        );
+        return wishes.create({
+          ...baseRequest,
+          ...encrypted,
+        } as unknown as CreateWishRequest);
+      }
+
+      return wishes.create<T>(baseRequest);
     },
     onMutate: async (data) => {
-      if (!planId || !taskKey) return;
+      if (!planId || !taskKey) return {};
 
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
@@ -181,7 +196,11 @@ export function useCreateWish<T = Record<string, unknown>>(
 
       return { previousWishes, previousEntitlements };
     },
-    onError: (_err, _data, context) => {
+    onError: (
+      _err,
+      _data,
+      context: { previousWishes?: Wish<T>[]; previousEntitlements?: EntitlementInfo } | undefined,
+    ) => {
       if (!planId || !taskKey) return;
 
       // Rollback wishes on error
@@ -204,12 +223,13 @@ export function useCreateWish<T = Record<string, unknown>>(
       if (!planId || !taskKey) return;
 
       // Replace optimistic wish (with temp ID) with real server response
+      const typedWish = newWish as Wish<T>;
       queryClient.setQueryData<Wish<T>[]>(
         queryKeys.wishes.byTaskKey(planId, taskKey),
         (old) => {
-          if (!old) return [newWish];
+          if (!old) return [typedWish];
           // Remove temp wish and add real one
-          return [...old.filter((w) => !w.id.startsWith("temp-")), newWish];
+          return [...old.filter((w) => !w.id.startsWith("temp-")), typedWish];
         },
       );
 
@@ -269,9 +289,10 @@ export function useUpdateWish<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId, isReadOnly } = usePlan();
   const { wishes } = useApi();
+  const crypto = useOptionalCrypto();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       wishId,
       data,
     }: {
@@ -285,17 +306,41 @@ export function useUpdateWish<T = Record<string, unknown>>(
         throw new Error("Plan ID is required");
       }
 
-      const request: UpdateWishRequest<T> = {
+      const baseRequest: UpdateWishRequest<T> = {
         title: data.title,
         notes: data.notes,
         metadata: data.metadata,
         metadataSchema: data.metadataSchema,
       };
 
-      return wishes.update<T>(planId, wishId, request);
+      // Encrypt sensitive fields if crypto is available
+      if (crypto?.activeDEK) {
+        const currentWishes = queryClient.getQueryData<Wish<T>[]>(
+          queryKeys.wishes.byTaskKey(planId, taskKey!),
+        );
+        const currentWish = currentWishes?.find((w) => w.id === wishId);
+        if (!currentWish) {
+          throw new Error(
+            `Cannot encrypt update: wish ${wishId} not found in cache. The wish must be loaded before updating.`,
+          );
+        }
+        const currentMetadata = currentWish.metadata;
+
+        const encrypted = await encryptForUpdate(
+          { title: data.title, notes: data.notes, metadata: data.metadata },
+          currentMetadata,
+          crypto.activeDEK,
+        );
+        return wishes.update(planId, wishId, {
+          ...baseRequest,
+          ...encrypted,
+        } as unknown as UpdateWishRequest);
+      }
+
+      return wishes.update<T>(planId, wishId, baseRequest);
     },
     onMutate: async ({ wishId, data }) => {
-      if (!planId || !taskKey) return;
+      if (!planId || !taskKey) return {};
 
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
@@ -332,7 +377,7 @@ export function useUpdateWish<T = Record<string, unknown>>(
 
       return { previousWishes };
     },
-    onError: (_err, _variables, context) => {
+    onError: (_err, _variables, context: { previousWishes?: Wish<T>[] } | undefined) => {
       if (!planId || !taskKey || !context?.previousWishes) return;
 
       // Rollback on error
@@ -345,11 +390,12 @@ export function useUpdateWish<T = Record<string, unknown>>(
       if (!planId || !taskKey) return;
 
       // Update the cache with the real server response
+      const typedWish = updatedWish as Wish<T>;
       queryClient.setQueryData<Wish<T>[]>(
         queryKeys.wishes.byTaskKey(planId, taskKey),
         (old) => {
-          if (!old) return [updatedWish];
-          return old.map((w) => (w.id === variables.wishId ? updatedWish : w));
+          if (!old) return [typedWish];
+          return old.map((w) => (w.id === variables.wishId ? typedWish : w));
         },
       );
 
@@ -402,7 +448,7 @@ export function useDeleteWish<T = Record<string, unknown>>(
       return wishes.delete(planId, wishId);
     },
     onMutate: async (wishId) => {
-      if (!planId || !taskKey) return;
+      if (!planId || !taskKey) return {};
 
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({

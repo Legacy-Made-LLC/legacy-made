@@ -10,6 +10,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LockedFeatureOverlay, RestrictedAccessOverlay } from "@/components/entitlements";
+import { SharedPlanEncryptionGate } from "@/components/family";
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useLegacySections } from "@/constants/legacy";
@@ -53,6 +54,7 @@ export default function LegacyScreen() {
   }
 
   return (
+    <SharedPlanEncryptionGate>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
@@ -83,6 +85,7 @@ export default function LegacyScreen() {
         No need to finish everything today.{"\n"}The right words will find you.
       </Text>
     </ScrollView>
+    </SharedPlanEncryptionGate>
   );
 }
 

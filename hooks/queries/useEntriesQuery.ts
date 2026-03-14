@@ -2,6 +2,7 @@
  * Entries Query Hooks
  *
  * TanStack Query hooks for fetching entry data.
+ * Entries are automatically decrypted if they have encrypted metadata.
  */
 
 import { useEffect } from "react";
@@ -9,6 +10,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "@/api";
 import type { Entry } from "@/api/types";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { decryptEntry, isEncryptedEntry } from "@/lib/crypto/entryEncryption";
 import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -18,11 +21,26 @@ import { queryKeys } from "@/lib/queryKeys";
 export function useEntriesQuery<T = Record<string, unknown>>(taskKey: string | undefined) {
   const { planId } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.entries.byTaskKey(planId!, taskKey!),
-    queryFn: () => entries.listByTaskKey<T>(planId!, taskKey!),
-    enabled: !!planId && !!taskKey,
+    queryFn: async () => {
+      const raw = await entries.listByTaskKey<T>(planId!, taskKey!);
+      if (!crypto?.activeDEK) return raw;
+      return Promise.all(
+        raw.map(async (e) => {
+          if (!isEncryptedEntry(e)) return e;
+          const decrypted = await decryptEntry<T>(
+            e as unknown as Parameters<typeof decryptEntry>[0],
+            crypto.activeDEK!,
+          );
+          return decrypted as unknown as Entry<T>;
+        }),
+      );
+    },
+    enabled: !!planId && !!taskKey && cryptoReady,
   });
 }
 
@@ -39,11 +57,21 @@ export function useEntryQuery<T = Record<string, unknown>>(
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
+  const cryptoReady = !crypto || (crypto.isReady && !crypto.isActiveDEKLoading);
 
   return useQuery({
     queryKey: queryKeys.entries.single(planId!, entryId!),
-    queryFn: () => entries.get<T>(planId!, entryId!),
-    enabled: !!planId && !!entryId,
+    queryFn: async () => {
+      const raw = await entries.get<T>(planId!, entryId!);
+      if (!crypto?.activeDEK || !isEncryptedEntry(raw)) return raw;
+      const decrypted = await decryptEntry<T>(
+        raw as unknown as Parameters<typeof decryptEntry>[0],
+        crypto.activeDEK,
+      );
+      return decrypted as unknown as Entry<T>;
+    },
+    enabled: !!planId && !!entryId && cryptoReady,
     // Use cached data from list query as initial data for instant display
     initialData: () => {
       if (!planId || !entryId) return undefined;
@@ -140,10 +168,16 @@ export function usePrefetchEntriesByTaskKeys(taskKeys: string[]) {
   const queryClient = useQueryClient();
   const { planId } = usePlan();
   const { entries } = useApi();
+  const crypto = useOptionalCrypto();
 
   // Prefetch on mount and when taskKeys change
   useEffect(() => {
     if (!planId || taskKeys.length === 0) return;
+
+    // Skip prefetch when crypto is active — the prefetch queryFn doesn't
+    // decrypt, so it would cache encrypted data under the same key the
+    // decrypting query reads from, causing blank fields.
+    if (crypto) return;
 
     // Prefetch entries for each task key
     taskKeys.forEach((taskKey) => {
@@ -154,6 +188,6 @@ export function usePrefetchEntriesByTaskKeys(taskKeys: string[]) {
         staleTime: 30000,
       });
     });
-  }, [planId, taskKeys, queryClient, entries]);
+  }, [planId, taskKeys, queryClient, entries, crypto]);
 }
 

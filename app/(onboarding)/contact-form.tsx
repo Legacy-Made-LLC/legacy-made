@@ -60,7 +60,7 @@ export default function ContactFormScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={3} />
+      <OnboardingHeader showBackButton currentStep={4} />
 
       <KeyboardAwareScrollView
         style={styles.formScrollView}

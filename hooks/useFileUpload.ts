@@ -1,8 +1,9 @@
 /**
  * useFileUpload Hook
  *
- * Orchestrates file uploads for entries or wishes. Handles both standard uploads (R2)
- * and video uploads (Mux) with progress tracking.
+ * Orchestrates file uploads for entries, wishes, and messages.
+ * All files (images, documents, audio, video) are encrypted with AES-256-GCM
+ * before upload to R2.
  */
 
 import { useApi } from "@/api";
@@ -13,9 +14,10 @@ import {
   isStorageQuotaError,
   parseStorageQuotaError,
 } from "@/lib/entitlementHelpers";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import { encryptFileForUpload } from "@/lib/crypto/fileEncryption";
 import { logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/queryKeys";
-import { useUser } from "@clerk/clerk-expo";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
@@ -49,8 +51,6 @@ interface UseFileUploadOptions {
   onFileError?: (file: FileAttachment, error: string) => void;
   /** Callback when all uploads complete */
   onAllComplete?: (results: UploadResult[]) => void;
-  /** When true, upload videos via the standard R2 path instead of Mux */
-  useStandardUploadForVideo?: boolean;
 }
 
 interface UseFileUploadReturn {
@@ -80,13 +80,26 @@ async function readFileAsBlob(uri: string): Promise<Blob> {
 }
 
 /**
- * Uploads a file to a presigned URL with progress tracking
+ * Convert a Blob to ArrayBuffer using FileReader.
+ * Blob.arrayBuffer() is not available in React Native (Hermes).
+ */
+function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error("Failed to read blob as ArrayBuffer"));
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+/**
+ * Uploads data to a presigned URL with progress tracking
  * Uses XMLHttpRequest to track upload progress
  */
 function uploadToPresignedUrl(
   url: string,
-  blob: Blob,
-  mimeType: string,
+  data: Blob | ArrayBuffer,
+  contentType: string,
   onProgress: (progress: number) => void,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -120,25 +133,20 @@ function uploadToPresignedUrl(
     }
 
     xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", mimeType);
-    xhr.send(blob);
+    xhr.setRequestHeader("Content-Type", contentType);
+    xhr.send(data);
   });
 }
 
-/**
- * Get the ID from a target for logging/tracking purposes
- */
-function getTargetId(target: FileUploadTarget): string {
-  return target.entryId ?? target.wishId ?? target.messageId ?? "";
-}
+
 
 export function useFileUpload(
   options: UseFileUploadOptions = {},
 ): UseFileUploadReturn {
-  const { onFileUploaded, onFileError, onAllComplete, useStandardUploadForVideo } = options;
+  const { onFileUploaded, onFileError, onAllComplete } = options;
   const { files: filesService } = useApi();
   const queryClient = useQueryClient();
-  const { user } = useUser();
+  const crypto = useOptionalCrypto();
 
   const [uploadStates, setUploadStates] = useState<
     Record<string, FileUploadState>
@@ -174,9 +182,10 @@ export function useFileUpload(
   );
 
   /**
-   * Upload a standard file (image, document) to R2
+   * Upload a file to R2 with optional E2EE encryption.
+   * All file types (images, documents, audio, video) use the same path.
    */
-  const uploadStandardFile = useCallback(
+  const uploadFile = useCallback(
     async (
       target: FileUploadTarget,
       file: FileAttachment,
@@ -185,28 +194,53 @@ export function useFileUpload(
       const uri = file.uri;
 
       try {
-        // 1. Initialize upload - get presigned URL
-        const initResponse = await filesService.initUpload(target, {
-          filename: file.fileName,
-          mimeType: file.mimeType,
-          sizeBytes: file.fileSize,
-        });
-
-        if (signal.aborted) {
-          return { uri, success: false, error: "Cancelled" };
-        }
-
-        // 2. Read file and upload to presigned URL
+        // 1. Read file data
         const blob = await readFileAsBlob(file.uri);
 
         if (signal.aborted) {
           return { uri, success: false, error: "Cancelled" };
         }
 
+        // 2. Determine upload size and content type
+        // If encryption is available, encrypt the file data before upload
+        let uploadData: Blob | ArrayBuffer = blob;
+        let uploadContentType = file.mimeType;
+        let uploadSize = file.fileSize;
+
+        if (crypto?.activeDEK) {
+          const arrayBuffer = await blobToArrayBuffer(blob);
+          const encrypted = await encryptFileForUpload(
+            arrayBuffer,
+            crypto.activeDEK,
+          );
+          uploadData = encrypted;
+          // Encrypted files are opaque binary data
+          uploadContentType = "application/octet-stream";
+          uploadSize = encrypted.byteLength;
+        }
+
+        if (signal.aborted) {
+          return { uri, success: false, error: "Cancelled" };
+        }
+
+        // 3. Initialize upload - get presigned URL
+        const isEncrypted = !!crypto?.activeDEK;
+        const initResponse = await filesService.initUpload(target, {
+          filename: file.fileName,
+          mimeType: file.mimeType,
+          sizeBytes: uploadSize,
+          isEncrypted,
+        });
+
+        if (signal.aborted) {
+          return { uri, success: false, error: "Cancelled" };
+        }
+
+        // 4. Upload to presigned URL
         await uploadToPresignedUrl(
           initResponse.uploadUrl,
-          blob,
-          file.mimeType,
+          uploadData,
+          uploadContentType,
           (progress) => updateFileState(uri, { progress }),
           signal,
         );
@@ -229,17 +263,35 @@ export function useFileUpload(
                 thumbnailUri: file.thumbnailUri,
               });
               const thumbBlob = await readFileAsBlob(file.thumbnailUri);
+
+              // Encrypt thumbnail the same way as the main file
+              let thumbUploadData: Blob | ArrayBuffer = thumbBlob;
+              let thumbContentType = "image/jpeg";
+              let thumbSize = thumbBlob.size;
+
+              if (crypto?.activeDEK) {
+                const thumbArrayBuffer = await blobToArrayBuffer(thumbBlob);
+                const encryptedThumb = await encryptFileForUpload(
+                  thumbArrayBuffer,
+                  crypto.activeDEK,
+                );
+                thumbUploadData = encryptedThumb;
+                thumbContentType = "application/octet-stream";
+                thumbSize = encryptedThumb.byteLength;
+              }
+
               const thumbInit = await filesService.initUpload(target, {
                 filename: `thumb_${file.fileName.replace(/\.\w+$/, ".jpg")}`,
                 mimeType: "image/jpeg",
-                sizeBytes: thumbBlob.size,
+                sizeBytes: thumbSize,
                 role: "thumbnail",
                 parentFileId: initResponse.fileId,
+                isEncrypted,
               });
               await uploadToPresignedUrl(
                 thumbInit.uploadUrl,
-                thumbBlob,
-                "image/jpeg",
+                thumbUploadData,
+                thumbContentType,
                 () => {},
                 signal,
               );
@@ -295,100 +347,7 @@ export function useFileUpload(
         return { uri, success: false, error: message };
       }
     },
-    [filesService, updateFileState, onFileUploaded, onFileError],
-  );
-
-  /**
-   * Upload a video file to Mux
-   * Note: For better UX with large videos, consider using @mux/upchunk
-   */
-  const uploadVideoFile = useCallback(
-    async (
-      target: FileUploadTarget,
-      file: FileAttachment,
-      signal: AbortSignal,
-    ): Promise<UploadResult> => {
-      const uri = file.uri;
-      const targetId = getTargetId(target);
-
-      try {
-        // 1. Initialize video upload - get Mux direct upload URL
-        // Include metadata for easier tracking in Mux dashboard
-        const videoUploadPayload = {
-          filename: file.fileName,
-          mimeType: file.mimeType,
-          sizeBytes: file.fileSize,
-          meta: {
-            externalId: `${targetId}-${Date.now()}`,
-            creatorId: user?.id,
-            title: file.fileName,
-          },
-          passthrough: JSON.stringify(
-            target.entryId
-              ? { entryId: target.entryId }
-              : target.messageId
-                ? { messageId: target.messageId }
-                : { wishId: target.wishId },
-          ),
-        };
-
-        const initResponse = await filesService.initVideoUpload(
-          target,
-          videoUploadPayload,
-        );
-
-        if (signal.aborted) {
-          return { uri, success: false, error: "Cancelled" };
-        }
-
-        // 2. Read file and upload to Mux URL
-        const blob = await readFileAsBlob(file.uri);
-
-        if (signal.aborted) {
-          return { uri, success: false, error: "Cancelled" };
-        }
-
-        await uploadToPresignedUrl(
-          initResponse.uploadUrl,
-          blob,
-          file.mimeType,
-          (progress) => updateFileState(uri, { progress }),
-          signal,
-        );
-
-        // No complete call needed for Mux - webhook handles it
-        // Mark as complete locally (backend will update status via webhook)
-        // Videos don't have a download URL until processed, pass null
-        updateFileState(uri, { status: "complete", progress: 1 });
-        onFileUploaded?.(file, initResponse.fileId, null);
-
-        return { uri, success: true, fileId: initResponse.fileId };
-      } catch (error) {
-        // Check if this is a storage quota error
-        if (isStorageQuotaError(error)) {
-          const quotaDetails = parseStorageQuotaError(error);
-          const message = quotaDetails
-            ? `Storage limit exceeded. You have ${formatStorageMB(quotaDetails.limit - quotaDetails.current)} remaining.`
-            : "Storage quota exceeded";
-          updateFileState(uri, { status: "error", error: message });
-          onFileError?.(file, message);
-          setHasStorageQuotaError(true);
-          return {
-            uri,
-            success: false,
-            error: message,
-            isStorageQuotaError: true,
-          };
-        }
-
-        const message =
-          error instanceof Error ? error.message : "Upload failed";
-        updateFileState(uri, { status: "error", error: message });
-        onFileError?.(file, message);
-        return { uri, success: false, error: message };
-      }
-    },
-    [filesService, updateFileState, onFileUploaded, onFileError, user?.id],
+    [filesService, updateFileState, onFileUploaded, onFileError, crypto],
   );
 
   /**
@@ -429,10 +388,8 @@ export function useFileUpload(
           continue;
         }
 
-        const isVideo = file.mimeType.startsWith("video/");
-        const result = isVideo && !useStandardUploadForVideo
-          ? await uploadVideoFile(target, file, signal)
-          : await uploadStandardFile(target, file, signal);
+        // All files use the same encrypted R2 upload path
+        const result = await uploadFile(target, file, signal);
 
         results.push(result);
       }
@@ -442,12 +399,9 @@ export function useFileUpload(
 
       // Invalidate queries based on target type
       if (target.entryId) {
-        // Invalidate entry-related queries
         queryClient.invalidateQueries({
           queryKey: queryKeys.files.byEntry(target.entryId),
         });
-
-        // Also invalidate entry queries since files are included in entry responses
         queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey;
@@ -474,12 +428,9 @@ export function useFileUpload(
           },
         });
       } else if (target.wishId) {
-        // Invalidate wish-related queries
         queryClient.invalidateQueries({
           queryKey: queryKeys.files.byWish(target.wishId),
         });
-
-        // Also invalidate wish queries since files are included in wish responses
         queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey;
@@ -492,7 +443,6 @@ export function useFileUpload(
       }
 
       // Invalidate all entitlements to refresh storage quota after uploads
-      // (must include plan entitlements since storage indicators read from those)
       queryClient.invalidateQueries({
         queryKey: queryKeys.entitlements.all(),
       });
@@ -502,9 +452,7 @@ export function useFileUpload(
       return results;
     },
     [
-      uploadStandardFile,
-      uploadVideoFile,
-      useStandardUploadForVideo,
+      uploadFile,
       updateFileState,
       queryClient,
       onAllComplete,

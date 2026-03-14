@@ -73,6 +73,12 @@ export const ownerPages: Translations["pages"] = {
         body: "Every section you complete is one less thing your family has to figure out.",
         cta: "Keep going",
       },
+      backupKey: {
+        title: "Back Up Your Access",
+        body: "Set up a recovery method so you can restore access to your information if you lose your phone or switch devices.",
+        cta: "Set Up Recovery",
+        secondaryCta: "Not now",
+      },
       addTrustedContact: {
         title: "Share your plan with someone you trust",
         body: "Adding a trusted contact means the right person can access your plan when it matters most.",

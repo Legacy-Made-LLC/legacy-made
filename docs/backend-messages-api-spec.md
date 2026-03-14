@@ -139,7 +139,7 @@ The file upload system already supports messages. The frontend is wired to use:
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/messages/:messageId/files/upload/init` | Init standard file upload (photos) |
-| `POST` | `/messages/:messageId/files/video/init` | Init video upload (Mux) |
+| `POST` | `/messages/:messageId/files/upload/init` | Init video upload (R2) |
 | `GET` | `/messages/:messageId/files` | List files for a message |
 
 These follow the same pattern as `/entries/:entryId/files/*` and `/wishes/:wishId/files/*`. The `files` table just needs a `messageId` foreign key column alongside the existing `entryId` and `wishId` columns.
@@ -162,4 +162,4 @@ No changes needed. The existing `/plans/:planId/progress` endpoints already supp
 4. **File upload routes** under `/messages/:messageId/files/*` — same handlers as entries/wishes, just scoped to message ownership
 5. **Quota support** — return quota info in list responses (same shape as entries/wishes)
 
-Everything else (auth, plan ownership checks, Mux integration, R2 uploads) is already in place and shared.
+Everything else (auth, plan ownership checks, R2 uploads) is already in place and shared.

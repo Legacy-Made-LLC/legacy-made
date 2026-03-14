@@ -1,8 +1,10 @@
+import { useApi } from "@/api/useApi";
 import { QuotaIndicator, TierBadge } from "@/components/entitlements";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
+import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
 import { useClerk, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,6 +13,7 @@ import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -158,7 +161,7 @@ function AccountView({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageSuccess, setImageSuccess] = useState(false);
-  const imageSuccessTimer = useRef<ReturnType<typeof setTimeout>>();
+  const imageSuccessTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const showImageSuccess = useCallback(() => {
     setImageSuccess(true);
@@ -546,6 +549,7 @@ export function Menu({ visible, onClose }: MenuProps) {
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { pushTokens } = useApi();
   const [modalVisible, setModalVisible] = useState(false);
   const [currentView, setCurrentView] = useState<MenuView>("main");
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
@@ -576,6 +580,20 @@ export function Menu({ visible, onClose }: MenuProps) {
     },
   ];
 
+  // Security items
+  const securityItems = [
+    {
+      label: "Key Backup",
+      route: "/settings/key-backup",
+      icon: "key-outline" as const,
+    },
+    {
+      label: "My Devices",
+      route: "/settings/devices",
+      icon: "phone-portrait-outline" as const,
+    },
+  ];
+
   // Support items with external links
   const supportItems = [
     {
@@ -598,6 +616,17 @@ export function Menu({ visible, onClose }: MenuProps) {
   const handleSignOut = async () => {
     onClose();
     try {
+      // Best-effort: unregister push token before clearing auth
+      try {
+        const token = await AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+        if (token) {
+          await pushTokens.unregister(token);
+          await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
+        }
+      } catch (tokenErr) {
+        logger.error("Push token cleanup failed", tokenErr);
+      }
+
       queryClient.clear();
       await signOut();
     } catch (err) {
@@ -728,6 +757,18 @@ export function Menu({ visible, onClose }: MenuProps) {
                 {/* Your Plan Section */}
                 <MenuSection title="YOUR PLAN">
                   {planItems.map((item) => (
+                    <MenuItem
+                      key={item.label}
+                      label={item.label}
+                      icon={item.icon}
+                      onPress={() => handleNavigation(item.route)}
+                    />
+                  ))}
+                </MenuSection>
+
+                {/* Security Section */}
+                <MenuSection title="SECURITY">
+                  {securityItems.map((item) => (
                     <MenuItem
                       key={item.label}
                       label={item.label}

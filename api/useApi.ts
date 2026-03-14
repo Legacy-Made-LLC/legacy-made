@@ -9,9 +9,11 @@ import { createApiClient } from './client';
 import { createEntriesService } from './entries';
 import { createEntitlementsService } from './entitlements';
 import { createFilesService } from './files';
+import { createKeysService } from './keys';
 import { createMessagesService } from './messages';
 import { createPlansService } from './plans';
 import { createProgressService } from './progress';
+import { createPushTokensService } from './pushTokens';
 import { createSharedPlansService } from './sharedPlans';
 import { createTrustedContactsService } from './trustedContacts';
 import { createWishesService } from './wishes';
@@ -83,8 +85,16 @@ export function useApi() {
     return createSharedPlansService(client);
   }, [client]);
 
+  const keys = useMemo(() => {
+    return createKeysService(client);
+  }, [client]);
+
   const accessInvitations = useMemo(() => {
     return createAccessInvitationsService(client);
+  }, [client]);
+
+  const pushTokens = useMemo(() => {
+    return createPushTokensService(client);
   }, [client]);
 
   return {
@@ -108,8 +118,12 @@ export function useApi() {
     trustedContacts,
     /** Shared plans service for viewing plans shared with the user */
     sharedPlans,
+    /** E2EE key management service */
+    keys,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
+    /** Push token registration service */
+    pushTokens,
     /** Whether the user is signed in */
     isSignedIn,
     /** Whether Clerk has finished loading */

@@ -1,6 +1,7 @@
 import { FormInput, signUpSchema } from "@/components/forms";
 import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
+import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
@@ -85,7 +86,7 @@ export default function AccountCreationScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <OnboardingHeader showBackButton currentStep={5} />
+      <OnboardingHeader showBackButton currentStep={6} />
 
       <KeyboardAwareScrollView
         style={styles.formScrollView}
@@ -165,6 +166,8 @@ export default function AccountCreationScreen() {
             />
           )}
         </form.Field>
+
+        <EncryptionBadge />
 
         <View style={styles.formButtonContainer}>
           <Text style={styles.verificationExplanation}>

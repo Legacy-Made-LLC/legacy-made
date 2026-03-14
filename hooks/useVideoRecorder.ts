@@ -86,6 +86,18 @@ export function useVideoRecorder(
     };
   }, []);
 
+  const stopRecording = useCallback(() => {
+    if (state !== "recording") return;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    cameraRef.current?.stopRecording();
+    // The recordAsync promise will resolve and handle the state transition
+  }, [state]);
+
   // Auto-stop at max duration
   useEffect(() => {
     if (state === "recording" && elapsedSeconds >= maxDuration) {
@@ -129,18 +141,6 @@ export function useVideoRecorder(
       setState("idle");
     }
   }, [state, maxDuration]);
-
-  const stopRecording = useCallback(() => {
-    if (state !== "recording") return;
-
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    cameraRef.current?.stopRecording();
-    // The recordAsync promise will resolve and handle the state transition
-  }, [state]);
 
   const toggleFacing = useCallback(() => {
     setFacing((prev) => (prev === "front" ? "back" : "front"));

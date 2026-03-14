@@ -75,4 +75,18 @@ export const queryKeys = {
     // All plans shared with the current user
     all: () => ['sharedPlans'] as const,
   },
+  crypto: {
+    all: () => ['crypto'] as const,
+    hasKeys: (userId: string) => ['crypto', 'hasKeys', userId] as const,
+    dek: (userId: string) => ['crypto', 'dek', userId] as const,
+    keyVersion: (userId: string) => ['crypto', 'keyVersion', userId] as const,
+    e2eeStatus: (planId: string) => ['crypto', 'e2eeStatus', planId] as const,
+    backupStatus: (planId: string) => ['crypto', 'backupStatus', planId] as const,
+    sharedDEK: (planId: string, ownerId: string) =>
+      ['crypto', 'sharedDEK', planId, ownerId] as const,
+    serverKeys: (userId: string) => ['crypto', 'serverKeys', userId] as const,
+    /** All device keys (including inactive) for the device management UI */
+    deviceKeys: (userId: string) => ['crypto', 'deviceKeys', userId] as const,
+    recoveryEvents: () => ['crypto', 'recoveryEvents'] as const,
+  },
 } as const;

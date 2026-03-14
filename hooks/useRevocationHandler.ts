@@ -21,6 +21,7 @@ import { useCallback } from "react";
 import { usePerspective } from "@/contexts/LocaleContext";
 import { usePlanTransition } from "@/contexts/PlanTransitionContext";
 import { usePlan } from "@/data/PlanProvider";
+import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
 import { toast } from "./useToast";
@@ -37,6 +38,7 @@ export function useRevocationHandler() {
   const { setPerspective } = usePerspective();
   const { transition } = usePlanTransition();
   const queryClient = useQueryClient();
+  const { clearSharedDEKCache } = useCrypto();
 
   const handleRevocation = useCallback(() => {
     // Prevent concurrent calls — shared across all hook instances
@@ -50,6 +52,11 @@ export function useRevocationHandler() {
       returnToMyPlan();
       setPerspective("owner");
       router.push("/(app)/(tabs)/home");
+
+      // Clear the shared plan's decryption key from memory
+      if (revokedPlanId) {
+        clearSharedDEKCache(revokedPlanId);
+      }
 
       // Clean up cached data for the revoked plan
       if (revokedPlanId) {
@@ -88,6 +95,7 @@ export function useRevocationHandler() {
     returnToMyPlan,
     setPerspective,
     queryClient,
+    clearSharedDEKCache,
   ]);
 
   return { handleRevocation };

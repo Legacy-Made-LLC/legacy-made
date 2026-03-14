@@ -24,7 +24,7 @@ export default function RootIndex() {
     if (!hasCompletedInitialOnboarding) {
       setHasCompletedInitialOnboarding(true);
     }
-    return <Redirect href="/(app)" />;
+    return <Redirect href="/(app)/(tabs)/home" />;
   }
 
   // If user hasn't completed onboarding, redirect to onboarding

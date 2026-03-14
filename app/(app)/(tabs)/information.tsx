@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { RestrictedAccessOverlay } from "@/components/entitlements";
+import { SharedPlanEncryptionGate } from "@/components/family";
 import { PillarSectionCard } from "@/components/ui/PillarSectionCard";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useVaultSections } from "@/constants/vault";
@@ -29,6 +30,7 @@ export default function InformationScreen() {
   }
 
   return (
+    <SharedPlanEncryptionGate>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
@@ -59,6 +61,7 @@ export default function InformationScreen() {
         No need to finish everything today.{"\n"}A little at a time goes a long way.
       </Text>
     </ScrollView>
+    </SharedPlanEncryptionGate>
   );
 }
 

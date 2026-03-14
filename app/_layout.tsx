@@ -28,11 +28,13 @@ import Loader from "@/components/ui/Loader";
 import { PausedMutationBanner } from "@/components/ui/PausedMutationBanner";
 import { Toast } from "@/components/ui/Toast";
 import { LocaleProvider } from "@/contexts/LocaleContext";
+import { NotificationPromptProvider } from "@/contexts/NotificationPromptContext";
 import { PlanTransitionProvider } from "@/contexts/PlanTransitionContext";
 import { EntitlementsProvider } from "@/data/EntitlementsProvider";
 import { OnboardingProvider } from "@/data/OnboardingContext";
 import { PlanProvider } from "@/data/PlanProvider";
 import { UpgradePromptProvider } from "@/data/UpgradePromptContext";
+import { CryptoProvider } from "@/lib/crypto/CryptoProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
 import * as Sentry from "@sentry/react-native";
 import Constants from "expo-constants";
@@ -119,36 +121,44 @@ export default Sentry.wrap(function RootLayout() {
                 >
                   <QueryProvider>
                     <PlanProvider>
-                      <EntitlementsProvider>
-                        <PlanTransitionProvider>
-                          <Stack
-                            screenOptions={{
-                              headerShown: false,
-                              animation: "fade",
-                            }}
-                            initialRouteName="index"
-                          >
-                            <Stack.Screen name="index" />
-                            <Stack.Screen name="(app)" />
-                            <Stack.Screen name="(auth)" />
-                            <Stack.Screen
-                              name="(onboarding)"
-                              options={{ animation: "fade" }}
-                            />
-                            <Stack.Screen
-                              name="invitations/[token]"
-                              options={{
+                      <NotificationPromptProvider>
+                      <CryptoProvider>
+                        <EntitlementsProvider>
+                          <PlanTransitionProvider>
+                            <Stack
+                              screenOptions={{
                                 headerShown: false,
-                                presentation: "modal",
+                                animation: "fade",
                               }}
-                            />
-                          </Stack>
-                          <StatusBar style="dark" />
-                          <Toast />
-                          <PausedMutationBanner />
-                          <DevMenu />
-                        </PlanTransitionProvider>
-                      </EntitlementsProvider>
+                              initialRouteName="index"
+                            >
+                              <Stack.Screen name="index" />
+                              <Stack.Screen name="(app)" />
+                              <Stack.Screen name="(auth)" />
+                              <Stack.Screen
+                                name="(onboarding)"
+                                options={{ animation: "fade" }}
+                              />
+                              <Stack.Screen
+                                name="invitations/[token]"
+                                options={{
+                                  headerShown: false,
+                                  presentation: "modal",
+                                }}
+                              />
+                              <Stack.Screen
+                                name="settings"
+                                options={{ headerShown: false }}
+                              />
+                            </Stack>
+                            <StatusBar style="dark" />
+                            <Toast />
+                            <PausedMutationBanner />
+                            <DevMenu />
+                          </PlanTransitionProvider>
+                        </EntitlementsProvider>
+                      </CryptoProvider>
+                      </NotificationPromptProvider>
                     </PlanProvider>
                   </QueryProvider>
                 </ClerkProvider>

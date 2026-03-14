@@ -11,20 +11,30 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { TrustedContactAccessLevel } from "@/api/types";
+import { useApi } from "@/api";
+import type {
+  CreateTrustedContactRequest,
+  TrustedContactAccessLevel,
+} from "@/api/types";
 import { StatusBadge } from "@/components/family/StatusBadge";
 import { Card } from "@/components/ui/Card";
 import Loader from "@/components/ui/Loader";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useNotificationPrompt } from "@/contexts/NotificationPromptContext";
 import {
   useCreateTrustedContact,
   useDeleteTrustedContact,
   useResendInvitation,
+  useRevokeTrustedContact,
   useTrustedContactQuery,
   useUpdateTrustedContact,
 } from "@/hooks/queries";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
+import { useRevokeDEK, useShareDEK } from "@/hooks/useShareDEK";
 import { toast } from "@/hooks/useToast";
+import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { wrapDEKForRecipient } from "@/lib/crypto/wrapDEKForRecipient";
+import { logger } from "@/lib/logger";
 
 const ACCESS_LEVEL_LABELS: Record<string, string> = {
   full_edit: "Can Edit",
@@ -55,8 +65,14 @@ export default function TrustedContactDetailScreen() {
   const { data: contact, isLoading } = useTrustedContactQuery(contactId);
   const createMutation = useCreateTrustedContact();
   const updateMutation = useUpdateTrustedContact();
+  const revokeMutation = useRevokeTrustedContact();
   const deleteMutation = useDeleteTrustedContact();
   const resendMutation = useResendInvitation();
+  const shareDEK = useShareDEK();
+  const revokeDEK = useRevokeDEK();
+  const { keys } = useApi();
+  const { dekCryptoKey } = useCrypto();
+  const { triggerPrompt } = useNotificationPrompt();
   const { guardOverlay } = usePillarGuard({
     pillar: "family_access",
     featureName: "Family Access",
@@ -78,13 +94,17 @@ export default function TrustedContactDetailScreen() {
   const initials =
     `${contact.firstName.charAt(0)}${contact.lastName.charAt(0)}`.toUpperCase();
   const isPending = contact.accessStatus === "pending";
+  const isAccepted = contact.accessStatus === "accepted";
   const isActive =
     contact.accessStatus === "pending" || contact.accessStatus === "accepted";
+  const isDeclined = contact.accessStatus === "declined";
   const isRevoked =
     contact.accessStatus === "revoked_by_owner" ||
     contact.accessStatus === "revoked_by_contact";
+  const isInactive = isRevoked || isDeclined;
   const statusDate =
     contact.acceptedAt || contact.declinedAt || contact.revokedAt;
+  const needsDEKShare = isAccepted && contact.dekShared === false;
 
   const handleAccessLevelChange = async (
     newLevel: TrustedContactAccessLevel,
@@ -100,6 +120,16 @@ export default function TrustedContactDetailScreen() {
       toast.success({ message: "Access level updated." });
     } catch {
       toast.error({ message: "Couldn\u2019t update access level." });
+    }
+  };
+
+  const handleShareDEK = async () => {
+    if (!contact.clerkUserId) return;
+    try {
+      await shareDEK.mutateAsync({ recipientUserId: contact.clerkUserId });
+      toast.success({ message: "Encryption key shared." });
+    } catch {
+      toast.error({ message: "Couldn\u2019t share encryption key." });
     }
   };
 
@@ -126,12 +156,40 @@ export default function TrustedContactDetailScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteMutation.mutateAsync(contact.id);
+              await revokeMutation.mutateAsync(contact.id);
+              // Revoke DEK access if the contact had encryption keys shared
+              if (contact.clerkUserId) {
+                revokeDEK.mutate(contact.clerkUserId);
+              }
               toast.success({ message: "Access has been revoked." });
-              router.back();
             } catch {
               toast.error({
                 message: "Couldn\u2019t revoke access.",
+              });
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Trusted Contact",
+      `This will permanently remove ${fullName} from your trusted contacts. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(contact.id);
+              toast.success({ message: "Trusted contact has been deleted." });
+              router.back();
+            } catch {
+              toast.error({
+                message: "Couldn\u2019t delete trusted contact.",
               });
             }
           },
@@ -150,7 +208,7 @@ export default function TrustedContactDetailScreen() {
           text: "Restore",
           onPress: async () => {
             try {
-              await createMutation.mutateAsync({
+              const request: CreateTrustedContactRequest = {
                 email: contact.email,
                 firstName: contact.firstName,
                 lastName: contact.lastName,
@@ -158,11 +216,36 @@ export default function TrustedContactDetailScreen() {
                 accessLevel: contact.accessLevel,
                 accessTiming: contact.accessTiming,
                 notes: contact.notes ?? undefined,
-              });
+              };
+
+              // Atomic DEK pre-share: if the contact has a known userId,
+              // fetch their active public keys and wrap the DEK for each device
+              const recipientUserId = contact.clerkUserId;
+              if (recipientUserId && dekCryptoKey) {
+                try {
+                  const recipientKeys =
+                    await keys.getPublicKeys(recipientUserId);
+                  if (recipientKeys.length > 0) {
+                    request.deks = await wrapDEKForRecipient(
+                      dekCryptoKey,
+                      recipientUserId,
+                      recipientKeys,
+                    );
+                  }
+                } catch (dekError) {
+                  logger.warn("DEK pre-share failed on restore", {
+                    error: dekError,
+                  });
+                }
+              }
+
+              await createMutation.mutateAsync(request);
+
               toast.success({
                 title: "Invitation sent",
                 message: `A new invitation has been sent to ${contact.email}.`,
               });
+              triggerPrompt(contact.firstName);
               router.back();
             } catch {
               toast.error({ message: "Couldn\u2019t restore access." });
@@ -192,6 +275,40 @@ export default function TrustedContactDetailScreen() {
           <Text style={styles.relationship}>{contact.relationship}</Text>
         )}
       </View>
+
+      {/* DEK Sharing Banner */}
+      {needsDEKShare && (
+        <Card style={styles.dekBanner}>
+          <View style={styles.dekBannerContent}>
+            <View style={styles.dekBannerIcon}>
+              <Ionicons
+                name="key-outline"
+                size={22}
+                color={colors.featureFamily}
+              />
+            </View>
+            <View style={styles.dekBannerText}>
+              <Text style={styles.dekBannerTitle}>Share encryption access</Text>
+              <Text style={styles.dekBannerDescription}>
+                {fullName} has accepted your invitation but can&apos;t view your
+                plan until you share your encryption key.
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={handleShareDEK}
+            disabled={shareDEK.isPending}
+            style={({ pressed }) => [
+              styles.dekShareButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.dekShareButtonText}>
+              {shareDEK.isPending ? "Sharing..." : "Share Encryption Key"}
+            </Text>
+          </Pressable>
+        </Card>
+      )}
 
       {/* Detail Card */}
       <Card style={styles.detailCard}>
@@ -347,7 +464,7 @@ export default function TrustedContactDetailScreen() {
         {isActive && (
           <Pressable
             onPress={handleRevoke}
-            disabled={deleteMutation.isPending}
+            disabled={revokeMutation.isPending}
             style={({ pressed }) => [
               styles.destructiveButton,
               pressed && styles.buttonPressed,
@@ -359,6 +476,22 @@ export default function TrustedContactDetailScreen() {
               color={colors.error}
             />
             <Text style={styles.destructiveButtonText}>Revoke Access</Text>
+          </Pressable>
+        )}
+
+        {isInactive && (
+          <Pressable
+            onPress={handleDelete}
+            disabled={deleteMutation.isPending}
+            style={({ pressed }) => [
+              styles.destructiveButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Text style={styles.destructiveButtonText}>
+              {deleteMutation.isPending ? "Deleting..." : "Delete Contact"}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -405,6 +538,52 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  // DEK Sharing Banner
+  dekBanner: {
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.featureFamily,
+    backgroundColor: colors.featureFamilyTint,
+  },
+  dekBannerContent: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  dekBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dekBannerText: {
+    flex: 1,
+  },
+  dekBannerTitle: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.titleMedium,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  dekBannerDescription: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
+  },
+  dekShareButton: {
+    backgroundColor: colors.featureFamily,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.pill,
+    alignItems: "center",
+  },
+  dekShareButtonText: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.body,
+    color: colors.surface,
   },
   // Detail Card
   detailCard: {
