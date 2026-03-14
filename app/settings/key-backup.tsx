@@ -20,6 +20,9 @@ export default function KeyBackupScreen() {
   const router = useRouter();
   const { backupStatus } = useCrypto();
 
+  const hasAnyRecoveryMethod =
+    backupStatus.escrow.configured || backupStatus.recoveryPhrase.configured;
+
   const options = [
     {
       id: "escrow" as const,
@@ -57,7 +60,13 @@ export default function KeyBackupScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Choose Recovery Method" }} />
+      <Stack.Screen
+        options={{
+          title: hasAnyRecoveryMethod
+            ? "Your Recovery Methods"
+            : "Choose Recovery Method",
+        }}
+      />
       <ScrollView
         style={shared.container}
         contentContainerStyle={[
@@ -151,6 +160,19 @@ export default function KeyBackupScreen() {
         </Text>
 
         <EncryptionBadge />
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.homeButton,
+            pressed && styles.homeButtonPressed,
+          ]}
+          onPress={() => router.replace("/")}
+          accessibilityRole="button"
+          accessibilityLabel="Go back to home"
+        >
+          <Ionicons name="home-outline" size={18} color={colors.primary} />
+          <Text style={styles.homeButtonText}>Back to Home</Text>
+        </Pressable>
       </ScrollView>
     </>
   );
@@ -221,5 +243,26 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: "center",
     marginTop: spacing.md,
+  },
+  homeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: 14,
+    marginTop: spacing.md,
+    backgroundColor: `${colors.primary}10`,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: `${colors.primary}25`,
+  },
+  homeButtonPressed: {
+    opacity: 0.7,
+    backgroundColor: `${colors.primary}18`,
+  },
+  homeButtonText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.body,
+    color: colors.primary,
   },
 });

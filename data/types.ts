@@ -12,14 +12,9 @@ export interface FinancialAccount {
   id: string;
   accountName: string;
   institution: string;
-  accountType:
-    | 'Checking'
-    | 'Savings'
-    | 'Retirement'
-    | 'Investment'
-    | 'Credit'
-    | 'Loan'
-    | 'Other';
+  accountTypes: Array<
+    'Checking' | 'Savings' | 'Retirement' | 'Investment' | 'Credit' | 'Loan' | 'Other'
+  >;
   accountNumberLast4?: string;
   notes?: string;
 }

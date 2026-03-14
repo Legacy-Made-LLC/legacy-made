@@ -22,6 +22,8 @@ import { listStyles } from "./listStyles";
 
 interface FinancialMetadata {
   institution?: string;
+  accountTypes?: string[];
+  /** @deprecated Legacy single type — use accountTypes */
   accountType?: string;
   accountNumber?: string;
 }
@@ -42,9 +44,10 @@ export function FinancialList({
 
   const getDisplayTitle = useCallback((entry: Entry) => {
     const metadata = entry.metadata as FinancialMetadata;
+    const typesLabel = metadata.accountTypes?.join(", ") ?? metadata.accountType;
     return (
       entry.title ||
-      [metadata.institution, metadata.accountType].filter(Boolean).join(" ")
+      [metadata.institution, typesLabel].filter(Boolean).join(" ")
     );
   }, []);
 
@@ -130,11 +133,12 @@ export function FinancialList({
 
         const displayTitle = getDisplayTitle(entry);
 
-        // If title is blank, show institution + account type as title
+        // If title is blank, show institution + account types as title
+        const typesLabel = metadata.accountTypes?.join(", ") ?? metadata.accountType;
         const hasCustomTitle =
           entry.title &&
           entry.title !==
-            `${metadata.institution} ${metadata.accountType}`.trim();
+            `${metadata.institution} ${typesLabel}`.trim();
 
         // Subtitle: show institution (if not already in title) + account number
         const subtitle = [

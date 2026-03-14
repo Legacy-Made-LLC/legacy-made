@@ -38,7 +38,7 @@ const FINANCIAL_SCHEMA: MetadataSchema = {
   version: 1,
   fields: {
     institution: { label: "Institution", order: 1 },
-    accountType: { label: "Account Type", order: 2 },
+    accountTypes: { label: "Account Types", order: 2 },
     accountNumber: { label: "Account Number (last 4)", order: 3 },
     notes: { label: "Notes", order: 4 },
   },
@@ -154,23 +154,25 @@ export function entryToFinancialAccount(entry: Entry<FinancialMetadata>): Financ
     id: entry.id,
     accountName: entry.title || '',
     institution: metadata.institution,
-    accountType: mapAccountType(metadata.accountType),
+    accountTypes: mapAccountTypes(metadata.accountTypes),
     accountNumberLast4: metadata.accountNumber,
     notes: metadata.notes || entry.notes || undefined,
   };
 }
 
 /**
- * Map API account type string to app's union type
+ * Map API account type strings to app's union type array
  */
-function mapAccountType(
-  type: string
-): FinancialAccount['accountType'] {
+function mapAccountTypes(
+  types: string[]
+): FinancialAccount['accountTypes'] {
   const validTypes = ['Checking', 'Savings', 'Retirement', 'Investment', 'Credit', 'Loan', 'Other'];
-  const normalized = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-  return validTypes.includes(normalized)
-    ? (normalized as FinancialAccount['accountType'])
-    : 'Other';
+  return types.map((type) => {
+    const normalized = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+    return validTypes.includes(normalized)
+      ? (normalized as FinancialAccount['accountTypes'][number])
+      : 'Other';
+  });
 }
 
 /**
@@ -187,7 +189,7 @@ export function financialAccountToCreateRequest(
     notes: account.notes,
     metadata: {
       institution: account.institution,
-      accountType: account.accountType,
+      accountTypes: account.accountTypes,
       accountNumber: account.accountNumberLast4,
       notes: account.notes,
     },

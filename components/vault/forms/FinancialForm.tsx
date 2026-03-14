@@ -36,8 +36,8 @@ const FINANCIAL_METADATA_SCHEMA: MetadataSchema = {
   version: 1,
   fields: {
     institution: { label: "Bank/Institution", order: 1 },
-    accountType: {
-      label: "Account Type",
+    accountTypes: {
+      label: "Account Types",
       order: 2,
       valueLabels: Object.fromEntries(accountTypes.map((t) => [t, t])),
     },
@@ -51,7 +51,9 @@ type AccountType = (typeof accountTypes)[number];
 
 interface FinancialMetadata {
   institution: string;
-  accountType: AccountType;
+  accountTypes: AccountType[];
+  /** @deprecated Use accountTypes instead. Kept for backward compatibility with existing entries. */
+  accountType?: AccountType;
   accountOwners?: string | null;
   accountNumber?: string | null;
   contactInfo?: string | null;
@@ -80,30 +82,38 @@ export function FinancialForm({
     | FinancialMetadata
     | undefined;
 
+  // Migrate legacy single accountType to accountTypes array
+  const initialAccountTypes: string[] =
+    initialMetadata?.accountTypes ??
+    (initialMetadata?.accountType ? [initialMetadata.accountType] : []);
+
   const defaultValues = useMemo(
     () => ({
       accountName: initialData?.title ?? "",
       institution: initialMetadata?.institution ?? "",
-      accountType: (initialMetadata?.accountType ?? "Checking") as string,
+      accountTypes: initialAccountTypes,
       accountOwners: initialMetadata?.accountOwners ?? "",
       accountNumber: initialMetadata?.accountNumber ?? "",
       notes: initialMetadata?.notes ?? initialData?.notes ?? "",
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [initialData, initialMetadata],
   );
 
   const submitForm = async (value: typeof defaultValues) => {
+    const selectedTypes = value.accountTypes as AccountType[];
     const metadata: FinancialMetadata = {
       institution: value.institution.trim(),
-      accountType: value.accountType as AccountType,
+      accountTypes: selectedTypes.length > 0 ? selectedTypes : ["Other"],
       accountOwners: value.accountOwners.trim() || null,
       accountNumber: value.accountNumber.trim() || null,
       notes: value.notes.trim() || null,
     };
 
+    const typesLabel = selectedTypes.join(", ");
     const title =
       value.accountName.trim() ||
-      `${value.institution.trim()} ${value.accountType}`.trim() ||
+      `${value.institution.trim()} ${typesLabel}`.trim() ||
       "Draft";
 
     try {
@@ -198,35 +208,45 @@ export function FinancialForm({
           )}
         </form.Field>
 
-        <form.Field name="accountType">
-          {(field) => (
-            <View style={formStyles.fieldContainer}>
-              <Text style={formStyles.label}>Account Type</Text>
-              <View style={formStyles.typeGrid}>
-                {accountTypes.map((type) => (
-                  <Pressable
-                    key={type}
-                    style={[
-                      formStyles.typeButton,
-                      field.state.value === type &&
-                        formStyles.typeButtonSelected,
-                    ]}
-                    onPress={readOnly ? undefined : () => field.handleChange(type)}
-                  >
-                    <Text
+        <form.Field name="accountTypes">
+          {(field) => {
+            const selected = field.state.value as string[];
+            const toggleType = (type: string) => {
+              if (readOnly) return;
+              const updated = selected.includes(type)
+                ? selected.filter((t) => t !== type)
+                : [...selected, type];
+              field.handleChange(updated);
+            };
+            return (
+              <View style={formStyles.fieldContainer}>
+                <Text style={formStyles.label}>Account Types</Text>
+                <View style={formStyles.typeGrid}>
+                  {accountTypes.map((type) => (
+                    <Pressable
+                      key={type}
                       style={[
-                        formStyles.typeButtonText,
-                        field.state.value === type &&
-                          formStyles.typeButtonTextSelected,
+                        formStyles.typeButton,
+                        selected.includes(type) &&
+                          formStyles.typeButtonSelected,
                       ]}
+                      onPress={() => toggleType(type)}
                     >
-                      {type}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text
+                        style={[
+                          formStyles.typeButtonText,
+                          selected.includes(type) &&
+                            formStyles.typeButtonTextSelected,
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
-            </View>
-          )}
+            );
+          }}
         </form.Field>
 
         <form.Field name="accountName">

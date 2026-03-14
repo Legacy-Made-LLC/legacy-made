@@ -9,11 +9,11 @@ import type { Translations } from "../../types";
 export const ownerVault: Translations["vault"] = {
   contacts: {
     title: "Who to Contact First",
-    description: "The first calls to be made",
+    description: "The people you trust to step in and help coordinate",
     tasks: {
       primary: {
         title: "Primary Contacts",
-        description: "The people to call first",
+        description: "The people you trust to step in and help coordinate",
         triggerText: "Who should be contacted first?",
         guidanceHeading: "The primary point of contact.",
         guidance:
@@ -42,15 +42,15 @@ export const ownerVault: Translations["vault"] = {
 
   people: {
     title: "Important People",
-    description: "Everyone else those closest to you should know about",
+    description: "Others who matter and should be in the loop",
     tasks: {
       people: {
         title: "Important People",
-        description: "Everyone else those closest to you should know about",
+        description: "Others who matter and should be in the loop",
         triggerText: "Who else matters in your life?",
         guidanceHeading: "Who else matters in your life?",
         guidance:
-          "Beyond family, there are people who should know — and people those closest to you should know about.",
+          "Beyond your inner circle, there are people who should know — and people your inner circle should know about.",
         tips: [
           "Think about neighbors, coworkers, or community members who matter to you.",
           "Include anyone who might be waiting to hear from you regularly.",
@@ -83,11 +83,11 @@ export const ownerVault: Translations["vault"] = {
 
   insurance: {
     title: "Insurance Policies",
-    description: "Coverage those closest to you should know about",
+    description: "Coverage to know about when it matters most",
     tasks: {
       policies: {
         title: "Insurance Policies",
-        description: "Coverage those closest to you should know about",
+        description: "Coverage to know about when it matters most",
         triggerText: "What policies should you include?",
         guidanceHeading:
           "Insurance benefits only help if others know they exist.",
@@ -148,8 +148,7 @@ export const ownerVault: Translations["vault"] = {
         title: "Property & Vehicles",
         description: "Real estate, vehicles, and physical assets",
         triggerText: "What property should you include?",
-        guidanceHeading:
-          "Others won't know what exists unless you tell them.",
+        guidanceHeading: "Others won't know what exists unless you tell them.",
         guidance:
           "Properties, vehicles, storage units — if there's a key, a title, or a code, note it here.",
         tips: [

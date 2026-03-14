@@ -29,7 +29,7 @@ export interface ContactMetadata {
 
 export interface FinancialMetadata {
   institution: string;
-  accountType: string;
+  accountTypes: string[];
   accountNumber?: string;
   contactInfo?: string;
   notes?: string;

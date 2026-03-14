@@ -122,7 +122,7 @@ export type OnboardingContactFormValues = z.infer<typeof onboardingContactSchema
 export const financialSchema = z.object({
   accountName: optionalString,
   institution: requiredString("Institution"),
-  accountType: optionalString,
+  accountTypes: z.array(z.string()),
   accountOwners: optionalString,
   accountNumber: optionalString,
   notes: optionalString,

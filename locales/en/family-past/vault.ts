@@ -10,11 +10,13 @@ import type { Translations } from "../../types";
 export const familyPastVault: Translations["vault"] = {
   contacts: {
     title: "Who to Contact First",
-    description: "The first calls to make",
+    description:
+      "If something unexpected happened, who should help coordinate things",
     tasks: {
       primary: {
         title: "Primary Contacts",
-        description: "The people to call first",
+        description:
+          "If something unexpected happened, who should help coordinate things",
         triggerText: "Who should be contacted first?",
         guidanceHeading: "The primary point of contact.",
         guidance:
@@ -43,11 +45,11 @@ export const familyPastVault: Translations["vault"] = {
 
   people: {
     title: "Important People",
-    description: "Everyone else to know about",
+    description: "Other trusted people who should be involved",
     tasks: {
       people: {
         title: "Important People",
-        description: "Everyone else to know about",
+        description: "Other trusted people who should be involved",
         triggerText: "Who else mattered in their life?",
         guidanceHeading: "Who else mattered in their life?",
         guidance:

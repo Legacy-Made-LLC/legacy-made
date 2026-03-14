@@ -32,7 +32,7 @@ export const ownerCommon: Translations["common"] = {
     people: {
       title: "No people added yet",
       description:
-        "Add the important people in your life that those closest to you should know about.",
+        "Add the other people in your life who matter and should be in the loop.",
     },
     financial: {
       title: "No accounts added yet",
