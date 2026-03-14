@@ -231,7 +231,7 @@ export default function HomeScreen() {
 
   // Present modal when showModal becomes true (guard against re-presenting)
   useEffect(() => {
-    if (showModal && !isViewingSharedPlan && !hasPresented.current) {
+    if (showModal && !hasPresented.current) {
       hasPresented.current = true;
       backupSheetRef.current?.present();
     }
@@ -239,7 +239,7 @@ export default function HomeScreen() {
     if (!showModal) {
       hasPresented.current = false;
     }
-  }, [showModal, isViewingSharedPlan]);
+  }, [showModal]);
 
   const firstName = user?.firstName;
 

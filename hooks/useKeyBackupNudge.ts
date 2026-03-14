@@ -50,7 +50,7 @@ export interface UseKeyBackupNudgeReturn {
 export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
   const crypto = useOptionalCrypto();
   const { userId } = useAuth();
-  const { planId } = usePlan();
+  const { planId, isViewingSharedPlan } = usePlan();
   const { data: entryCounts } = useEntryCountsQuery();
 
   const [nudgeState, setNudgeState] = useState<NudgeState>("not_dismissed");
@@ -167,11 +167,17 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
     }
   }, [planId, totalEntries]);
 
-  // If backup becomes configured, everything turns off
+  // Never show on shared plans — backup keys are only relevant to the plan owner
   const showModal =
-    !hasBackup && preconditionsMet && nudgeState === "not_dismissed";
+    !isViewingSharedPlan &&
+    !hasBackup &&
+    preconditionsMet &&
+    nudgeState === "not_dismissed";
   const showGuidanceCard =
-    !hasBackup && preconditionsMet && nudgeState === "modal_shown";
+    !isViewingSharedPlan &&
+    !hasBackup &&
+    preconditionsMet &&
+    nudgeState === "modal_shown";
 
   return { showModal, showGuidanceCard, onModalDismissed, onSilence, isLoading };
 }

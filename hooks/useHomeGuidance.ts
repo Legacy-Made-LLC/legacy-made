@@ -72,7 +72,9 @@ export interface HomeGuidanceOptions {
   showBackupKeyGuidance?: boolean;
 }
 
-export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult {
+export function useHomeGuidance(
+  opts?: HomeGuidanceOptions,
+): HomeGuidanceResult {
   const translations = useTranslations();
   const vaultSections = useVaultSections();
   const wishesSections = useWishesSections();
@@ -231,8 +233,8 @@ export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult 
         body: g.vaultComplete.body,
         cta: g.vaultComplete.cta,
         ctaRoute: "/(app)/(tabs)/wishes" as Href,
-        tintColor: colors.featureInformationTint,
-        accentColor: colors.featureInformation,
+        tintColor: colors.featureWishesTint,
+        accentColor: colors.featureWishes,
         icon: "document-text-outline",
       };
     }
@@ -245,8 +247,8 @@ export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult 
         body: g.wishesComplete.body,
         cta: g.wishesComplete.cta,
         ctaRoute: "/(app)/(tabs)/information" as Href,
-        tintColor: colors.featureWishesTint,
-        accentColor: colors.featureWishes,
+        tintColor: colors.featureInformationTint,
+        accentColor: colors.featureInformation,
         icon: "heart-outline",
       };
     }
@@ -276,8 +278,8 @@ export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult 
         body: g.startedVault.body,
         cta: g.startedVault.cta,
         ctaRoute: "/(app)/(tabs)/wishes" as Href,
-        tintColor: colors.featureInformationTint,
-        accentColor: colors.featureInformation,
+        tintColor: colors.featureWishesTint,
+        accentColor: colors.featureWishes,
         icon: "document-text-outline",
       };
     }
@@ -290,8 +292,8 @@ export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult 
         body: g.startedWishes.body,
         cta: g.startedWishes.cta,
         ctaRoute: "/(app)/(tabs)/information" as Href,
-        tintColor: colors.featureWishesTint,
-        accentColor: colors.featureWishes,
+        tintColor: colors.featureInformationTint,
+        accentColor: colors.featureInformation,
         icon: "heart-outline",
       };
     }
@@ -304,8 +306,8 @@ export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult 
         body: g.startedLegacy.body,
         cta: g.startedLegacy.cta,
         ctaRoute: "/(app)/(tabs)/information" as Href,
-        tintColor: colors.featureLegacyTint,
-        accentColor: colors.featureLegacy,
+        tintColor: colors.featureInformationTint,
+        accentColor: colors.featureInformation,
         icon: "videocam-outline",
       };
     }
@@ -452,5 +454,9 @@ export function useHomeGuidance(opts?: HomeGuidanceOptions): HomeGuidanceResult 
     translations,
   ]);
 
-  return { guidance, isLoading, onDismissContactGuidance: dismissContactGuidance };
+  return {
+    guidance,
+    isLoading,
+    onDismissContactGuidance: dismissContactGuidance,
+  };
 }
