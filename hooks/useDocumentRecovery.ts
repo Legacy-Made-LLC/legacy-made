@@ -80,8 +80,6 @@ export function useDocumentRecovery() {
         // 4. Fetch encrypted DEK blobs from server
         const dekRecords = await keys.listDeks(planId);
 
-        logger.debug("dekRecords", { dekRecords });
-
         // Find the recovery document DEK
         const mnemonicDek = dekRecords.find((d) => d.dekType === "recovery");
         if (!mnemonicDek) {

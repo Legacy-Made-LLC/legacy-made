@@ -6,6 +6,7 @@
  */
 
 import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
+import { keyBackupStyles as shared } from "@/components/settings/keyBackupStyles";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,7 +59,7 @@ export default function KeyBackupScreen() {
     <>
       <Stack.Screen options={{ title: "Choose Recovery Method" }} />
       <ScrollView
-        style={styles.container}
+        style={shared.container}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + spacing.xl },
@@ -81,7 +82,7 @@ export default function KeyBackupScreen() {
             key={option.id}
             style={({ pressed }) => [
               styles.optionCard,
-              pressed && styles.optionCardPressed,
+              pressed && shared.optionCardPressed,
             ]}
             onPress={() => router.push(option.route as never)}
             accessibilityRole="button"
@@ -96,10 +97,10 @@ export default function KeyBackupScreen() {
                 color={option.isConfigured ? colors.success : colors.primary}
               />
             </View>
-            <View style={styles.optionContent}>
+            <View style={shared.optionContent}>
               <View style={styles.optionHeader}>
-                <Text style={styles.optionTitle}>{option.title}</Text>
-                <Text style={styles.optionDescription}>
+                <Text style={shared.optionTitle}>{option.title}</Text>
+                <Text style={shared.optionDescription}>
                   {option.description}
                 </Text>
               </View>
@@ -140,7 +141,7 @@ export default function KeyBackupScreen() {
               name="chevron-forward"
               size={20}
               color={colors.textTertiary}
-              style={styles.chevron}
+              style={shared.chevron}
             />
           </Pressable>
         ))}
@@ -156,10 +157,6 @@ export default function KeyBackupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.md,
@@ -174,7 +171,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     flex: 1,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
@@ -191,10 +188,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  optionCardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
   optionIcon: {
     width: 40,
     height: 40,
@@ -204,21 +197,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: spacing.md,
   },
-  optionContent: {
-    flex: 1,
-  },
   optionHeader: {
     marginBottom: spacing.sm,
-  },
-  optionTitle: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.titleMedium,
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  chevron: {
-    marginTop: 2,
-    marginLeft: spacing.sm,
   },
   statusContainer: {
     flexDirection: "row",
@@ -226,23 +206,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   configuredText: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
     color: colors.success,
   },
   removedText: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
   },
-  optionDescription: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
-  },
   footer: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
     textAlign: "center",

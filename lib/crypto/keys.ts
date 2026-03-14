@@ -10,24 +10,9 @@ import type { CryptoKey as QCCryptoKey } from "react-native-quick-crypto";
 import QuickCrypto from "react-native-quick-crypto";
 
 import { base64ToUint8, uint8ToBase64 } from "./aes";
+import { fromQC, toQC } from "./utils";
 
 const subtle = QuickCrypto.subtle;
-
-/**
- * Cast a standard CryptoKey to the react-native-quick-crypto CryptoKey type.
- * The two types are structurally compatible at runtime but TypeScript sees them
- * as distinct because quick-crypto adds extra internal properties.
- */
-function toQC(key: CryptoKey): QCCryptoKey {
-  return key as unknown as QCCryptoKey;
-}
-
-/**
- * Cast a react-native-quick-crypto CryptoKey back to the standard CryptoKey type.
- */
-function fromQC(key: QCCryptoKey): CryptoKey {
-  return key as unknown as CryptoKey;
-}
 
 // SecureStore key prefixes (scoped per user to prevent cross-account key leakage)
 //
@@ -109,7 +94,7 @@ export async function importPrivateKey(b64: string): Promise<CryptoKey> {
     "pkcs8",
     keyData.buffer,
     { name: "RSA-OAEP", hash: "SHA-256" },
-    true,
+    false,
     ["decrypt"],
   );
   return fromQC(key);
@@ -143,7 +128,11 @@ export async function importPublicKey(b64: string): Promise<CryptoKey> {
  */
 export async function exportDEK(key: CryptoKey): Promise<string> {
   const exported = await subtle.exportKey("raw", toQC(key));
-  return uint8ToBase64(new Uint8Array(exported as ArrayBuffer));
+  const raw = new Uint8Array(exported as ArrayBuffer);
+  const b64 = uint8ToBase64(raw);
+  // Zero the raw DEK bytes after base64 conversion
+  raw.fill(0);
+  return b64;
 }
 
 /**
@@ -298,6 +287,8 @@ export async function wrapDEK(
     toQC(recipientPublicKey),
     rawDEK,
   );
+  // Zero the raw DEK bytes now that wrapping is complete
+  new Uint8Array(rawDEK).fill(0);
   return uint8ToBase64(new Uint8Array(encrypted));
 }
 

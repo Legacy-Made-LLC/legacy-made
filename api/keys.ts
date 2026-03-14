@@ -328,7 +328,7 @@ export function createKeysService(client: ApiClient) {
       ownerId: string,
     ): Promise<DekRecord[]> => {
       return client.get<DekRecord[]>(
-        `/encryption/deks/mine/${ownerId}?planId=${encodeURIComponent(planId)}`,
+        `/encryption/deks/mine/${encodeURIComponent(ownerId)}?planId=${encodeURIComponent(planId)}`,
       );
     },
 
@@ -433,7 +433,7 @@ export function createKeysService(client: ApiClient) {
      * Revoke KMS escrow for a plan. Server deletes the escrowed DEK.
      */
     revokeEscrow: async (planId: string): Promise<void> => {
-      await client.delete<void>(`/encryption/escrow?planId=${planId}`);
+      await client.delete<void>(`/encryption/escrow?planId=${encodeURIComponent(planId)}`);
     },
 
     /**

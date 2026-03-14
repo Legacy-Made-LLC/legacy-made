@@ -5,6 +5,7 @@
  * Includes clear disclosure about what this means for privacy.
  */
 
+import { keyBackupStyles as shared } from "@/components/settings/keyBackupStyles";
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePlan } from "@/data/PlanProvider";
 import {
@@ -121,48 +122,48 @@ export default function KeyBackupEscrowScreen() {
     <>
       <Stack.Screen options={{ title: "Recovery With Legacy Made" }} />
       <ScrollView
-        style={styles.container}
+        style={shared.container}
         contentContainerStyle={[
-          styles.content,
+          shared.content,
           { paddingBottom: insets.bottom + spacing.xl },
         ]}
       >
-        <View style={styles.statusBanner}>
+        <View style={shared.statusBanner}>
           <Ionicons
             name={stateConfig.bannerIcon}
             size={22}
             color={stateConfig.bannerIconColor}
           />
-          <View style={styles.statusBannerContent}>
-            <Text style={styles.statusBannerTitle}>
+          <View style={shared.statusBannerContent}>
+            <Text style={shared.statusBannerTitle}>
               {stateConfig.bannerTitle}
             </Text>
             {stateConfig.bannerDate && (
-              <Text style={styles.statusBannerDate}>
+              <Text style={shared.statusBannerDate}>
                 {stateConfig.bannerDate}
               </Text>
             )}
           </View>
         </View>
 
-        <Text style={styles.guidedPrompt}>{stateConfig.prompt}</Text>
+        <Text style={shared.guidedPrompt}>{stateConfig.prompt}</Text>
 
         {error && (
-          <View style={styles.errorCard}>
+          <View style={shared.errorCard}>
             <Ionicons name="alert-circle" size={16} color={colors.error} />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={shared.errorText}>{error}</Text>
           </View>
         )}
 
         <Pressable
           style={({ pressed }) => [
-            styles.optionCard,
-            pressed && styles.optionCardPressed,
+            shared.optionCard,
+            pressed && shared.optionCardPressed,
           ]}
           onPress={stateConfig.actionOnPress}
           disabled={stateConfig.actionPending}
         >
-          <View style={styles.optionIcon}>
+          <View style={shared.optionIcon}>
             {stateConfig.actionPending ? (
               <ActivityIndicator color={stateConfig.actionIconColor} />
             ) : (
@@ -173,9 +174,9 @@ export default function KeyBackupEscrowScreen() {
               />
             )}
           </View>
-          <View style={styles.optionContent}>
-            <Text style={styles.optionTitle}>{stateConfig.actionTitle}</Text>
-            <Text style={styles.optionDescription}>
+          <View style={shared.optionContent}>
+            <Text style={shared.optionTitle}>{stateConfig.actionTitle}</Text>
+            <Text style={shared.optionDescription}>
               {stateConfig.actionDescription}
             </Text>
           </View>
@@ -183,7 +184,7 @@ export default function KeyBackupEscrowScreen() {
             name="chevron-forward"
             size={20}
             color={colors.textTertiary}
-            style={styles.chevron}
+            style={shared.chevron}
           />
         </Pressable>
 
@@ -198,110 +199,11 @@ export default function KeyBackupEscrowScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  errorCard: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    backgroundColor: `${colors.error}10`,
-    borderRadius: 12,
-    padding: spacing.md,
-    alignItems: "center",
-  },
-  errorText: {
-    flex: 1,
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.bodySmall,
-    color: colors.error,
-  },
-  statusBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statusBannerContent: {
-    flex: 1,
-  },
-  statusBannerTitle: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.titleMedium,
-    color: colors.textPrimary,
-  },
-  statusBannerDate: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.caption,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  guidedPrompt: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-    marginTop: spacing.sm,
-  },
   disclaimer: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
     textAlign: "center",
     marginTop: spacing.md,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  optionCardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}10`,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  optionContent: {
-    flex: 1,
-  },
-  chevron: {
-    marginTop: 2,
-    marginLeft: spacing.sm,
-  },
-  optionTitle: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.titleMedium,
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  optionDescription: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
 });

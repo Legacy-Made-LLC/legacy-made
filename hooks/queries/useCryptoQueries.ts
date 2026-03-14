@@ -442,6 +442,8 @@ export function useEscrowRecoveryMutation() {
       await storePublicKey(keyPair.publicKey, userId);
       await storeDEK(dek, userId);
 
+      // recoverFromEscrow does not store the new public key — a separate
+      // registerKey call is needed to persist it on the server.
       const keyRecord = await keys.registerKey({
         publicKey: publicKeyB64,
         deviceLabel: getDeviceLabel("recovered"),

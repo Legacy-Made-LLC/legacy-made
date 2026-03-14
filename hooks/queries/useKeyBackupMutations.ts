@@ -88,6 +88,8 @@ export function useGenerateRecoveryDocumentMutation() {
         wrappingKey,
         dekBytes,
       );
+      // Zero the raw DEK bytes after encryption
+      dekBytes.fill(0);
 
       // 6. Store encrypted blob on server (atomic create/replace)
       const blob = JSON.stringify({
@@ -189,6 +191,8 @@ async function encryptDekForEscrow(
     publicKey,
     dekBytes,
   );
+  // Zero the raw DEK bytes after encryption
+  dekBytes.fill(0);
 
   return uint8ToBase64(new Uint8Array(ciphertext));
 }

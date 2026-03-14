@@ -115,7 +115,7 @@ export function FilePreview({
     file.isEncrypted === true &&
     file.isRemote === true;
   const { localUri: decryptedUri, isLoading: isDecrypting } =
-    useEncryptedFileView(needsDecryption ? file.id : undefined, file.mimeType, file.uri);
+    useEncryptedFileView(needsDecryption ? file.id : undefined, file.mimeType, file.uri, file.isEncrypted);
 
   // Decrypt encrypted video thumbnails
   const needsThumbnailDecryption =
@@ -128,6 +128,7 @@ export function FilePreview({
       needsThumbnailDecryption ? file.thumbnailFileId : undefined,
       "image/jpeg",
       file.thumbnailUri,
+      file.isThumbnailEncrypted,
     );
 
   const isBusy =
@@ -337,8 +338,10 @@ export function FilePreview({
           <Pressable
             ref={menuButtonRef}
             onPress={handleOpenMenu}
-            hitSlop={8}
+            hitSlop={10}
             style={styles.compactMenuButton}
+            accessibilityRole="button"
+            accessibilityLabel="File options menu"
           >
             <Ionicons
               name="ellipsis-vertical"
@@ -1075,6 +1078,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   compactMenuButton: {
-    padding: 2,
+    padding: 6,
   },
 });

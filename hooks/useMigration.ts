@@ -18,6 +18,8 @@ import {
   isEncryptedEntry,
 } from "@/lib/crypto/entryEncryption";
 import { logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/queryKeys";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 export interface MigrationProgress {
@@ -78,6 +80,7 @@ export function useMigration() {
   const { entries, wishes, messages } = useApi();
   const { planId } = usePlan();
   const { dekCryptoKey } = useCrypto();
+  const queryClient = useQueryClient();
   const [progress, setProgress] = useState<MigrationProgress>(INITIAL_PROGRESS);
   const abortRef = useRef(false);
 
@@ -251,6 +254,17 @@ export function useMigration() {
           messages: messagesToMigrate.length - failedMessages.length,
           failed: failedEntries.length + failedWishes.length + failedMessages.length,
         });
+
+        // Invalidate caches so UI shows freshly encrypted data
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entries.all(planId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.wishes.all(planId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.messages.all(planId),
+        });
       }
     } catch (err) {
       setProgress((p) => ({
@@ -263,7 +277,7 @@ export function useMigration() {
       }));
       logger.error("Migration: Fatal error", err);
     }
-  }, [planId, dekCryptoKey, entries, wishes, messages]);
+  }, [planId, dekCryptoKey, entries, wishes, messages, queryClient]);
 
   const abort = useCallback(() => {
     abortRef.current = true;

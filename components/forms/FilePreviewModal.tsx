@@ -27,6 +27,7 @@ export function FilePreviewModal({ file, onClose }: FilePreviewModalProps) {
         visible
         uri={file.uri}
         fileId={file.isEncrypted ? file.id : undefined}
+        isEncrypted={file.isEncrypted}
         onClose={onClose}
       />
     );

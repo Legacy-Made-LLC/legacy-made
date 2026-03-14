@@ -38,6 +38,7 @@ export function useEncryptedFileView(
   fileId: string | undefined,
   mimeType?: string,
   downloadUrl?: string | null,
+  isEncrypted?: boolean,
 ): EncryptedFileViewResult {
   const { files } = useApi();
   const crypto = useOptionalCrypto();
@@ -79,10 +80,7 @@ export function useEncryptedFileView(
       let url = downloadUrl || null;
       if (!url) {
         const downloadInfo = await files.getDownloadUrl(fileId);
-        url = downloadInfo.downloadUrl ?? null;
-      }
-      if (!url) {
-        throw new Error("No download URL available");
+        url = downloadInfo.downloadUrl;
       }
 
       // 2. Download the encrypted file
@@ -91,9 +89,7 @@ export function useEncryptedFileView(
       // If the provided URL expired, fetch a fresh one and retry
       if (!response.ok && downloadUrl) {
         const downloadInfo = await files.getDownloadUrl(fileId);
-        if (downloadInfo.downloadUrl) {
-          response = await fetch(downloadInfo.downloadUrl);
-        }
+        response = await fetch(downloadInfo.downloadUrl);
       }
       if (!response.ok) {
         throw new Error(`Download failed with status ${response.status}`);
@@ -110,10 +106,16 @@ export function useEncryptedFileView(
             crypto.activeDEK,
           );
         } catch {
-          // If decryption fails, the file might be unencrypted (pre-migration)
+          if (isEncrypted) {
+            // File is marked as encrypted — decryption failure is a genuine error
+            throw new Error(
+              "Failed to decrypt file. The file is marked as encrypted but could not be decrypted.",
+            );
+          }
+          // File is not marked as encrypted — may be a pre-migration file
           // Fall back to using the raw data
           logger.warn(
-            "E2EE: File decryption failed, using raw data (may be pre-migration file)",
+            "E2EE: File decryption failed, using raw data (pre-migration file)",
           );
           decryptedData = encryptedData;
         }
@@ -139,7 +141,7 @@ export function useEncryptedFileView(
     } finally {
       setIsLoading(false);
     }
-  }, [fileId, files, crypto, mimeType, cryptoReady, downloadUrl]);
+  }, [fileId, files, crypto, mimeType, cryptoReady, downloadUrl, isEncrypted]);
 
   // Load file on mount / fileId change — wait for crypto to be ready
   useEffect(() => {

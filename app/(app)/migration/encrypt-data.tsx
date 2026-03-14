@@ -49,6 +49,7 @@ export default function EncryptDataScreen() {
           title: "Encrypting Data",
           headerBackTitle: "Back",
           gestureEnabled: progress.isComplete,
+          headerLeft: progress.isComplete ? undefined : () => null,
         }}
       />
       <View
@@ -79,6 +80,8 @@ export default function EncryptDataScreen() {
             <Pressable
               style={styles.doneButton}
               onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Done"
             >
               <Text style={styles.doneButtonText}>Done</Text>
             </Pressable>
@@ -96,6 +99,8 @@ export default function EncryptDataScreen() {
                 started.current = false;
                 startMigration();
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Try again"
             >
               <Text style={styles.retryButtonText}>Try Again</Text>
             </Pressable>

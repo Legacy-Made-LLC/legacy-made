@@ -99,6 +99,7 @@ export default function DeviceLinkingScreen() {
       if (remaining <= 0 && timerRef.current) {
         clearInterval(timerRef.current);
         setSessionCode(null);
+        setQrSvg(null);
         if (pollRef.current) clearInterval(pollRef.current);
         setError("Session expired. Please generate a new one.");
       }
@@ -162,6 +163,9 @@ export default function DeviceLinkingScreen() {
         userId: keyRecord.userId,
         keyVersion: keyRecord.keyVersion,
       });
+      // "encryptedPayload" is a legacy field name from the backend API — it
+      // accepts arbitrary data. What we pass here is intentionally plaintext
+      // (userId + keyVersion are not secrets).
       await keys.depositDeviceLink({
         sessionCode: session.sessionCode,
         encryptedPayload: depositPayload,
@@ -364,7 +368,11 @@ export default function DeviceLinkingScreen() {
   if (isComplete) {
     return (
       <>
-        <Stack.Screen options={{ title: mode === "receive" ? "Link This Device" : "Add a New Device" }} />
+        <Stack.Screen
+          options={{
+            title: mode === "receive" ? "Link This Device" : "Add a New Device",
+          }}
+        />
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
             <Ionicons
@@ -386,6 +394,8 @@ export default function DeviceLinkingScreen() {
                 ? router.replace("/(app)")
                 : router.back()
             }
+            accessibilityRole="button"
+            accessibilityLabel="Done"
           >
             <Text style={styles.doneButtonText}>Done</Text>
           </Pressable>
@@ -423,6 +433,9 @@ export default function DeviceLinkingScreen() {
                 <Pressable
                   style={styles.backLink}
                   onPress={() => setShowManualInput(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to scanner"
+                  hitSlop={8}
                 >
                   <Ionicons
                     name="arrow-back"
@@ -457,6 +470,8 @@ export default function DeviceLinkingScreen() {
                   ]}
                   onPress={() => handleSendToDevice()}
                   disabled={!codeInput.trim() || isLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Authorize device"
                 >
                   {isLoading ? (
                     <ActivityIndicator color="#FFFFFF" />
@@ -499,6 +514,8 @@ export default function DeviceLinkingScreen() {
                       </Text>
                       <Pressable
                         style={styles.secondaryButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Allow camera access"
                         onPress={async () => {
                           const result = await requestPermission();
                           if (!result.granted) {
@@ -519,6 +536,9 @@ export default function DeviceLinkingScreen() {
                 <Pressable
                   style={styles.manualEntryLink}
                   onPress={() => setShowManualInput(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Type code manually"
+                  hitSlop={8}
                 >
                   <Text style={styles.manualEntryText}>Type code manually</Text>
                 </Pressable>
@@ -556,7 +576,9 @@ export default function DeviceLinkingScreen() {
                     {sessionCode}
                   </Text>
                   <Text style={styles.tokenTimer}>
-                    Expires in {secondsLeft}s
+                    {secondsLeft <= 0
+                      ? "Expired"
+                      : `Expires in ${secondsLeft}s`}
                   </Text>
                 </View>
 
@@ -586,6 +608,8 @@ export default function DeviceLinkingScreen() {
                 ]}
                 onPress={handleStartReceive}
                 disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Generate session code"
               >
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -620,12 +644,12 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   heading: {
-    fontFamily: "LibreBaskerville_600SemiBold",
+    fontFamily: typography.fontFamily.serifSemiBold,
     fontSize: typography.sizes.displayMedium,
     color: colors.textPrimary,
   },
   body: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
@@ -636,7 +660,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   backLinkText: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.bodySmall,
     color: colors.primary,
   },
@@ -650,7 +674,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   tokenLabel: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.label,
     color: colors.textSecondary,
     letterSpacing: 1,
@@ -659,13 +683,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   tokenFallback: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
     letterSpacing: 1,
   },
   tokenTimer: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
   },
@@ -679,7 +703,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     flex: 1,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
   },
@@ -693,7 +717,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
   },
@@ -701,7 +725,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   label: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.label,
     color: colors.textSecondary,
     letterSpacing: 1,
@@ -712,7 +736,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: spacing.md,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
@@ -734,7 +758,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   cameraPermissionText: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
     textAlign: "center",
@@ -749,7 +773,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryButtonText: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.bodySmall,
     color: colors.primary,
   },
@@ -758,7 +782,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   manualEntryText: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.bodySmall,
     color: colors.primary,
     textDecorationLine: "underline",
@@ -774,7 +798,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   primaryButtonText: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.body,
     color: "#FFFFFF",
   },
@@ -788,7 +812,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     flex: 1,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.error,
   },
@@ -804,12 +828,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   successTitle: {
-    fontFamily: "LibreBaskerville_600SemiBold",
+    fontFamily: typography.fontFamily.serifSemiBold,
     fontSize: typography.sizes.displayMedium,
     color: colors.textPrimary,
   },
   successDescription: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     textAlign: "center",
@@ -826,7 +850,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   doneButtonText: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.body,
     color: "#FFFFFF",
   },

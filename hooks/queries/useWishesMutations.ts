@@ -319,7 +319,12 @@ export function useUpdateWish<T = Record<string, unknown>>(
           queryKeys.wishes.byTaskKey(planId, taskKey!),
         );
         const currentWish = currentWishes?.find((w) => w.id === wishId);
-        const currentMetadata = currentWish?.metadata ?? ({} as T);
+        if (!currentWish) {
+          throw new Error(
+            `Cannot encrypt update: wish ${wishId} not found in cache. The wish must be loaded before updating.`,
+          );
+        }
+        const currentMetadata = currentWish.metadata;
 
         const encrypted = await encryptForUpdate(
           { title: data.title, notes: data.notes, metadata: data.metadata },

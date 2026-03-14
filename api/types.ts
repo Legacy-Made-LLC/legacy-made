@@ -266,7 +266,7 @@ export interface InitUploadResponse {
  */
 export interface DownloadUrlResponse {
   /** Presigned download URL for R2 files */
-  downloadUrl?: string;
+  downloadUrl: string;
   /** Seconds until URL expires */
   expiresIn?: number;
 }

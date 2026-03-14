@@ -271,7 +271,12 @@ export function useUpdateMessage<T = Record<string, unknown>>(
             : queryKeys.messages.all(planId),
         );
         const currentMessage = currentMessages?.find((m) => m.id === messageId);
-        const currentMetadata = currentMessage?.metadata ?? ({} as T);
+        if (!currentMessage) {
+          throw new Error(
+            `Cannot encrypt update: message ${messageId} not found in cache. The message must be loaded before updating.`,
+          );
+        }
+        const currentMetadata = currentMessage.metadata;
 
         const encrypted = await encryptForUpdate(
           { title: data.title, notes: data.notes, metadata: data.metadata },

@@ -46,6 +46,7 @@ export function RecordedVideoPreview({
     needsThumbnailDecryption ? video.thumbnailFileId : undefined,
     "image/jpeg",
     video.thumbnailUri,
+    video.isThumbnailEncrypted,
   );
 
   const isUploading = video.uploadStatus === "uploading";

@@ -6,19 +6,14 @@
  */
 
 import QuickCrypto from "react-native-quick-crypto";
-import type { CryptoKey as QCCryptoKey } from "react-native-quick-crypto";
 
 import type { EncryptedPayload } from "./types";
+import { toQC } from "./utils";
 
 const subtle = QuickCrypto.subtle;
 
 /** IV size for AES-GCM (12 bytes recommended by NIST) */
 const IV_LENGTH = 12;
-
-/** Cast standard CryptoKey to quick-crypto CryptoKey for subtle API calls */
-function toQC(key: CryptoKey): QCCryptoKey {
-  return key as unknown as QCCryptoKey;
-}
 
 /**
  * Encrypt a string with AES-256-GCM.

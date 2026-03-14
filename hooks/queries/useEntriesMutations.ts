@@ -267,7 +267,12 @@ export function useUpdateEntry<T = Record<string, unknown>>(
           queryKeys.entries.byTaskKey(planId, taskKey!),
         );
         const currentEntry = currentEntries?.find((e) => e.id === entryId);
-        const currentMetadata = currentEntry?.metadata ?? ({} as T);
+        if (!currentEntry) {
+          throw new Error(
+            `Cannot encrypt update: entry ${entryId} not found in cache. The entry must be loaded before updating.`,
+          );
+        }
+        const currentMetadata = currentEntry.metadata;
 
         const encrypted = await encryptForUpdate(
           { title: data.title, notes: data.notes, metadata: data.metadata },

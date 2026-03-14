@@ -15,6 +15,7 @@
  * to ensure old recovery documents are properly invalidated.
  */
 
+import { keyBackupStyles as shared } from "@/components/settings/keyBackupStyles";
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePlan } from "@/data/PlanProvider";
 import {
@@ -335,7 +336,9 @@ export default function KeyBackupPhraseScreen() {
       setIsComplete(true);
     } catch (err) {
       logger.error("E2EE: Failed to generate recovery PDF", err);
-      setPdfError(err instanceof Error ? err.message : "Failed to generate PDF");
+      setPdfError(
+        err instanceof Error ? err.message : "Failed to generate PDF",
+      );
     } finally {
       setIsSavingPDF(false);
     }
@@ -379,30 +382,30 @@ export default function KeyBackupPhraseScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Create Your Recovery Document" }} />
+      <Stack.Screen options={{ title: "Create Recovery Document" }} />
       <ScrollView
-        style={styles.container}
+        style={shared.container}
         contentContainerStyle={[
-          styles.content,
+          shared.content,
           { paddingBottom: insets.bottom + spacing.xl },
         ]}
       >
-        <View style={styles.statusBanner}>
+        <View style={shared.statusBanner}>
           <Ionicons name={bannerIcon} size={22} color={bannerIconColor} />
-          <View style={styles.statusBannerContent}>
-            <Text style={styles.statusBannerTitle}>{bannerTitle}</Text>
+          <View style={shared.statusBannerContent}>
+            <Text style={shared.statusBannerTitle}>{bannerTitle}</Text>
             {bannerDate && (
-              <Text style={styles.statusBannerDate}>{bannerDate}</Text>
+              <Text style={shared.statusBannerDate}>{bannerDate}</Text>
             )}
           </View>
         </View>
 
-        <Text style={styles.guidedPrompt}>{prompt}</Text>
+        <Text style={shared.guidedPrompt}>{prompt}</Text>
 
         {error && (
-          <View style={styles.errorCard}>
+          <View style={shared.errorCard}>
             <Ionicons name="alert-circle" size={16} color={colors.error} />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={shared.errorText}>{error}</Text>
           </View>
         )}
 
@@ -410,13 +413,15 @@ export default function KeyBackupPhraseScreen() {
           <>
             <Pressable
               style={({ pressed }) => [
-                styles.optionCard,
-                pressed && styles.optionCardPressed,
+                shared.optionCard,
+                pressed && shared.optionCardPressed,
               ]}
               onPress={handleGenerateWithConfirmation}
               disabled={generateMutation.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Create a new recovery document"
             >
-              <View style={styles.optionIcon}>
+              <View style={shared.optionIcon}>
                 {generateMutation.isPending ? (
                   <ActivityIndicator color={colors.primary} />
                 ) : (
@@ -427,9 +432,9 @@ export default function KeyBackupPhraseScreen() {
                   />
                 )}
               </View>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>Create a new one</Text>
-                <Text style={styles.optionDescription}>
+              <View style={shared.optionContent}>
+                <Text style={shared.optionTitle}>Create a new one</Text>
+                <Text style={shared.optionDescription}>
                   Your current document will stop working and you&apos;ll get a
                   new one to save in its place.
                 </Text>
@@ -438,19 +443,21 @@ export default function KeyBackupPhraseScreen() {
                 name="chevron-forward"
                 size={20}
                 color={colors.textTertiary}
-                style={styles.chevron}
+                style={shared.chevron}
               />
             </Pressable>
 
             <Pressable
               style={({ pressed }) => [
-                styles.optionCard,
-                pressed && styles.optionCardPressed,
+                shared.optionCard,
+                pressed && shared.optionCardPressed,
               ]}
               onPress={handleRemove}
               disabled={disableMutation.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Disable recovery document permanently"
             >
-              <View style={styles.optionIcon}>
+              <View style={shared.optionIcon}>
                 {disableMutation.isPending ? (
                   <ActivityIndicator color={colors.error} />
                 ) : (
@@ -461,9 +468,9 @@ export default function KeyBackupPhraseScreen() {
                   />
                 )}
               </View>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>Disable it permanently</Text>
-                <Text style={styles.optionDescription}>
+              <View style={shared.optionContent}>
+                <Text style={shared.optionTitle}>Disable it permanently</Text>
+                <Text style={shared.optionDescription}>
                   Your current document will permanently stop working. No new
                   document will be created.
                 </Text>
@@ -472,15 +479,15 @@ export default function KeyBackupPhraseScreen() {
                 name="chevron-forward"
                 size={20}
                 color={colors.textTertiary}
-                style={styles.chevron}
+                style={shared.chevron}
               />
             </Pressable>
           </>
         ) : (
           <Pressable
             style={({ pressed }) => [
-              styles.optionCard,
-              pressed && styles.optionCardPressed,
+              shared.optionCard,
+              pressed && shared.optionCardPressed,
             ]}
             onPress={
               isRemoved
@@ -491,8 +498,10 @@ export default function KeyBackupPhraseScreen() {
                 : handleGenerate
             }
             disabled={generateMutation.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Create recovery document"
           >
-            <View style={styles.optionIcon}>
+            <View style={shared.optionIcon}>
               {generateMutation.isPending ? (
                 <ActivityIndicator color={colors.primary} />
               ) : (
@@ -503,11 +512,9 @@ export default function KeyBackupPhraseScreen() {
                 />
               )}
             </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>
-                Create Recovery Document
-              </Text>
-              <Text style={styles.optionDescription}>
+            <View style={shared.optionContent}>
+              <Text style={shared.optionTitle}>Create Recovery Document</Text>
+              <Text style={shared.optionDescription}>
                 This document includes a QR code and recovery words you can
                 print or store somewhere safe.
               </Text>
@@ -516,7 +523,7 @@ export default function KeyBackupPhraseScreen() {
               name="chevron-forward"
               size={20}
               color={colors.textTertiary}
-              style={styles.chevron}
+              style={shared.chevron}
             />
           </Pressable>
         )}
@@ -536,12 +543,10 @@ export default function KeyBackupPhraseScreen() {
               style={styles.modalCloseButton}
               onPress={handleDismissModal}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Close recovery document modal"
             >
-              <Ionicons
-                name="close"
-                size={24}
-                color={colors.textSecondary}
-              />
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </Pressable>
             <Text style={styles.modalTitle}>Recovery Document</Text>
             <View style={styles.modalCloseButton} />
@@ -573,9 +578,9 @@ export default function KeyBackupPhraseScreen() {
             </View>
 
             {modalError && (
-              <View style={styles.errorCard}>
+              <View style={shared.errorCard}>
                 <Ionicons name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{modalError}</Text>
+                <Text style={shared.errorText}>{modalError}</Text>
               </View>
             )}
 
@@ -586,6 +591,8 @@ export default function KeyBackupPhraseScreen() {
               ]}
               onPress={handleGeneratePDF}
               disabled={isSavingPDF}
+              accessibilityRole="button"
+              accessibilityLabel="Save recovery document as PDF"
             >
               {isSavingPDF ? (
                 <ActivityIndicator color="#FFFFFF" />
@@ -621,14 +628,6 @@ export default function KeyBackupPhraseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
   wordsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -645,30 +644,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   wordNumber: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
     color: colors.textTertiary,
     width: 24,
     textAlign: "right",
   },
   wordText: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.bodySmall,
     color: colors.textPrimary,
-  },
-  errorCard: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    backgroundColor: `${colors.error}10`,
-    borderRadius: 12,
-    padding: spacing.md,
-    alignItems: "center",
-  },
-  errorText: {
-    flex: 1,
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.bodySmall,
-    color: colors.error,
   },
   generateButton: {
     backgroundColor: colors.primary,
@@ -681,86 +666,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   generateButtonText: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.body,
     color: "#FFFFFF",
-  },
-  statusBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statusBannerContent: {
-    flex: 1,
-  },
-  statusBannerTitle: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.titleMedium,
-    color: colors.textPrimary,
-  },
-  statusBannerDate: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.caption,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  guidedPrompt: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-    marginTop: spacing.sm,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  optionCardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}10`,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  optionContent: {
-    flex: 1,
-  },
-  chevron: {
-    marginTop: 2,
-    marginLeft: spacing.sm,
-  },
-  optionTitle: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: typography.sizes.titleMedium,
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  optionDescription: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
   modalContainer: {
     flex: 1,
@@ -788,7 +696,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalTitle: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.titleMedium,
     color: colors.textPrimary,
   },
@@ -810,13 +718,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   modalHeading: {
-    fontFamily: "LibreBaskerville_600SemiBold",
+    fontFamily: typography.fontFamily.serifSemiBold,
     fontSize: typography.sizes.displayMedium,
     color: colors.textPrimary,
     textAlign: "center",
   },
   heroBody: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,
@@ -828,13 +736,13 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
   },
   wordsSectionLabel: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.label,
     color: colors.textTertiary,
     letterSpacing: 1,
   },
   wordsSectionDescription: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: typography.fontFamily.regular,
     fontSize: typography.sizes.bodySmall,
     color: colors.textTertiary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,

@@ -38,10 +38,12 @@ interface VideoPlayerProps {
   uri: string;
   /** Backend file ID for encrypted files — triggers download + decrypt */
   fileId?: string;
+  /** Whether the file is known to be encrypted (controls decryption fallback behavior) */
+  isEncrypted?: boolean;
   onClose: () => void;
 }
 
-export function VideoPlayer({ visible, uri, fileId, onClose }: VideoPlayerProps) {
+export function VideoPlayer({ visible, uri, fileId, isEncrypted, onClose }: VideoPlayerProps) {
   const insets = useSafeAreaInsets();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +58,7 @@ export function VideoPlayer({ visible, uri, fileId, onClose }: VideoPlayerProps)
   const {
     localUri: decryptedUri,
     error: decryptError,
-  } = useEncryptedFileView(effectiveFileId, 'video/mp4', uri);
+  } = useEncryptedFileView(effectiveFileId, 'video/mp4', uri, isEncrypted);
 
   // Animation values for swipe-to-dismiss
   const translateY = useSharedValue(0);
@@ -300,9 +302,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   container: {
-    flex: 1,
-  },
-  headerSpacer: {
     flex: 1,
   },
   videoContainer: {
