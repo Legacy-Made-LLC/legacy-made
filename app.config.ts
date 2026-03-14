@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: IS_PROD ? "com.mylegacymade.legacymade" : "com.mylegacymade.legacymadedev",
     infoPlist: {
-      ITSAppUsesNonExemptEncryption: true,
+      ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
       NSCameraUsageDescription: "Record video messages for your loved ones",
       NSMicrophoneUsageDescription: "Record audio with your video messages",
@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     associatedDomains: ["applinks:app.mylegacymade.com"],
   },
   android: {
-    versionCode: 7,
+    versionCode: 8,
     adaptiveIcon: {
       backgroundColor: "#8a9785",
       foregroundImage: "./assets/images/android-icon-foreground.png",
