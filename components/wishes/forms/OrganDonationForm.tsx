@@ -29,7 +29,7 @@ const formText = {
     decisionLabel: "What are your wishes on organ donation?",
     registryLabel: "Are you on your state's donor registry?",
     registryInfo:
-      "Being on the registry helps, but your family will still be asked. Recording your wishes here ensures they know what you want.",
+      "Being on the registry helps, but those closest to you will still be asked. Recording your wishes here ensures they know what you want.",
   },
   family: {
     decisionLabel: "What are their wishes on organ donation?",

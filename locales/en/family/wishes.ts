@@ -141,7 +141,7 @@ export const familyWishes: Translations["wishes"] = {
         triggerText: "What they want their loved ones to know",
         guidanceHeading: "What they want their loved ones to know",
         guidance:
-          "These words are a gift — to them for saying them, and to their family for receiving them.",
+          "These words are a gift — to them for saying them, and to those closest to them for receiving them.",
         tips: [
           "They've shared what they'd want someone to say to them if they couldn't say it later.",
           "Gratitude is powerful. Specific moments mean more than general praise.",

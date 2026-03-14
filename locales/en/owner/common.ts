@@ -27,12 +27,12 @@ export const ownerCommon: Translations["common"] = {
     contacts: {
       title: "No contacts added yet",
       description:
-        "Add the people your family should contact first in an emergency.",
+        "Add the people to contact first in an emergency.",
     },
     people: {
       title: "No people added yet",
       description:
-        "Add the important people in your life your family should know about.",
+        "Add the important people in your life that those closest to you should know about.",
     },
     financial: {
       title: "No accounts added yet",
@@ -42,12 +42,12 @@ export const ownerCommon: Translations["common"] = {
     insurance: {
       title: "No policies added yet",
       description:
-        "Add your insurance policies so your family knows what coverage exists.",
+        "Add your insurance policies so others know what coverage exists.",
     },
     documents: {
       title: "No documents added yet",
       description:
-        "Add important documents and note where your family can find them.",
+        "Add important documents and note where others can find them.",
     },
     property: {
       title: "No property added yet",
@@ -62,7 +62,7 @@ export const ownerCommon: Translations["common"] = {
     digital: {
       title: "No accounts added yet",
       description:
-        "Add digital accounts and explain how your family can access them.",
+        "Add digital accounts and explain how others can access them.",
     },
   },
 

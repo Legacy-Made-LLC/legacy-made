@@ -28,12 +28,12 @@ const formText = {
   owner: {
     dispositionLabel: "What are your wishes for your body?",
     prearrangedLabel: "Have you made any pre-arrangements?",
-    notesPlaceholder: "Anything else your family should know...",
+    notesPlaceholder: "Anything else those closest to you should know...",
   },
   family: {
     dispositionLabel: "What are their wishes for their body?",
     prearrangedLabel: "Have they made any pre-arrangements?",
-    notesPlaceholder: "Anything else the family should know...",
+    notesPlaceholder: "Anything else those closest to them should know...",
   },
 };
 

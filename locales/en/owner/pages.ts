@@ -15,7 +15,6 @@ export const ownerPages: Translations["pages"] = {
       "A little progress today is more than enough.",
       "You\u2019re taking care of the people you love.",
       "Every small step makes a difference.",
-      "This can wait until you\u2019re ready. But you\u2019re here.",
       "What matters is that you\u2019ve started.",
     ],
     information:
@@ -70,7 +69,7 @@ export const ownerPages: Translations["pages"] = {
       },
       makingProgress: {
         title: "You\u2019re making real progress",
-        body: "Every section you complete is one less thing your family has to figure out.",
+        body: "Every section you complete is one less thing others have to figure out.",
         cta: "Keep going",
       },
       backupKey: {

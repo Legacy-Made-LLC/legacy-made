@@ -32,7 +32,7 @@ function getLabels(taskKey: string) {
       return {
         emptyTitle: "No email accounts added yet",
         emptyDescription:
-          "Add your email accounts so your family can access important communications.",
+          "Add your email accounts so others can access important communications.",
         addButton: "Add Email Account",
         icon: "mail-outline" as const,
       };

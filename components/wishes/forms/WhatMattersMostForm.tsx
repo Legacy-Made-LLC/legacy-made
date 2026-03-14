@@ -31,13 +31,13 @@ const formText = {
   owner: {
     question: "Select anything that resonates with you:",
     context: "You can choose as many or as few as feel right.",
-    notesLabel: "Anything else you'd want your family to understand?",
+    notesLabel: "Anything else you'd want those closest to you to understand?",
     notesPlaceholder: "In your own words, what does a meaningful life look like to you?",
   },
   family: {
     question: "Values that resonate with them:",
     context: "They could choose as many or as few as felt right.",
-    notesLabel: "Anything else they wanted their family to understand?",
+    notesLabel: "Anything else they wanted those closest to them to understand?",
     notesPlaceholder: "In their own words, what a meaningful life looks like to them.",
   },
 };

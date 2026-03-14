@@ -14,20 +14,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EntryFormProps } from "../registry";
 
 const formText = {
   owner: {
-    photoHelp: "Adding a photo helps your family identify who to contact",
+    photoHelp: "Adding a photo helps others identify who to contact",
   },
   family: {
     photoHelp: "A photo helps identify who to contact",
@@ -205,68 +199,78 @@ export function ContactForm({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-        <ContactFormFieldsWithForm
-          form={form}
-          showReasonField={true}
-          phoneRequired={true}
-          disabled={readOnly}
-        />
+      <ContactFormFieldsWithForm
+        form={form}
+        showReasonField={true}
+        phoneRequired={true}
+        disabled={readOnly}
+      />
 
-        {showPriorityToggle && (
-          <form.Field name="isPrimary">
-            {(field: { state: { value: boolean }; handleChange: (v: boolean) => void }) => {
-              const isSelected = field.state.value;
-              return (
-                <Pressable
-                  style={[
-                    styles.priorityCard,
-                    isSelected && styles.priorityCardSelected,
-                  ]}
-                  onPress={() => !readOnly && field.handleChange(!isSelected)}
-                  disabled={readOnly}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: isSelected }}
-                  accessibilityLabel="Mark as first contact"
-                >
-                  <View style={styles.priorityHeader}>
-                    <View style={styles.priorityLeft}>
-                      <Ionicons
-                        name={isSelected ? "star" : "star-outline"}
-                        size={20}
-                        color={isSelected ? colors.primary : colors.textTertiary}
-                      />
-                      <Text style={[styles.priorityLabel, isSelected && styles.priorityLabelSelected]}>
-                        Contact first
-                      </Text>
-                    </View>
-                    <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                      {isSelected && <View style={styles.radioInner} />}
-                    </View>
+      {showPriorityToggle && (
+        <form.Field name="isPrimary">
+          {(field: {
+            state: { value: boolean };
+            handleChange: (v: boolean) => void;
+          }) => {
+            const isSelected = field.state.value;
+            return (
+              <Pressable
+                style={[
+                  styles.priorityCard,
+                  isSelected && styles.priorityCardSelected,
+                ]}
+                onPress={() => !readOnly && field.handleChange(!isSelected)}
+                disabled={readOnly}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: isSelected }}
+                accessibilityLabel="Mark as first contact"
+              >
+                <View style={styles.priorityHeader}>
+                  <View style={styles.priorityLeft}>
+                    <Ionicons
+                      name={isSelected ? "star" : "star-outline"}
+                      size={20}
+                      color={isSelected ? colors.primary : colors.textTertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.priorityLabel,
+                        isSelected && styles.priorityLabelSelected,
+                      ]}
+                    >
+                      Contact first
+                    </Text>
                   </View>
-                  <Text style={styles.priorityDescription}>
-                    This person should be reached out to before others
-                  </Text>
-                </Pressable>
-              );
-            }}
-          </form.Field>
-        )}
+                  <View
+                    style={[styles.radio, isSelected && styles.radioSelected]}
+                  >
+                    {isSelected && <View style={styles.radioInner} />}
+                  </View>
+                </View>
+                <Text style={styles.priorityDescription}>
+                  This person should be reached out to before others
+                </Text>
+              </Pressable>
+            );
+          }}
+        </form.Field>
+      )}
 
-        {!readOnly && onAttachmentsChange && (
-          <FilePicker
-            label="Photo"
-            value={attachments ?? []}
-            onChange={onAttachmentsChange}
-            mode="image"
-            maxFiles={1}
-            placeholder="Add a photo of this person"
-            helpText={t.photoHelp}
-            showStorageIndicator
-            onUpgradeRequired={onStorageUpgradeRequired}
-          />
-        )}
+      {!readOnly && onAttachmentsChange && (
+        <FilePicker
+          label="Photo"
+          value={attachments ?? []}
+          onChange={onAttachmentsChange}
+          mode="image"
+          maxFiles={1}
+          placeholder="Add a photo of this person"
+          helpText={t.photoHelp}
+          showStorageIndicator
+          onUpgradeRequired={onStorageUpgradeRequired}
+        />
+      )}
 
-        {!readOnly && (
+      {!readOnly && (
         <View style={styles.buttonContainer}>
           <form.Subscribe
             selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -310,21 +314,21 @@ export function ContactForm({
             }}
           </form.Subscribe>
         </View>
-        )}
+      )}
 
-        {!readOnly && !isNew && onDelete && (
-          <View style={styles.deleteContainer}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.deleteButtonPressed,
-              ]}
-              onPress={handleDelete}
-            >
-              <Text style={styles.deleteButtonText}>Delete Contact</Text>
-            </Pressable>
-          </View>
-        )}
+      {!readOnly && !isNew && onDelete && (
+        <View style={styles.deleteContainer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.deleteButton,
+              pressed && styles.deleteButtonPressed,
+            ]}
+            onPress={handleDelete}
+          >
+            <Text style={styles.deleteButtonText}>Delete Contact</Text>
+          </Pressable>
+        </View>
+      )}
     </KeyboardAwareScrollView>
   );
 }

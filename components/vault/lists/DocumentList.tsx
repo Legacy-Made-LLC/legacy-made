@@ -94,7 +94,7 @@ export function DocumentList({
         {renderGuidanceCard()}
         <EmptyState
           title="No documents added yet"
-          description="Add your important legal documents so your family knows where to find them."
+          description="Add your important legal documents so others know where to find them."
           buttonTitle={readOnly ? undefined : "Add Document"}
           onButtonPress={readOnly ? undefined : onAddPress}
           secondaryActionLabel={emptySecondaryLabel}

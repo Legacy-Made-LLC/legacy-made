@@ -9,7 +9,7 @@ import type { Translations } from "../../types";
 export const ownerVault: Translations["vault"] = {
   contacts: {
     title: "Who to Contact First",
-    description: "The first calls your family should make",
+    description: "The first calls to be made",
     tasks: {
       primary: {
         title: "Primary Contacts",
@@ -30,7 +30,7 @@ export const ownerVault: Translations["vault"] = {
         triggerText: "Who else should know right away?",
         guidanceHeading: "Who else should know right away?",
         guidance:
-          "These are the other people your family should contact early — relatives, close friends, or professionals.",
+          "These are the other people to contact early — relatives, close friends, or professionals.",
         tips: [
           "Include your attorney, financial advisor, and accountant if you have them.",
           "Add close friends who should hear the news personally, not secondhand.",
@@ -42,15 +42,15 @@ export const ownerVault: Translations["vault"] = {
 
   people: {
     title: "Important People",
-    description: "Everyone else your family should know about",
+    description: "Everyone else those closest to you should know about",
     tasks: {
       people: {
         title: "Important People",
-        description: "Everyone else your family should know about",
+        description: "Everyone else those closest to you should know about",
         triggerText: "Who else matters in your life?",
         guidanceHeading: "Who else matters in your life?",
         guidance:
-          "Beyond family, there are people who should know — and people your family should know about.",
+          "Beyond family, there are people who should know — and people those closest to you should know about.",
         tips: [
           "Think about neighbors, coworkers, or community members who matter to you.",
           "Include anyone who might be waiting to hear from you regularly.",
@@ -68,7 +68,7 @@ export const ownerVault: Translations["vault"] = {
         title: "Financial Accounts",
         description: "Bank, investment, and retirement accounts",
         triggerText: "Wondering what accounts to list?",
-        guidanceHeading: "Your family just needs to know these accounts exist.",
+        guidanceHeading: "Others just need to know these accounts exist.",
         guidance:
           "You don't need full account numbers — just enough for them to contact the right institutions.",
         tips: [
@@ -83,14 +83,14 @@ export const ownerVault: Translations["vault"] = {
 
   insurance: {
     title: "Insurance Policies",
-    description: "Coverage your family should know about",
+    description: "Coverage those closest to you should know about",
     tasks: {
       policies: {
         title: "Insurance Policies",
-        description: "Coverage your family should know about",
+        description: "Coverage those closest to you should know about",
         triggerText: "What policies should you include?",
         guidanceHeading:
-          "Insurance benefits only help if your family knows they exist.",
+          "Insurance benefits only help if others know they exist.",
         guidance:
           "Many families miss out on coverage they're entitled to simply because they didn't know about it.",
         tips: [
@@ -112,7 +112,7 @@ export const ownerVault: Translations["vault"] = {
         description: "Wills, trusts, and powers of attorney",
         triggerText: "Which documents matter most?",
         guidanceHeading:
-          "These documents give your family the authority to act.",
+          "These documents give those you trust the authority to act.",
         guidance:
           "When the time comes, they'll need to find these quickly. Note where each one is stored.",
         tips: [
@@ -128,7 +128,7 @@ export const ownerVault: Translations["vault"] = {
         title: "Other Documents",
         description: "Birth certificates, passports, and other records",
         triggerText: "What other records should you note?",
-        guidanceHeading: "These are the records your family may need.",
+        guidanceHeading: "These are the records others may need.",
         guidance:
           "Record important personal documents like birth certificates, passports, and Social Security cards. Note where originals are stored.",
         tips: [
@@ -149,7 +149,7 @@ export const ownerVault: Translations["vault"] = {
         description: "Real estate, vehicles, and physical assets",
         triggerText: "What property should you include?",
         guidanceHeading:
-          "Your family won't know what exists unless you tell them.",
+          "Others won't know what exists unless you tell them.",
         guidance:
           "Properties, vehicles, storage units — if there's a key, a title, or a code, note it here.",
         tips: [

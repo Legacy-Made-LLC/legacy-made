@@ -18,11 +18,11 @@ export const ownerWishes: Translations["wishes"] = {
         guidanceHeading:
           "When it comes to medical care, what matters most to you?",
         guidance:
-          "There's no right answer here. This is about helping your family understand what a meaningful life looks like to you.",
+          "There's no right answer here. This is about helping those closest to you understand what a meaningful life looks like to you.",
         tips: [
           "Think about what makes a day feel worth living — connection? Comfort? Being present?",
           "Some people prioritize length of life, others prioritize quality. Both are valid.",
-          "If you're unsure, imagine your family asking: 'What would they want?' What would you hope they'd say?",
+          "If you're unsure, imagine those closest to you asking: 'What would they want?' What would you hope they'd say?",
         ],
         pacingNote: "These are big questions. It's okay to come back later.",
       },
@@ -34,7 +34,7 @@ export const ownerWishes: Translations["wishes"] = {
         guidanceHeading:
           "Are there circumstances where you'd want to let nature take its course?",
         guidance:
-          "This isn't about giving up — it's about giving your family clarity during an impossible time.",
+          "This isn't about giving up — it's about giving those closest to you clarity during an impossible time.",
         tips: [
           "Without your guidance, families often feel guilty no matter what they decide. Your words can lift that weight.",
           "You're not making a medical decision right now. You're sharing values that can help guide decisions later.",
@@ -47,7 +47,7 @@ export const ownerWishes: Translations["wishes"] = {
         triggerText: "How should comfort and treatment be balanced?",
         guidanceHeading: "How should comfort and treatment be balanced?",
         guidance:
-          "There's no wrong answer. Some people want every possible treatment; others prioritize peace and comfort. What matters is that your family knows what you'd want.",
+          "There's no wrong answer. Some people want every possible treatment; others prioritize peace and comfort. What matters is that those closest to you know what you'd want.",
         tips: [
           "Think about what matters more to you: more time or better quality time?",
           "Pain medication can make you drowsy — how much does staying alert matter?",
@@ -59,7 +59,7 @@ export const ownerWishes: Translations["wishes"] = {
         description: "Formal documents on file",
         triggerText: "Do you have advance directive documents?",
         guidanceHeading:
-          "Legal documents give your family the authority to act.",
+          "Legal documents give those you trust the authority to act.",
         guidance:
           "An advance directive or healthcare proxy ensures your wishes are followed — and that someone you trust can make decisions if you can't.",
         tips: [
@@ -81,7 +81,7 @@ export const ownerWishes: Translations["wishes"] = {
         triggerText: "Where would you want to be, if you could choose?",
         guidanceHeading: "Where would you want to be, if you could choose?",
         guidance:
-          "Home, hospice, hospital — each has trade-offs. Knowing your preference helps your family honor your wishes when decisions need to be made quickly.",
+          "Home, hospice, hospital — each has trade-offs. Knowing your preference helps those closest to you honor your wishes when decisions need to be made quickly.",
         tips: [
           "Home care is possible for many situations, but requires family support.",
           "Hospice facilities specialize in comfort care and often allow more visitors.",
@@ -91,14 +91,14 @@ export const ownerWishes: Translations["wishes"] = {
       afterDeath: {
         title: "After-Death Preferences",
         description: "Burial, cremation, other",
-        triggerText: "Saying this clearly is a gift to your family.",
-        guidanceHeading: "Saying this clearly is a gift to your family.",
+        triggerText: "Saying this clearly is a gift to those closest to you.",
+        guidanceHeading: "Saying this clearly is a gift to those closest to you.",
         guidance:
           "Burial, cremation, green burial — whatever you choose, stating it removes a heavy decision during an already difficult time.",
         tips: [
           "If you have strong preferences, stating them clearly removes guilt from the decision.",
           "If you're flexible, saying so is equally valuable. 'Whatever brings comfort' is valid.",
-          "Pre-arrangements can save your family money and stress, but aren't required.",
+          "Pre-arrangements can save those closest to you money and stress, but aren't required.",
         ],
       },
       service: {
@@ -107,11 +107,11 @@ export const ownerWishes: Translations["wishes"] = {
         triggerText: "How would you want to be remembered?",
         guidanceHeading: "How would you want to be remembered?",
         guidance:
-          "A quiet gathering, a big celebration, or nothing at all — your family will feel more at peace knowing what you'd want.",
+          "A quiet gathering, a big celebration, or nothing at all — those closest to you will feel more at peace knowing what you'd want.",
         tips: [
           "Think about gatherings you've attended — what felt right, and what didn't?",
           "Some people want celebration; others prefer quiet. Both are meaningful.",
-          "If there's a song or reading that matters to you, mention it — your family may not know.",
+          "If there's a song or reading that matters to you, mention it — others may not know.",
           "Even 'keep it simple' or 'make it a party' gives helpful direction.",
         ],
       },
@@ -121,10 +121,10 @@ export const ownerWishes: Translations["wishes"] = {
         triggerText: "One decision could save several lives.",
         guidanceHeading: "One decision could save several lives.",
         guidance:
-          "Organ donation happens quickly after death, so your family needs to know your wishes in advance. Stating them clearly removes doubt during an already difficult time.",
+          "Organ donation happens quickly after death, so those closest to you need to know your wishes in advance. Stating them clearly removes doubt during an already difficult time.",
         tips: [
           "You can choose to donate everything, specific organs only, or nothing at all.",
-          "Being on the registry helps, but your family still needs to know your wishes.",
+          "Being on the registry helps, but those closest to you still need to know your wishes.",
           "Religious and cultural considerations are respected — share any concerns here.",
         ],
       },
@@ -133,7 +133,7 @@ export const ownerWishes: Translations["wishes"] = {
 
   values: {
     title: "Personal Values & Guidance",
-    description: "Emotional and relational guidance for your family",
+    description: "Emotional and relational guidance for those closest to you",
     tasks: {
       lovedOnesKnow: {
         title: "What Loved Ones Should Know",
@@ -141,7 +141,7 @@ export const ownerWishes: Translations["wishes"] = {
         triggerText: "What would you say if you couldn't say it later?",
         guidanceHeading: "What would you say if you couldn't say it later?",
         guidance:
-          "These words are a gift — to you for saying them, and to your family for receiving them.",
+          "These words are a gift — to you for saying them, and to those closest to you for receiving them.",
         tips: [
           "Think about what you'd want someone to say to you if they couldn't say it later.",
           "Gratitude is powerful. Naming specific moments means more than general praise.",
@@ -155,7 +155,7 @@ export const ownerWishes: Translations["wishes"] = {
         triggerText: "What traditions or beliefs should be honored?",
         guidanceHeading: "What traditions or beliefs should be honored?",
         guidance:
-          "Whether deeply religious, casually spiritual, or secular — your family will want to respect what matters to you.",
+          "Whether deeply religious, casually spiritual, or secular — those closest to you will want to respect what matters to you.",
         tips: [
           "Include any rituals, prayers, or customs that should be observed.",
           "If you have a religious leader or congregation, note their contact info.",
@@ -169,7 +169,7 @@ export const ownerWishes: Translations["wishes"] = {
         guidanceHeading:
           "Your words can prevent conflict during an already difficult time.",
         guidance:
-          "Grief makes people reactive. If you name who should decide, how to handle disagreements, and what matters most — you give your family a way forward.",
+          "Grief makes people reactive. If you name who should decide, how to handle disagreements, and what matters most — you give those closest to you a way forward.",
         tips: [
           "Name a primary decision-maker and explain why you trust them.",
           "Acknowledge that people might disagree — and give guidance for how to resolve it.",

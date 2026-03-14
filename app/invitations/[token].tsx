@@ -910,7 +910,7 @@ export default function InvitationScreen() {
         <Text style={styles.infoTitle}>What is Legacy Made?</Text>
         <Text style={styles.infoText}>
           Legacy Made helps people organize critical information for their loved
-          ones — accounts, documents, wishes, and messages — so their family is
+          ones — accounts, documents, wishes, and messages — so those closest to them are
           never left guessing.
         </Text>
       </View>

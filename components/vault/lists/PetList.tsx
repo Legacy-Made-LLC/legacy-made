@@ -94,7 +94,7 @@ export function PetList({
         {renderGuidanceCard()}
         <EmptyState
           title="No pets added yet"
-          description="Add your pets so your family knows how to care for them."
+          description="Add your pets so others know how to care for them."
           buttonTitle={readOnly ? undefined : "Add Pet"}
           onButtonPress={readOnly ? undefined : onAddPress}
           secondaryActionLabel={emptySecondaryLabel}

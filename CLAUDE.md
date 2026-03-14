@@ -88,6 +88,7 @@ The MVP focuses on the **primary entry point** — helping users organize critic
 All user data is end-to-end encrypted. Before making any decisions about encryption — including how data is encrypted/decrypted, how keys are managed, how files are handled, how sharing works, or how backup/recovery operates — **read `docs/e2ee-security-strategy.md`**. That document is the authoritative reference for the security architecture as implemented.
 
 Key things to know:
+
 - **All personal data** (text fields, files, images, video) is encrypted client-side before transmission
 - **AES-256-GCM** for content encryption, **RSA-OAEP-2048** for DEK wrapping
 - Crypto implementation lives in `lib/crypto/` — `CryptoProvider.tsx` is the central orchestrator
@@ -119,6 +120,7 @@ npm run lint
 **Problem:** Android bundler requires Node v20 or v22. Node v24+ causes build failures.
 
 **Solution:**
+
 ```bash
 # Create .nvmrc file (already exists in this project)
 echo "22" > .nvmrc
@@ -142,10 +144,10 @@ cd android && ./gradlew clean && cd ..
 
 #### 3. Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Node version error | Run `nvm use` before any command |
-| Build cache issues | `cd android && ./gradlew clean` |
+| Issue                          | Solution                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| Node version error             | Run `nvm use` before any command                                             |
+| Build cache issues             | `cd android && ./gradlew clean`                                              |
 | Android Studio can't find Node | Launch from terminal: `nvm use && open -a /Applications/Android\ Studio.app` |
 
 **Note:** Full Android development documentation available at `docs/android-development-gotchas.md`
@@ -240,12 +242,12 @@ export const colors = {
 
 Each main feature has a distinct pastel color identity that carries through the entire experience:
 
-| Feature | Color | Hex | Usage |
-|---------|-------|-----|-------|
-| **Information Vault** | Sage Green | `#8a9785` | Primary feature for organizing critical information |
-| **Wishes & Guidance** | Soft Lavender | `#B8A9C9` | Future feature for end-of-life wishes |
-| **Legacy Messages** | Soft Blue | `#A3C4D8` | Future feature for personal messages to loved ones |
-| **Family Access** | Warm Blush/Peach | `#E0B8A8` | Future feature for sharing access with family |
+| Feature               | Color            | Hex       | Usage                                               |
+| --------------------- | ---------------- | --------- | --------------------------------------------------- |
+| **Information Vault** | Sage Green       | `#8a9785` | Primary feature for organizing critical information |
+| **Wishes & Guidance** | Soft Lavender    | `#B8A9C9` | Future feature for end-of-life wishes               |
+| **Legacy Messages**   | Soft Blue        | `#A3C4D8` | Future feature for personal messages to loved ones  |
+| **Family Access**     | Warm Blush/Peach | `#E0B8A8` | Future feature for sharing access with family       |
 
 This color system creates visual distinction between features while maintaining the calm, cohesive aesthetic. The sage green serves as the primary accent for the MVP (Information Vault pillar).
 
@@ -344,7 +346,7 @@ The main hub — a single scrollable view with category cards.
 │  Legacy Made              [?]   │  ← Serif heading, help icon
 │                                 │
 │  "Organize what matters most    │  ← Subheading
-│   so your family is never       │
+│   so those closest are never       │
 │   left guessing."               │
 │                                 │
 │  ┌─────────────────────────┐    │
@@ -807,7 +809,6 @@ Keep animations **subtle and calming**:
 1. **Screen transitions:** Use Expo Router's default stack animations (slide from right)
 
 2. **Card press feedback:**
-
    - Scale to 0.98 on press
    - Slight opacity reduction (0.9)
    - Duration: 100ms
@@ -815,7 +816,6 @@ Keep animations **subtle and calming**:
 3. **List items:** Consider subtle fade-in on mount (staggered, 50ms delay between items)
 
 4. **Button press:**
-
    - Background color darkens slightly
    - Scale to 0.98
    - Duration: 100ms
