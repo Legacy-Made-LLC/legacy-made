@@ -25,7 +25,7 @@ const RE_NUDGE_DELTA = 5;
 type NudgeState = "not_dismissed" | "modal_shown" | "silenced";
 
 /** Per-plan AsyncStorage key for nudge state */
-function stateKey(planId: string) {
+export function nudgeStateKey(planId: string) {
   return `e2ee_backup_nudge_state_${planId}`;
 }
 
@@ -112,7 +112,7 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
 
         // Preconditions met — now load persisted state
         const [savedState, silencedAtStr] = await Promise.all([
-          AsyncStorage.getItem(stateKey(planId)),
+          AsyncStorage.getItem(nudgeStateKey(planId)),
           AsyncStorage.getItem(silencedAtCountKey(planId)),
         ]);
 
@@ -123,7 +123,7 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
             if (totalEntries >= silencedAt + RE_NUDGE_DELTA) {
               // Reset to not_dismissed for re-nudge
               setNudgeState("not_dismissed");
-              await AsyncStorage.removeItem(stateKey(planId));
+              await AsyncStorage.removeItem(nudgeStateKey(planId));
               await AsyncStorage.removeItem(silencedAtCountKey(planId));
             } else {
               setNudgeState("silenced");
@@ -155,14 +155,14 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
   const onModalDismissed = useCallback(() => {
     setNudgeState("modal_shown");
     if (planId) {
-      AsyncStorage.setItem(stateKey(planId), "modal_shown");
+      AsyncStorage.setItem(nudgeStateKey(planId), "modal_shown");
     }
   }, [planId]);
 
   const onSilence = useCallback(() => {
     setNudgeState("silenced");
     if (planId) {
-      AsyncStorage.setItem(stateKey(planId), "silenced");
+      AsyncStorage.setItem(nudgeStateKey(planId), "silenced");
       AsyncStorage.setItem(silencedAtCountKey(planId), String(totalEntries));
     }
   }, [planId, totalEntries]);

@@ -64,18 +64,24 @@ export const EncryptionMigrationModal = forwardRef<
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const sheetRef = useRef<BottomSheetModal>(null);
+  const isPresentedRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
     dismiss: () => sheetRef.current?.dismiss(),
   }));
 
-  // Present/dismiss based on phase
+  // Present/dismiss based on phase — only call present() on the transition
+  // from hidden to non-hidden to avoid re-presenting an already-visible sheet.
   useEffect(() => {
     if (phase !== "hidden") {
-      sheetRef.current?.present();
+      if (!isPresentedRef.current) {
+        sheetRef.current?.present();
+        isPresentedRef.current = true;
+      }
     } else {
       sheetRef.current?.dismiss();
+      isPresentedRef.current = false;
     }
   }, [phase]);
 

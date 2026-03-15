@@ -14,7 +14,19 @@ import { logger } from "@/lib/logger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { nudgeStateKey } from "./useKeyBackupNudge";
 import { MigrationProgress, useMigration } from "./useMigration";
+
+/**
+ * Mark the KeyBackupNudge as "modal_shown" so it shows a subtle guidance card
+ * instead of a second modal. This prevents two nearly identical backup prompts
+ * from stacking on top of each other after migration completes.
+ */
+function suppressBackupNudgeModal(planId: string) {
+  AsyncStorage.setItem(nudgeStateKey(planId), "modal_shown").catch(
+    (err) => logger.error("Failed to suppress backup nudge modal", err),
+  );
+}
 
 // v3: also nulls out plaintext metadata keys alongside the encrypted blob.
 export const MIGRATION_COMPLETE_KEY = "e2ee_migration_complete_v3";
@@ -91,11 +103,17 @@ export function useAutoMigration(): UseAutoMigrationReturn {
         AsyncStorage.setItem(MIGRATION_COMPLETE_KEY, "true").catch((err) =>
           logger.error("E2EE: Failed to save migration flag", err),
         );
+        // The migration "complete" phase already shows a "Back up key" prompt.
+        // Suppress the separate KeyBackupNudge modal so users don't see two
+        // nearly identical backup prompts stacked on top of each other.
+        if (planId) {
+          suppressBackupNudgeModal(planId);
+        }
         logger.info("E2EE: Auto-migration complete, flag saved");
         setPhase("complete");
       }
     }
-  }, [progress.isComplete, progress.error, progress.failedEntries, progress.failedWishes, progress.failedMessages]);
+  }, [progress.isComplete, progress.error, progress.failedEntries, progress.failedWishes, progress.failedMessages, planId]);
 
   const retry = useCallback(() => {
     setPhase("encrypting");
