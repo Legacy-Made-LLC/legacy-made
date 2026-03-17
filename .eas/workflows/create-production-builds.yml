@@ -9,7 +9,22 @@ jobs:
     type: build # This job type creates a production build for Android
     params:
       platform: android
+      profile: production
   build_ios:
     type: build # This job type creates a production build for iOS
     params:
       platform: ios
+      profile: production
+  submit_android:
+    name: Submit to Play Store
+    type: submit
+    needs: [build_android]
+    params:
+      build_id: ${{ needs.build_android.outputs.build_id }}
+      profile: production
+  testflight:
+    name: Submit to TestFlight
+    type: testflight
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      changelog: "${{ github.commit_message || 'Bug fixes' }}"
