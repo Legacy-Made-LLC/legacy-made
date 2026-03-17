@@ -28,7 +28,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     associatedDomains: ["applinks:app.mylegacymade.com"],
   },
   android: {
-    versionCode: 13,
     adaptiveIcon: {
       backgroundColor: "#8a9785",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -55,10 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   },
-  web: {
-    output: "static",
-    favicon: "./assets/images/favicon.png",
-  },
+  web: {},
   plugins: [
     "expo-router",
     [

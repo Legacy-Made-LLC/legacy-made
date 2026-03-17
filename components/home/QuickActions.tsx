@@ -29,8 +29,12 @@ export function QuickActions({ actions, isLoading }: QuickActionsProps) {
   const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && actions.length > 0 && !hasAnimated.current) {
+    if (isLoading) {
+      // Reset so the fade-in replays once loading finishes (e.g. after plan switch)
+      hasAnimated.current = false;
+    } else if (actions.length > 0 && !hasAnimated.current) {
       hasAnimated.current = true;
+      fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
