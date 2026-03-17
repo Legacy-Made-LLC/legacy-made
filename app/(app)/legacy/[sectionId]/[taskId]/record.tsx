@@ -14,19 +14,16 @@
 
 import { colors, spacing, typography } from "@/constants/theme";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
-import { emitVideoRecorded, clearVideoRecordedCallback } from "@/lib/videoRecordingBridge";
+import {
+  clearVideoRecordedCallback,
+  emitVideoRecorded,
+} from "@/lib/videoRecordingBridge";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView } from "expo-camera";
-import { useVideoPlayer, VideoView } from "expo-video";
 import { useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAX_DURATION_SECONDS = 180;
@@ -81,10 +78,13 @@ export default function VideoRecordingScreen() {
   // Update player source when videoUri becomes available
   useEffect(() => {
     if (videoUri && previewPlayer) {
-      previewPlayer.replace(videoUri);
-      previewPlayer.loop = true;
-      previewPlayer.play();
-      setIsPlaying(true);
+      const updateVideoUri = async () => {
+        previewPlayer.replaceAsync(videoUri);
+        previewPlayer.loop = true;
+        previewPlayer.play();
+        setIsPlaying(true);
+      };
+      updateVideoUri();
     }
   }, [videoUri, previewPlayer]);
 
@@ -131,7 +131,10 @@ export default function VideoRecordingScreen() {
             To record video messages, please allow camera and microphone access
             in your device settings.
           </Text>
-          <Pressable style={styles.permissionButton} onPress={requestPermissions}>
+          <Pressable
+            style={styles.permissionButton}
+            onPress={requestPermissions}
+          >
             <Text style={styles.permissionButtonText}>Grant Access</Text>
           </Pressable>
         </View>
@@ -197,7 +200,9 @@ export default function VideoRecordingScreen() {
       />
 
       {/* Top controls overlay */}
-      <View style={[styles.topControls, { paddingTop: insets.top + spacing.sm }]}>
+      <View
+        style={[styles.topControls, { paddingTop: insets.top + spacing.sm }]}
+      >
         <Pressable
           style={styles.closeButton}
           onPress={handleClose}

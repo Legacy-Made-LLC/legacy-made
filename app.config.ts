@@ -15,7 +15,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: IS_PROD ? "com.mylegacymade.legacymade" : "com.mylegacymade.legacymadedev",
+    bundleIdentifier: IS_PROD
+      ? "com.mylegacymade.legacymade"
+      : "com.mylegacymade.legacymadedev",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription: "Select a photo for your profile picture",
@@ -26,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     associatedDomains: ["applinks:app.mylegacymade.com"],
   },
   android: {
-    versionCode: 8,
+    versionCode: 13,
     adaptiveIcon: {
       backgroundColor: "#8a9785",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -34,7 +36,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: "com.legacymade.LegacyMade",
-    permissions: ["android.permission.RECORD_AUDIO", "android.permission.CAMERA"],
+    permissions: [
+      "android.permission.RECORD_AUDIO",
+      "android.permission.CAMERA",
+    ],
     intentFilters: [
       {
         action: "VIEW",

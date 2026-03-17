@@ -50,3 +50,6 @@ app-example
 
 # Firebase
 google-services.json
+
+# EAS local credentials
+credentials.json

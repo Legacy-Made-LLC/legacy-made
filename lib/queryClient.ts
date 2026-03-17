@@ -30,6 +30,21 @@ function shouldRetry(failureCount: number, error: Error, maxRetries: number): bo
   return failureCount < maxRetries;
 }
 
+/**
+ * Exponential backoff with special handling for 429 (Too Many Requests).
+ *
+ * 429s use a longer base delay (10s) since the server's rate-limit window
+ * is typically 10–60s. Normal errors use the TanStack default (1s base).
+ */
+function retryDelay(failureCount: number, error: Error): number {
+  if (error instanceof ApiClientError && error.statusCode === 429) {
+    // 10s, 20s, 40s — respects the server's 10s short-window TTL
+    return Math.min(10_000 * 2 ** (failureCount - 1), 60_000);
+  }
+  // Default exponential backoff: 1s, 2s, 4s...
+  return Math.min(1_000 * 2 ** (failureCount - 1), 30_000);
+}
+
 export function createQueryClient() {
   return new QueryClient({
     mutationCache: new MutationCache({
@@ -62,6 +77,8 @@ export function createQueryClient() {
         gcTime: 1000 * 60 * 10,
         // Retry failed requests twice, but skip 401/403
         retry: (failureCount, error) => shouldRetry(failureCount, error, 2),
+        // Exponential backoff — longer delays for 429s
+        retryDelay,
         // Refetch on app focus (configured via focusManager in QueryProvider)
         refetchOnWindowFocus: true,
         // Refetch on network reconnect
@@ -74,6 +91,8 @@ export function createQueryClient() {
         networkMode: 'offlineFirst',
         // Retry mutations once, but skip 401/403
         retry: (failureCount, error) => shouldRetry(failureCount, error, 1),
+        // Exponential backoff — longer delays for 429s
+        retryDelay,
       },
     },
   });

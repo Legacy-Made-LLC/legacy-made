@@ -170,8 +170,15 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
 
   // needsRecovery: no local keys but plan already has E2EE enabled
   // Important: hasKeysQuery.data is undefined while loading, NOT false
+  // Suppress while escrow recovery is in-flight OR just succeeded — there is
+  // a window after the mutation completes where hasKeysQuery hasn't refetched
+  // yet, so data is still `false`. isSuccess stays true until the mutation
+  // is reset, closing that gap.
   const needsRecovery =
-    hasKeysQuery.data === false && e2eeStatusQuery.data?.e2eeEnabled === true;
+    !escrowRecoveryMutation.isPending &&
+    !escrowRecoveryMutation.isSuccess &&
+    hasKeysQuery.data === false &&
+    e2eeStatusQuery.data?.e2eeEnabled === true;
 
   // shouldAutoSetup: no local keys, E2EE not yet enabled, ready to set up
   const shouldAutoSetup =
@@ -401,20 +408,21 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
 
   const completeRecovery = useCallback(async () => {
     if (!userId) return;
-    // Invalidate queries so they re-fetch from SecureStore
-    await queryClient.invalidateQueries({
+    // Refetch key queries and wait for them to resolve before returning.
+    // The escrow mutation's onSuccess already invalidated these, but the
+    // refetches may still be in-flight. Using refetchQueries ensures we
+    // block until hasKeysQuery.data is true, preventing the app layout's
+    // needsRecovery guard from redirecting back to the recovery screen.
+    await queryClient.refetchQueries({
       queryKey: queryKeys.crypto.hasKeys(userId),
     });
-    await queryClient.invalidateQueries({
+    await queryClient.refetchQueries({
       queryKey: queryKeys.crypto.dek(userId),
     });
-    await queryClient.invalidateQueries({
+    await queryClient.refetchQueries({
       queryKey: queryKeys.crypto.keyVersion(userId),
     });
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.crypto.serverKeys(userId),
-    });
-    logger.info("E2EE: Recovery complete, queries invalidated");
+    logger.info("E2EE: Recovery complete, key queries settled");
   }, [userId, queryClient]);
 
   // ── Context value ────────────────────────────────────────────────────

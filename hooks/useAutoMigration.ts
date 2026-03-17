@@ -95,11 +95,22 @@ export function useAutoMigration(): UseAutoMigrationReturn {
         progress.failedEntries.length > 0 ||
         progress.failedWishes.length > 0 ||
         progress.failedMessages.length > 0;
+      const totalItems =
+        progress.totalEntries +
+        progress.totalWishes +
+        progress.totalMessages;
 
       if (hasFailures) {
         setPhase("failed");
+      } else if (totalItems === 0) {
+        // Nothing needed migrating (e.g. new device after recovery, or
+        // data was already encrypted). Skip the modal entirely.
+        AsyncStorage.setItem(MIGRATION_COMPLETE_KEY, "true").catch((err) =>
+          logger.error("E2EE: Failed to save migration flag", err),
+        );
+        logger.info("E2EE: No items needed migration, skipping modal");
+        setPhase("hidden");
       } else {
-        // Save completion flag
         AsyncStorage.setItem(MIGRATION_COMPLETE_KEY, "true").catch((err) =>
           logger.error("E2EE: Failed to save migration flag", err),
         );
@@ -113,7 +124,7 @@ export function useAutoMigration(): UseAutoMigrationReturn {
         setPhase("complete");
       }
     }
-  }, [progress.isComplete, progress.error, progress.failedEntries, progress.failedWishes, progress.failedMessages, planId]);
+  }, [progress.isComplete, progress.error, progress.failedEntries, progress.failedWishes, progress.failedMessages, progress.totalEntries, progress.totalWishes, progress.totalMessages, planId]);
 
   const retry = useCallback(() => {
     setPhase("encrypting");

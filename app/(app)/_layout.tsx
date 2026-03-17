@@ -182,8 +182,11 @@ export default function AppLayout() {
     return <Loader branded />;
   }
 
-  // Redirect to recovery screen if user needs key recovery
-  if (crypto.needsRecovery) {
+  // Redirect to recovery screen if user needs key recovery.
+  // Wait for crypto queries to settle first — during post-recovery invalidation,
+  // hasKeysQuery briefly stays false while refetching, which would cause a
+  // false-positive redirect back to recovery and trigger duplicate API calls.
+  if (crypto.needsRecovery && !crypto.isLoading) {
     return <Redirect href="/settings/recovery" />;
   }
 

@@ -1,10 +1,10 @@
+import { colors, spacing, typography } from "@/constants/theme";
+import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackHeaderProps } from "@react-navigation/native-stack";
-import { Stack, useRouter } from "expo-router";
+import { Redirect, Stack, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { colors, spacing, typography } from "@/constants/theme";
 
 /**
  * Custom header for settings screens that matches the app's design language.
@@ -81,6 +81,12 @@ const headerStyles = StyleSheet.create({
 });
 
 export default function SettingsLayout() {
+  const { isSignedIn } = useAuth();
+
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)" />;
+  }
+
   return (
     <Stack
       screenOptions={{

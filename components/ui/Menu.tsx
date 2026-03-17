@@ -6,14 +6,14 @@ import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
-import { useClerk, useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -546,7 +546,7 @@ function AccountView({
 // Main Menu Component
 export function Menu({ visible, onClose }: MenuProps) {
   const insets = useSafeAreaInsets();
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
   const { pushTokens } = useApi();

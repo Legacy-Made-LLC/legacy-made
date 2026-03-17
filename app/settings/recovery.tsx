@@ -12,8 +12,9 @@
 import { useApi } from "@/api/useApi";
 import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { colors, spacing, typography } from "@/constants/theme";
-import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { usePlan } from "@/data/PlanProvider";
+import { useCrypto } from "@/lib/crypto/CryptoProvider";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -74,10 +75,19 @@ export default function RecoveryScreen() {
   const { keys } = useApi();
   const { myPlanId: planId } = usePlan();
 
+  const { user } = useUser();
+  const { signOut } = useAuth();
+
   const [autoState, setAutoState] = useState<AutoRecoveryState>("checking");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasRecoveryDoc, setHasRecoveryDoc] = useState(false);
   const attemptedRef = useRef(false);
+
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+  }, [signOut]);
 
   const attemptEscrowRecovery = useCallback(async () => {
     setAutoState("recovering");
@@ -86,6 +96,9 @@ export default function RecoveryScreen() {
     try {
       const success = await recoverFromEscrow();
       if (success) {
+        // Wait for key queries to refetch and resolve before navigating.
+        // Without this, the app layout's needsRecovery guard may still see
+        // stale hasKeysQuery.data === false and redirect back here.
         await completeRecovery();
         router.replace("/(app)");
       } else {
@@ -157,6 +170,14 @@ export default function RecoveryScreen() {
             ? "Checking your account\u2026"
             : "Restoring access\u2026"}
         </Text>
+        {userEmail && (
+          <View style={styles.signOutFooter}>
+            <Text style={styles.signedInAs}>Signed in as {userEmail}</Text>
+            <Pressable onPress={handleSignOut} hitSlop={8}>
+              <Text style={styles.signOutLink}>Not you? Sign out</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     );
   }
@@ -220,6 +241,21 @@ export default function RecoveryScreen() {
           router.push("/settings/device-linking?mode=receive" as never)
         }
       />
+
+      <View style={styles.signOutFooter}>
+        {userEmail ? (
+          <>
+            <Text style={styles.signedInAs}>Signed in as {userEmail}</Text>
+            <Pressable onPress={handleSignOut} hitSlop={8}>
+              <Text style={styles.signOutLink}>Not you? Sign out</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable onPress={handleSignOut} hitSlop={8}>
+            <Text style={styles.signOutLink}>Back to login</Text>
+          </Pressable>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -310,7 +346,7 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: spacing.lg,
@@ -347,5 +383,20 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
+  },
+  signOutFooter: {
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.xl,
+  },
+  signedInAs: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+  },
+  signOutLink: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: typography.sizes.bodySmall,
+    color: colors.primary,
   },
 });
