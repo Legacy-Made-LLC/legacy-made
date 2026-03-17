@@ -29,6 +29,8 @@ import {
   useTrustedContactQuery,
   useUpdateTrustedContact,
 } from "@/hooks/queries";
+import { queryKeys } from "@/lib/queryKeys";
+import { useQuery } from "@tanstack/react-query";
 import { usePillarGuard } from "@/hooks/usePillarGuard";
 import { useRevokeDEK, useShareDEK } from "@/hooks/useShareDEK";
 import { toast } from "@/hooks/useToast";
@@ -82,6 +84,20 @@ export default function TrustedContactDetailScreen() {
       "Your access level doesn't include Family Access for this plan.",
   });
 
+  // Check if the contact has encryption keys (needed for DEK sharing).
+  // Only query when the contact has accepted and we haven't shared the DEK yet.
+  const recipientKeysQuery = useQuery({
+    queryKey: queryKeys.crypto.serverKeys(contact?.clerkUserId ?? ""),
+    queryFn: () => keys.getPublicKeys(contact?.clerkUserId ?? ""),
+    enabled:
+      !!contact?.clerkUserId &&
+      contact?.accessStatus === "accepted" &&
+      contact?.dekShared === false,
+    staleTime: 60 * 1000,
+  });
+  const recipientHasKeys =
+    recipientKeysQuery.data && recipientKeysQuery.data.length > 0;
+
   if (guardOverlay) {
     return guardOverlay;
   }
@@ -118,7 +134,8 @@ export default function TrustedContactDetailScreen() {
         data: { accessLevel: newLevel },
       });
       toast.success({ message: "Access level updated." });
-    } catch {
+    } catch (err) {
+      logger.error("Failed to update access level", { contactId: contact.id, newLevel, error: err });
       toast.error({ message: "Couldn\u2019t update access level." });
     }
   };
@@ -128,7 +145,8 @@ export default function TrustedContactDetailScreen() {
     try {
       await shareDEK.mutateAsync({ recipientUserId: contact.clerkUserId });
       toast.success({ message: "Encryption key shared." });
-    } catch {
+    } catch (err) {
+      logger.error("Failed to share DEK with trusted contact", { contactId: contact.id, recipientUserId: contact.clerkUserId, error: err });
       toast.error({ message: "Couldn\u2019t share encryption key." });
     }
   };
@@ -140,7 +158,8 @@ export default function TrustedContactDetailScreen() {
         title: "Invitation resent",
         message: `A new invitation has been sent to ${contact.email}.`,
       });
-    } catch {
+    } catch (err) {
+      logger.error("Failed to resend invitation", { contactId: contact.id, error: err });
       toast.error({ message: "Couldn\u2019t resend invitation." });
     }
   };
@@ -162,7 +181,8 @@ export default function TrustedContactDetailScreen() {
                 revokeDEK.mutate(contact.clerkUserId);
               }
               toast.success({ message: "Access has been revoked." });
-            } catch {
+            } catch (err) {
+              logger.error("Failed to revoke trusted contact access", { contactId: contact.id, error: err });
               toast.error({
                 message: "Couldn\u2019t revoke access.",
               });
@@ -187,7 +207,8 @@ export default function TrustedContactDetailScreen() {
               await deleteMutation.mutateAsync(contact.id);
               toast.success({ message: "Trusted contact has been deleted." });
               router.back();
-            } catch {
+            } catch (err) {
+              logger.error("Failed to delete trusted contact", { contactId: contact.id, error: err });
               toast.error({
                 message: "Couldn\u2019t delete trusted contact.",
               });
@@ -247,7 +268,8 @@ export default function TrustedContactDetailScreen() {
               });
               triggerPrompt(contact.firstName);
               router.back();
-            } catch {
+            } catch (err) {
+              logger.error("Failed to restore trusted contact access", { contactId: contact.id, error: err });
               toast.error({ message: "Couldn\u2019t restore access." });
             }
           },
@@ -288,25 +310,47 @@ export default function TrustedContactDetailScreen() {
               />
             </View>
             <View style={styles.dekBannerText}>
-              <Text style={styles.dekBannerTitle}>Share encryption access</Text>
+              <Text style={styles.dekBannerTitle}>
+                {recipientKeysQuery.isLoading
+                  ? "Checking encryption status\u2026"
+                  : recipientHasKeys
+                    ? "Share encryption access"
+                    : "Waiting for account setup"}
+              </Text>
               <Text style={styles.dekBannerDescription}>
-                {fullName} has accepted your invitation but can&apos;t view your
-                plan until you share your encryption key.
+                {recipientKeysQuery.isLoading
+                  ? `Checking whether ${fullName} is ready to receive your encryption key.`
+                  : recipientHasKeys
+                    ? `${fullName} has accepted your invitation but can\u2019t view your plan until you share your encryption key.`
+                    : `${fullName} has accepted your invitation but hasn\u2019t finished setting up their account yet. Once they log in and complete setup, you\u2019ll be able to share your encryption key.`}
               </Text>
             </View>
           </View>
-          <Pressable
-            onPress={handleShareDEK}
-            disabled={shareDEK.isPending}
-            style={({ pressed }) => [
-              styles.dekShareButton,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.dekShareButtonText}>
-              {shareDEK.isPending ? "Sharing..." : "Share Encryption Key"}
-            </Text>
-          </Pressable>
+          {recipientHasKeys ? (
+            <Pressable
+              onPress={handleShareDEK}
+              disabled={shareDEK.isPending}
+              style={({ pressed }) => [
+                styles.dekShareButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.dekShareButtonText}>
+                {shareDEK.isPending ? "Sharing..." : "Share Encryption Key"}
+              </Text>
+            </Pressable>
+          ) : recipientKeysQuery.isLoading ? null : (
+            <View style={styles.dekShareButtonDisabled}>
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={colors.textTertiary}
+              />
+              <Text style={styles.dekShareButtonDisabledText}>
+                Waiting for {contact.firstName} to finish setup
+              </Text>
+            </View>
+          )}
         </Card>
       )}
 
@@ -584,6 +628,20 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.body,
     color: colors.surface,
+  },
+  dekShareButtonDisabled: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: borderRadius.pill,
+  },
+  dekShareButtonDisabledText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
   },
   // Detail Card
   detailCard: {

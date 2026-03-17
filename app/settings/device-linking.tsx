@@ -131,12 +131,20 @@ export default function DeviceLinkingScreen() {
         throw new Error("No plan or user available");
       }
 
-      // Check if this device already has keys
+      // Check if this device already has keys — if so, recovery already
+      // succeeded (e.g. a previous attempt completed but the UI didn't
+      // reflect it). Complete recovery if needed and show success.
       const existing = await hasEncryptionKeys(userId);
       if (existing) {
-        throw new Error(
-          "This device already has encryption keys. Remove them first to link a new device.",
+        logger.info(
+          "E2EE: Device already has keys — treating as successful recovery",
         );
+        if (needsRecovery) {
+          await completeRecovery();
+        }
+        setIsComplete(true);
+        setStatusMessage(null);
+        return;
       }
 
       // 1. Generate new key pair for this device
