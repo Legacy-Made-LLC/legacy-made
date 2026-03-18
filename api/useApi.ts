@@ -2,21 +2,21 @@
  * useApi Hook - Easy access to API services in React components
  */
 
-import { useMemo, useRef } from 'react';
 import { useAuth } from "@clerk/expo";
-import { createAccessInvitationsService } from './accessInvitations';
-import { createApiClient } from './client';
-import { createEntriesService } from './entries';
-import { createEntitlementsService } from './entitlements';
-import { createFilesService } from './files';
-import { createKeysService } from './keys';
-import { createMessagesService } from './messages';
-import { createPlansService } from './plans';
-import { createProgressService } from './progress';
-import { createPushTokensService } from './pushTokens';
-import { createSharedPlansService } from './sharedPlans';
-import { createTrustedContactsService } from './trustedContacts';
-import { createWishesService } from './wishes';
+import { useMemo, useRef } from "react";
+import { createAccessInvitationsService } from "./accessInvitations";
+import { createApiClient } from "./client";
+import { createEntitlementsService } from "./entitlements";
+import { createEntriesService } from "./entries";
+import { createFilesService } from "./files";
+import { createKeysService } from "./keys";
+import { createMessagesService } from "./messages";
+import { createPlansService } from "./plans";
+import { createProgressService } from "./progress";
+import { createPushTokensService } from "./pushTokens";
+import { createSharedPlansService } from "./sharedPlans";
+import { createTrustedContactsService } from "./trustedContacts";
+import { createWishesService } from "./wishes";
 
 /**
  * Hook that provides access to API services with authentication

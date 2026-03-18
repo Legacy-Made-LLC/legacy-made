@@ -7,6 +7,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { FormInput, signInSchema } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -132,7 +134,7 @@ export default function SignInScreen() {
               autoCorrect={false}
               keyboardType="email-address"
               textContentType="emailAddress"
-              autoFocus
+              autoFocus={false}
             />
           )}
         </form.Field>
@@ -149,6 +151,15 @@ export default function SignInScreen() {
             />
           )}
         </form.Subscribe>
+
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <AppleSignInButton />
+        <GoogleSignInButton />
       </View>
 
       <View style={styles.footer}>
@@ -210,6 +221,22 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: spacing.sm,
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    marginHorizontal: spacing.md,
   },
   footer: {
     alignItems: "center",

@@ -14,13 +14,17 @@ import { createVideoPlayer } from "expo-video";
  */
 export async function generateVideoThumbnail(
   videoUri: string,
-): Promise<string | undefined> {
-  const [result] =
-    await createVideoPlayer(videoUri).generateThumbnailsAsync(1000); // 1 second into the video
-  const rendered = await ImageManipulator.manipulate(result).renderAsync();
-  const { uri } = await rendered.saveAsync({
-    compress: 0.8,
-    format: SaveFormat.JPEG,
-  });
-  return uri;
+): Promise<string> {
+  const player = createVideoPlayer(videoUri);
+  try {
+    const [result] = await player.generateThumbnailsAsync(1000); // 1 second into the video
+    const rendered = await ImageManipulator.manipulate(result).renderAsync();
+    const { uri } = await rendered.saveAsync({
+      compress: 0.8,
+      format: SaveFormat.JPEG,
+    });
+    return uri;
+  } finally {
+    player.release();
+  }
 }

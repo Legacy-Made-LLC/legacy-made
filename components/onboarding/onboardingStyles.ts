@@ -169,7 +169,8 @@ export const onboardingStyles = StyleSheet.create({
   },
   formContent: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
     flexGrow: 1,
   },
   formTitle: {
@@ -184,7 +185,7 @@ export const onboardingStyles = StyleSheet.create({
     fontSize: typography.sizes.body,
     color: colors.textSecondary,
     textAlign: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
     lineHeight: typography.sizes.body * typography.lineHeights.normal,
   },
   formField: {
@@ -210,8 +211,8 @@ export const onboardingStyles = StyleSheet.create({
     height: 52,
   },
   formButtonContainer: {
-    marginTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+    marginTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   verificationExplanation: {
     fontFamily: typography.fontFamily.regular,
@@ -226,7 +227,7 @@ export const onboardingStyles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: "center",
     lineHeight: typography.sizes.caption * typography.lineHeights.relaxed,
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
   termsLink: {
     color: colors.primary,
@@ -343,7 +344,6 @@ export const onboardingStyles = StyleSheet.create({
   nameRow: {
     flexDirection: "row",
     gap: spacing.md,
-    marginBottom: spacing.lg,
   },
   nameField: {
     flex: 1,
@@ -402,8 +402,8 @@ export const onboardingStyles = StyleSheet.create({
   // Sign In Link
   signInContainer: {
     alignItems: "center",
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   signInText: {
     fontFamily: typography.fontFamily.regular,
@@ -413,6 +413,24 @@ export const onboardingStyles = StyleSheet.create({
   signInLink: {
     fontFamily: typography.fontFamily.semibold,
     color: colors.primary,
+  },
+
+  // Divider ("or" separator)
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    marginHorizontal: spacing.md,
   },
 
   // Skip / "I'll do this later" link

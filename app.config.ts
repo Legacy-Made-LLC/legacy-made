@@ -87,13 +87,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: "#8a9785",
       },
     ],
+    "./plugins/withIOSDeploymentTarget",
     "react-native-quick-crypto",
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
+    "expo-apple-authentication",
+    "@clerk/expo",
     [
       "expo-build-properties",
       {
         ios: {
-          deploymentTarget: "16.0",
+          deploymentTarget: "17.0",
         },
         android: {
           // Optional: Additional memory optimizations
@@ -119,6 +122,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     clerkPublishableKey: IS_PROD
       ? process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
       : process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY_DEV,
+    EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME:
+      process.env.EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME,
   },
   runtimeVersion: {
     policy: "appVersion",

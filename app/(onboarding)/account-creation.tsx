@@ -1,7 +1,8 @@
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { FormInput, signUpSchema } from "@/components/forms";
 import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
-import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
@@ -167,8 +168,6 @@ export default function AccountCreationScreen() {
           )}
         </form.Field>
 
-        <EncryptionBadge />
-
         <View style={styles.formButtonContainer}>
           <Text style={styles.verificationExplanation}>
             We&apos;ll send a code to your email to verify it&apos;s you.
@@ -202,6 +201,16 @@ export default function AccountCreationScreen() {
               </Pressable>
             )}
           </form.Subscribe>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <AppleSignInButton />
+          <GoogleSignInButton />
+
           <Text style={styles.termsText}>
             By continuing, you agree to our{" "}
             <Text
