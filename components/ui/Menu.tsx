@@ -10,9 +10,11 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import * as Updates from "expo-updates";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -552,6 +554,7 @@ export function Menu({ visible, onClose }: MenuProps) {
   const { pushTokens } = useApi();
   const [modalVisible, setModalVisible] = useState(false);
   const [currentView, setCurrentView] = useState<MenuView>("main");
+  const [buildInfoVisible, setBuildInfoVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const viewSlideAnim = useRef(new Animated.Value(0)).current;
@@ -813,7 +816,23 @@ export function Menu({ visible, onClose }: MenuProps) {
                   />
                   <Text style={styles.mainSignOutText}>Log Out</Text>
                 </Pressable>
-                <Text style={styles.footerText}>Version 1.0.0</Text>
+                <View style={styles.footerVersionRow}>
+                  <Text style={styles.footerText}>
+                    Version {Constants.expoConfig?.version ?? "1"}
+                  </Text>
+                  <Pressable
+                    onPress={() => setBuildInfoVisible(true)}
+                    hitSlop={12}
+                    accessibilityLabel="Build information"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={16}
+                      color={colors.textTertiary}
+                    />
+                  </Pressable>
+                </View>
               </View>
             </View>
 
@@ -832,9 +851,156 @@ export function Menu({ visible, onClose }: MenuProps) {
           </Animated.View>
         </View>
       </Animated.View>
+      <BuildInfoModal
+        visible={buildInfoVisible}
+        onClose={() => setBuildInfoVisible(false)}
+      />
     </Modal>
   );
 }
+
+// ─── Build Info Modal ────────────────────────────────────────────────
+
+function BuildInfoModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  if (!visible) return null;
+
+  const appVersion = Constants.expoConfig?.version;
+  const runtimeVersion =
+    typeof Updates.runtimeVersion === "string"
+      ? Updates.runtimeVersion
+      : undefined;
+  const updateId = Updates.updateId;
+  const updateCreatedAt = Updates.createdAt;
+  const channel = Updates.channel;
+  const isEmbeddedLaunch = Updates.isEmbeddedLaunch;
+
+  const rows: { label: string; value: string }[] = [
+    { label: "App Version", value: appVersion ?? "–" },
+    ...(runtimeVersion
+      ? [{ label: "Runtime Version", value: runtimeVersion }]
+      : []),
+    ...(channel ? [{ label: "Channel", value: channel }] : []),
+    {
+      label: "Update",
+      value: isEmbeddedLaunch
+        ? "Embedded (native build)"
+        : updateId
+          ? `OTA (${updateId.slice(0, 8)})`
+          : "–",
+    },
+    ...(updateCreatedAt
+      ? [
+          {
+            label: "Update Published",
+            value: updateCreatedAt.toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <Pressable style={buildInfoStyles.overlay} onPress={onClose}>
+      <View style={buildInfoStyles.container}>
+        <Pressable onPress={(e) => e.stopPropagation()}>
+          <View style={buildInfoStyles.card}>
+            <Text style={buildInfoStyles.title}>Build Info</Text>
+
+            {rows.map((row) => (
+              <View key={row.label} style={buildInfoStyles.row}>
+                <Text style={buildInfoStyles.label}>{row.label}</Text>
+                <Text style={buildInfoStyles.value} selectable>
+                  {row.value}
+                </Text>
+              </View>
+            ))}
+
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                buildInfoStyles.closeButton,
+                pressed && buildInfoStyles.closeButtonPressed,
+              ]}
+            >
+              <Text style={buildInfoStyles.closeButtonText}>Done</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </View>
+    </Pressable>
+  );
+}
+
+const buildInfoStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+  container: {
+    width: "80%",
+    maxWidth: 300,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+  },
+  title: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.titleMedium,
+    color: colors.textPrimary,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: spacing.xs + 2,
+  },
+  label: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  value: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textPrimary,
+    flex: 1.2,
+    textAlign: "right",
+  },
+  closeButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    alignItems: "center",
+    borderRadius: 10,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  closeButtonPressed: {
+    opacity: 0.7,
+  },
+  closeButtonText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
+  },
+});
 
 const styles = StyleSheet.create({
   overlay: {
@@ -1012,12 +1178,17 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginLeft: spacing.md,
   },
+  footerVersionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
   footerText: {
     fontSize: typography.sizes.caption,
     fontFamily: typography.fontFamily.regular,
     color: colors.textTertiary,
-    textAlign: "center",
-    marginTop: spacing.sm,
   },
 
   // Account View

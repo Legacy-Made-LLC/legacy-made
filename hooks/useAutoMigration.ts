@@ -59,7 +59,8 @@ export function useAutoMigration(): UseAutoMigrationReturn {
   const attemptedRef = useRef(false);
   const [phase, setPhase] = useState<MigrationModalPhase>("hidden");
 
-  // Check if migration is needed and start it
+  // Check if migration is needed and start it silently.
+  // Don't show the modal yet — only present it once we know there are items.
   useEffect(() => {
     if (!isReady || !dekCryptoKey || !planId || attemptedRef.current) return;
 
@@ -71,8 +72,7 @@ export function useAutoMigration(): UseAutoMigrationReturn {
         const alreadyDone = await AsyncStorage.getItem(MIGRATION_COMPLETE_KEY);
         if (alreadyDone === "true") return;
 
-        logger.info("E2EE: Auto-migration starting");
-        setPhase("encrypting");
+        logger.info("E2EE: Auto-migration starting (silent until items found)");
         await startMigration();
       } catch (err) {
         logger.error("E2EE: Auto-migration check failed", err);
@@ -80,6 +80,18 @@ export function useAutoMigration(): UseAutoMigrationReturn {
       }
     })();
   }, [isReady, dekCryptoKey, planId, startMigration]);
+
+  // Show the modal once we know there are items to migrate
+  useEffect(() => {
+    if (phase !== "hidden") return; // Already showing
+    if (!progress.isRunning) return;
+
+    const totalItems =
+      progress.totalEntries + progress.totalWishes + progress.totalMessages;
+    if (totalItems > 0) {
+      setPhase("encrypting");
+    }
+  }, [phase, progress.isRunning, progress.totalEntries, progress.totalWishes, progress.totalMessages]);
 
   // React to progress changes
   useEffect(() => {
