@@ -1,4 +1,5 @@
-import { isClerkAPIResponseError, useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { isClerkAPIResponseError } from "@clerk/expo";
+import { useSignIn, useSignUp } from "@clerk/expo/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {

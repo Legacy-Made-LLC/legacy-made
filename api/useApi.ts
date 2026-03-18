@@ -3,7 +3,7 @@
  */
 
 import { useMemo, useRef } from 'react';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from "@clerk/expo";
 import { createAccessInvitationsService } from './accessInvitations';
 import { createApiClient } from './client';
 import { createEntriesService } from './entries';

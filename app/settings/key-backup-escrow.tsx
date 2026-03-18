@@ -13,7 +13,7 @@ import {
   useRevokeEscrowMutation,
 } from "@/hooks/queries/useKeyBackupMutations";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import React, { useCallback, useState } from "react";

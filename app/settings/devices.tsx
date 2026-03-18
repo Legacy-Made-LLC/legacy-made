@@ -11,7 +11,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { getKeyVersion } from "@/lib/crypto/keys";
 import { logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/queryKeys";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";

@@ -12,7 +12,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/images/icon.png",
   scheme: "legacymade",
   userInterfaceStyle: "automatic",
-  newArchEnabled: true,
   ios: {
     supportsTablet: true,
     bundleIdentifier: IS_PROD
@@ -32,7 +31,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#8a9785",
       foregroundImage: "./assets/images/android-icon-foreground.png",
     },
-    edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: "com.legacymade.LegacyMade",
     permissions: [

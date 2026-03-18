@@ -17,7 +17,9 @@
  *    d. "Already have an account?" escape hatch → sign-in → return
  */
 
-import { useAuth, useSignUp } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
+
+import { useSignUp } from "@clerk/expo/legacy";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { revalidateLogic, useForm } from "@tanstack/react-form";

@@ -1,4 +1,4 @@
-import { useSignUp } from '@clerk/clerk-expo';
+import { useSignUp } from "@clerk/expo/legacy";
 import { revalidateLogic, useForm } from '@tanstack/react-form';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';

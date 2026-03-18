@@ -10,7 +10,7 @@
  * 6. Persist token in AsyncStorage for sign-out cleanup
  */
 
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";

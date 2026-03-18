@@ -2,7 +2,7 @@ import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useSignUp } from "@clerk/clerk-expo";
+import { useSignUp } from "@clerk/expo/legacy";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {

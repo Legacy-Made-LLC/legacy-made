@@ -5,7 +5,7 @@ import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useSignUp } from "@clerk/clerk-expo";
+import { useSignUp } from "@clerk/expo/legacy";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";

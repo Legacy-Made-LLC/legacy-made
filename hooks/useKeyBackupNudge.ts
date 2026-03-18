@@ -9,7 +9,7 @@
 
 import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
 import { hasEncryptionKeys } from "@/lib/crypto/keys";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
