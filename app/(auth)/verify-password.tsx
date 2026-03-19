@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/clerk-expo";
+import { useSignIn } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -20,7 +20,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { logger } from "@/lib/logger";
 
 export default function VerifyPasswordScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { signIn } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ email: string }>();
@@ -32,30 +32,30 @@ export default function VerifyPasswordScreen() {
   const email = params.email || "";
 
   const onVerifyPress = async () => {
-    if (!isLoaded || !signIn) return;
+    if (!signIn) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: "password",
+      const { error: passwordError } = await signIn.password({
+        identifier: email,
         password,
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
+      if (passwordError) {
+        setError(passwordError.message || "Invalid password. Please try again.");
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await signIn.finalize();
         router.replace("/(app)");
       } else {
         setError("Sign-in could not be completed. Please try again.");
       }
     } catch (err: unknown) {
-      const clerkError = err as { errors?: { message: string }[] };
-      if (clerkError.errors && clerkError.errors.length > 0) {
-        setError(clerkError.errors[0].message);
-      } else {
-        setError("Invalid password. Please try again.");
-      }
+      setError("Invalid password. Please try again.");
       logger.error("Password verification failed", err);
     } finally {
       setIsLoading(false);

@@ -10,42 +10,36 @@
  * Flow:
  * 1. Fetch invitation details (public endpoint, no auth)
  * 2. Show who invited them and what access they'd get
- * 3. Accept — if signed in, accept directly. If not:
- *    a. Inline sign-up form (first name, last name, email)
- *    b. OTP email verification
- *    c. Auto-accept after verification
- *    d. "Already have an account?" escape hatch → sign-in → return
+ * 3. Accept:
+ *    - If signed in → accept directly via API
+ *    - If not signed in → save token to AsyncStorage, redirect to auth flow.
+ *      After sign-in/sign-up, usePendingInvitation in (app) layout auto-accepts.
  */
 
-import { useAuth, useSignUp } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { logger } from "@/lib/logger";
 import { fetchInvitationDetails } from "@/api/accessInvitations";
 import { ApiClientError } from "@/api/client";
 import type { InvitationDetails } from "@/api/types";
-import { FormInput, signUpSchema } from "@/components/forms";
 import Loader from "@/components/ui/Loader";
 import {
   borderRadius,
   colors,
-  componentStyles,
   spacing,
   typography,
 } from "@/constants/theme";
@@ -90,8 +84,6 @@ const ACCESS_LEVEL_INFO: Record<
 type ScreenState =
   | { kind: "loading" }
   | { kind: "loaded"; invitation: InvitationDetails }
-  | { kind: "signup"; invitation: InvitationDetails }
-  | { kind: "verify"; invitation: InvitationDetails; email: string }
   | { kind: "error"; message: string }
   | { kind: "expired" }
   | {
@@ -105,80 +97,12 @@ export default function InvitationScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
-  const { signUp, isLoaded: isSignUpLoaded, setActive } = useSignUp();
   const acceptMutation = useAcceptAccessInvitation();
   const declineMutation = useDeclineAccessInvitation();
   const { data: sharedPlans } = useSharedPlansQuery();
   const { switchToSharedPlan } = usePlanSwitching();
 
   const [state, setState] = useState<ScreenState>({ kind: "loading" });
-
-  // Track invitation data in a ref so we can read it from effects without
-  // adding `state` to the dependency array.
-  const invitationRef = useRef<InvitationDetails | undefined>(undefined);
-  if (
-    state.kind === "loaded" ||
-    state.kind === "signup" ||
-    state.kind === "verify"
-  ) {
-    invitationRef.current = state.invitation;
-  }
-
-  // Signup state
-  const [signupError, setSignupError] = useState("");
-  const [isSignupLoading, setIsSignupLoading] = useState(false);
-
-  // OTP state
-  const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [isOtpLoading, setIsOtpLoading] = useState(false);
-
-  // Sign-up form (must be called unconditionally per React hook rules)
-  const signupForm = useForm({
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-    },
-    validationLogic: revalidateLogic(),
-    validators: {
-      onDynamic: signUpSchema,
-    },
-    onSubmit: async ({ value }) => {
-      if (!isSignUpLoaded || !signUp) return;
-      if (state.kind !== "signup") return;
-
-      setIsSignupLoading(true);
-      setSignupError("");
-
-      try {
-        await signUp.create({
-          firstName: value.firstName.trim(),
-          lastName: value.lastName.trim(),
-          emailAddress: value.email.trim(),
-        });
-
-        await signUp.prepareEmailAddressVerification({
-          strategy: "email_code",
-        });
-
-        setState({
-          kind: "verify",
-          invitation: state.invitation,
-          email: value.email.trim(),
-        });
-      } catch (err: unknown) {
-        const clerkError = err as { errors?: { message: string }[] };
-        if (clerkError.errors && clerkError.errors.length > 0) {
-          setSignupError(clerkError.errors[0].message);
-        } else {
-          setSignupError("An error occurred. Please try again.");
-        }
-      } finally {
-        setIsSignupLoading(false);
-      }
-    },
-  });
 
   // Fetch invitation details on mount
   useEffect(() => {
@@ -218,44 +142,10 @@ export default function InvitationScreen() {
       });
   }, [token]);
 
-  // Check for pending invitation token (escape hatch return).
-  // Also serves as a fast path when usePendingInvitation in the app layout
-  // hasn't fired yet (both clear the token before accepting, so only one wins).
-  const { mutateAsync: acceptInvitation } = acceptMutation;
-  useEffect(() => {
-    if (!isSignedIn) return;
-
-    const checkPendingToken = async () => {
-      try {
-        const pendingToken = await AsyncStorage.getItem(
-          PENDING_INVITATION_TOKEN_KEY,
-        );
-        if (!pendingToken) return;
-
-        await AsyncStorage.removeItem(PENDING_INVITATION_TOKEN_KEY);
-
-        try {
-          await acceptInvitation(pendingToken);
-          setState({
-            kind: "done",
-            outcome: "accepted",
-            invitation: invitationRef.current,
-          });
-          toast.success({ title: "Invitation accepted" });
-        } catch (err) {
-          const message =
-            err instanceof ApiClientError
-              ? err.message
-              : "Couldn\u2019t accept invitation.";
-          toast.error({ message });
-        }
-      } catch {
-        // Ignore AsyncStorage errors
-      }
-    };
-
-    checkPendingToken();
-  }, [isSignedIn, acceptInvitation]);
+  // Pending invitation acceptance after auth is handled exclusively by
+  // usePendingInvitation in the (app) layout. This screen saves the token
+  // to AsyncStorage and navigates away — it won't be mounted when the
+  // user completes auth.
 
   // ── Handlers ──────────────────────────────────────────────────────────
 
@@ -270,17 +160,18 @@ export default function InvitationScreen() {
     }
 
     if (!isSignedIn) {
-      // Transition to inline sign-up
-      if (state.kind === "loaded") {
-        const inv = state.invitation;
-        if (inv.contactFirstName)
-          signupForm.setFieldValue("firstName", inv.contactFirstName);
-        if (inv.contactLastName)
-          signupForm.setFieldValue("lastName", inv.contactLastName);
-        if (inv.contactEmail)
-          signupForm.setFieldValue("email", inv.contactEmail);
-        setState({ kind: "signup", invitation: inv });
+      // Save the invitation token so it can be auto-accepted after auth
+      try {
+        await AsyncStorage.setItem(PENDING_INVITATION_TOKEN_KEY, token);
+      } catch (err) {
+        // If storage fails, the user will need to use the link again
+        logger.error("Failed to save pending invitation token", err);
       }
+
+      // Push to the auth welcome screen. The invitation screen stays in
+      // the back stack so the user can navigate back if they change their
+      // mind. After auth completes, usePendingInvitation auto-accepts.
+      router.push("/(auth)");
       return;
     }
 
@@ -325,103 +216,6 @@ export default function InvitationScreen() {
         },
       ],
     );
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!isSignUpLoaded || !signUp || !token) return;
-    if (state.kind !== "verify") return;
-
-    setIsOtpLoading(true);
-    setOtpError("");
-
-    try {
-      const result = await signUp.attemptEmailAddressVerification({
-        code: otpCode,
-      });
-
-      if (result.status === "complete") {
-        // Save invitation token BEFORE activating the session.
-        // setActive triggers isSignedIn → true, which causes the root index
-        // to redirect to /(app), dismissing this modal. The pending token
-        // in AsyncStorage is picked up by usePendingInvitation in the app layout.
-        try {
-          await AsyncStorage.setItem(PENDING_INVITATION_TOKEN_KEY, token);
-        } catch {
-          // If storage fails, we'll still try inline below
-        }
-
-        // Activate the session (this may trigger navigation away from this screen)
-        await setActive({ session: result.createdSessionId });
-
-        // Brief delay for session propagation to Clerk hooks
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Try to accept inline (fast path if the modal hasn't been dismissed yet).
-        // usePendingInvitation in (app) layout handles the case where
-        // this screen is dismissed before accept completes.
-        const inv = state.kind === "verify" ? state.invitation : undefined;
-        try {
-          await acceptMutation.mutateAsync(token);
-          await AsyncStorage.removeItem(PENDING_INVITATION_TOKEN_KEY).catch(
-            () => {},
-          );
-          setState({ kind: "done", outcome: "accepted", invitation: inv });
-          toast.success({ title: "Account created & invitation accepted" });
-        } catch (acceptErr) {
-          // Don't clear the pending token — let usePendingInvitation retry
-          const message =
-            acceptErr instanceof ApiClientError
-              ? acceptErr.message
-              : "Account created but couldn\u2019t accept invitation.";
-          toast.error({ message });
-          setState({ kind: "done", outcome: "accepted", invitation: inv });
-        }
-      } else {
-        setOtpError("Verification could not be completed. Please try again.");
-      }
-    } catch (err: unknown) {
-      const clerkError = err as { errors?: { message: string }[] };
-      if (clerkError.errors && clerkError.errors.length > 0) {
-        setOtpError(clerkError.errors[0].message);
-      } else {
-        setOtpError("Invalid code. Please try again.");
-      }
-    } finally {
-      setIsOtpLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (!isSignUpLoaded || !signUp) return;
-
-    try {
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setOtpCode("");
-      setOtpError("");
-      toast.success({ title: "Code resent" });
-    } catch {
-      setOtpError("Could not resend code. Please try again.");
-    }
-  };
-
-  const handleSignInEscapeHatch = async () => {
-    if (!token) return;
-
-    try {
-      await AsyncStorage.setItem(PENDING_INVITATION_TOKEN_KEY, token);
-    } catch {
-      // If storage fails, the user will need to use the link again
-    }
-
-    router.push("/(auth)/sign-in");
-  };
-
-  const handleBackToLoaded = () => {
-    if (state.kind === "signup") {
-      setState({ kind: "loaded", invitation: state.invitation });
-    } else if (state.kind === "verify") {
-      setState({ kind: "signup", invitation: state.invitation });
-    }
   };
 
   const handleGoHome = () => {
@@ -598,259 +392,11 @@ export default function InvitationScreen() {
             ]}
           >
             <Text style={styles.primaryButtonText}>
-              {isAccepted && state.invitation?.ownerName
-                ? `View Plan`
-                : isAccepted
-                  ? "View Plan"
-                  : "Go to Legacy Made"}
+              {isAccepted ? "View Plan" : "Go to Legacy Made"}
             </Text>
           </Pressable>
         </View>
       </View>
-    );
-  }
-
-  // Signup — inline account creation
-  if (state.kind === "signup") {
-    return (
-      <KeyboardAwareScrollView
-        style={styles.container}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + spacing.md,
-            paddingBottom: insets.bottom + spacing.xl,
-          },
-        ]}
-        bottomOffset={20}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Brand */}
-        <View style={styles.brand}>
-          <Image
-            source={require("@/assets/images/muted-green-circle-logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.brandName}>Legacy Made</Text>
-        </View>
-
-        {/* Back */}
-        <Pressable
-          onPress={handleBackToLoaded}
-          style={({ pressed }) => [
-            styles.backLink,
-            pressed && styles.buttonPressed,
-          ]}
-          hitSlop={12}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
-          <Text style={styles.backLinkText}>Back to invitation</Text>
-        </Pressable>
-
-        {/* Header */}
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>
-          To accept{" "}
-          <Text style={styles.ownerName}>
-            {state.invitation.ownerName}&apos;s
-          </Text>{" "}
-          invitation, tell us a little about yourself.
-        </Text>
-
-        {/* Error */}
-        {signupError ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{signupError}</Text>
-          </View>
-        ) : null}
-
-        {/* Form */}
-        <View style={styles.nameRow}>
-          <View style={styles.nameField}>
-            <signupForm.Field name="firstName">
-              {(field) => (
-                <FormInput
-                  field={field}
-                  label="First Name"
-                  placeholder="First"
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  textContentType="givenName"
-                />
-              )}
-            </signupForm.Field>
-          </View>
-          <View style={styles.nameField}>
-            <signupForm.Field name="lastName">
-              {(field) => (
-                <FormInput
-                  field={field}
-                  label="Last Name"
-                  placeholder="Last"
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  textContentType="familyName"
-                />
-              )}
-            </signupForm.Field>
-          </View>
-        </View>
-
-        <signupForm.Field name="email">
-          {(field) => (
-            <FormInput
-              field={field}
-              label="Email"
-              placeholder="your@email.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-            />
-          )}
-        </signupForm.Field>
-
-        {/* Submit */}
-        <View style={styles.signupButtonContainer}>
-          <Text style={styles.verificationHint}>
-            We&apos;ll send a code to your email to verify it&apos;s you.
-          </Text>
-          <signupForm.Subscribe
-            selector={(formState) => [
-              formState.canSubmit,
-              formState.isSubmitting,
-            ]}
-          >
-            {([canSubmit, isSubmitting]) => (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  pressed && styles.buttonPressed,
-                  (!canSubmit || isSignupLoading || isSubmitting) &&
-                    styles.buttonDisabled,
-                ]}
-                onPress={() => signupForm.handleSubmit()}
-                disabled={!canSubmit || isSignupLoading || isSubmitting}
-              >
-                {isSignupLoading || isSubmitting ? (
-                  <ActivityIndicator color={colors.surface} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Continue</Text>
-                )}
-              </Pressable>
-            )}
-          </signupForm.Subscribe>
-        </View>
-
-        {/* Sign-in escape hatch */}
-        <View style={styles.signInSection}>
-          <Text style={styles.signInText}>
-            Already have an account?{" "}
-            <Text style={styles.signInLink} onPress={handleSignInEscapeHatch}>
-              Sign In
-            </Text>
-          </Text>
-        </View>
-      </KeyboardAwareScrollView>
-    );
-  }
-
-  // Verify — OTP email verification
-  if (state.kind === "verify") {
-    return (
-      <KeyboardAwareScrollView
-        style={styles.container}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + spacing.md,
-            paddingBottom: insets.bottom + spacing.xl,
-          },
-        ]}
-        bottomOffset={20}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Brand */}
-        <View style={styles.brand}>
-          <Image
-            source={require("@/assets/images/muted-green-circle-logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.brandName}>Legacy Made</Text>
-        </View>
-
-        {/* Back */}
-        <Pressable
-          onPress={handleBackToLoaded}
-          style={({ pressed }) => [
-            styles.backLink,
-            pressed && styles.buttonPressed,
-          ]}
-          hitSlop={12}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
-          <Text style={styles.backLinkText}>Back</Text>
-        </Pressable>
-
-        {/* Header */}
-        <Text style={styles.title}>Check your email</Text>
-        <Text style={styles.subtitle}>
-          We sent a verification code to{" "}
-          <Text style={styles.ownerName}>{state.email}</Text>
-        </Text>
-
-        {/* Error */}
-        {otpError ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{otpError}</Text>
-          </View>
-        ) : null}
-
-        {/* OTP Input */}
-        <View style={styles.otpField}>
-          <Text style={styles.otpLabel}>VERIFICATION CODE</Text>
-          <TextInput
-            style={styles.otpInput}
-            placeholder="Enter 6-digit code"
-            placeholderTextColor={colors.textTertiary}
-            value={otpCode}
-            onChangeText={setOtpCode}
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            maxLength={6}
-            autoFocus
-          />
-        </View>
-
-        {/* Verify button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed && styles.buttonPressed,
-            (otpCode.length < 6 || isOtpLoading) && styles.buttonDisabled,
-          ]}
-          onPress={handleVerifyOtp}
-          disabled={otpCode.length < 6 || isOtpLoading}
-        >
-          {isOtpLoading ? (
-            <ActivityIndicator color={colors.surface} />
-          ) : (
-            <Text style={styles.primaryButtonText}>Verify & Accept</Text>
-          )}
-        </Pressable>
-
-        {/* Resend */}
-        <View style={styles.resendSection}>
-          <Text style={styles.resendText}>Didn&apos;t receive a code?</Text>
-          <Pressable onPress={handleResendCode} disabled={isOtpLoading}>
-            <Text style={styles.resendLink}>Resend Code</Text>
-          </Pressable>
-        </View>
-      </KeyboardAwareScrollView>
     );
   }
 
@@ -895,14 +441,6 @@ export default function InvitationScreen() {
         </View>
         <Text style={styles.accessLabel}>{accessInfo.label}</Text>
         <Text style={styles.accessDescription}>{accessInfo.description}</Text>
-        {/* {invitation.accessTiming === "upon_passing" && (
-          <View style={styles.timingBadge}>
-            <Ionicons name="time-outline" size={14} color={colors.warning} />
-            <Text style={styles.timingBadgeText}>
-              Access will be granted at the appropriate time
-            </Text>
-          </View>
-        )} */}
       </View>
 
       {/* What is Legacy Made */}
@@ -924,6 +462,14 @@ export default function InvitationScreen() {
               : "Couldn\u2019t accept invitation. Please try again."}
           </Text>
         </View>
+      ) : null}
+
+      {/* Unauthenticated hint */}
+      {!isSignedIn ? (
+        <Text style={styles.authHint}>
+          You&apos;ll need to sign in or create an account to accept this
+          invitation.
+        </Text>
       ) : null}
 
       {/* Actions */}
@@ -969,9 +515,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     alignItems: "center",
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
   },
   // Brand (top-pinned for centered states)
   brandTop: {
@@ -1054,21 +597,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
   },
-  timingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.md,
-    backgroundColor: "#FFF8F0",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.sm,
-  },
-  timingBadgeText: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.caption,
-    color: colors.warning,
-  },
   // Info
   infoSection: {
     width: "100%",
@@ -1118,38 +646,6 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
-  // Back link
-  backLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    alignSelf: "flex-start",
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  backLinkText: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-  },
-  // Signup form
-  nameRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  nameField: {
-    flex: 1,
-  },
-  signupButtonContainer: {
-    marginTop: spacing.lg,
-  },
-  verificationHint: {
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textTertiary,
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
   errorContainer: {
     backgroundColor: colors.error + "10",
     borderRadius: borderRadius.md,
@@ -1161,59 +657,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     color: colors.error,
   },
-  signInSection: {
-    alignItems: "center",
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  signInText: {
+  authHint: {
     fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
-  },
-  signInLink: {
-    fontFamily: typography.fontFamily.semibold,
-    color: colors.primary,
-  },
-  // OTP verification
-  otpField: {
-    marginBottom: spacing.lg,
-    width: "100%",
-  },
-  otpLabel: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-    textTransform: "uppercase",
-  },
-  otpInput: {
-    height: componentStyles.input.height,
-    borderWidth: componentStyles.input.borderWidth,
-    borderRadius: componentStyles.input.borderRadius,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    fontSize: typography.sizes.body,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
-  },
-  resendSection: {
-    alignItems: "center",
-    paddingTop: spacing.xl,
-  },
-  resendText: {
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  resendLink: {
-    fontFamily: typography.fontFamily.semibold,
-    fontSize: typography.sizes.body,
-    color: colors.primary,
-    paddingVertical: spacing.sm,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginBottom: spacing.md,
   },
   // Expired / Error
   expiredIcon: {

@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/clerk-expo";
+import { useSignIn } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { Link, useRouter } from "expo-router";
@@ -7,6 +7,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { FormInput, signInSchema } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -14,7 +16,7 @@ import { logger } from "@/lib/logger";
 import { isReviewerEmail } from "@/utils/reviewAuth";
 
 export default function SignInScreen() {
-  const { signIn, isLoaded } = useSignIn();
+  const { signIn } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -30,16 +32,21 @@ export default function SignInScreen() {
       onDynamic: signInSchema,
     },
     onSubmit: async ({ value }) => {
-      if (!isLoaded) return;
+      if (!signIn) return;
 
       setIsLoading(true);
       setError("");
 
       try {
-        // Create sign-in attempt and send OTP
-        const { supportedFirstFactors } = await signIn.create({
+        // Create sign-in attempt
+        const { error: createError } = await signIn.create({
           identifier: value.email,
         });
+
+        if (createError) {
+          setError(createError.message || "An error occurred. Please try again.");
+          return;
+        }
 
         // Reviewer accounts use password auth instead of OTP
         if (isReviewerEmail(value.email)) {
@@ -51,16 +58,18 @@ export default function SignInScreen() {
         }
 
         // Find the email code factor
-        const emailCodeFactor = supportedFirstFactors?.find(
+        const emailCodeFactor = signIn.supportedFirstFactors?.find(
           (factor) => factor.strategy === "email_code",
         );
 
-        if (emailCodeFactor && "emailAddressId" in emailCodeFactor) {
+        if (emailCodeFactor) {
           // Send the OTP
-          await signIn.prepareFirstFactor({
-            strategy: "email_code",
-            emailAddressId: emailCodeFactor.emailAddressId,
-          });
+          const { error: sendError } = await signIn.emailCode.sendCode();
+
+          if (sendError) {
+            setError(sendError.message || "Could not send verification code.");
+            return;
+          }
 
           // Navigate to OTP verification
           router.push({
@@ -71,12 +80,7 @@ export default function SignInScreen() {
           setError("Email sign-in is not available for this account.");
         }
       } catch (err: unknown) {
-        const clerkError = err as { errors?: { message: string }[] };
-        if (clerkError.errors && clerkError.errors.length > 0) {
-          setError(clerkError.errors[0].message);
-        } else {
-          setError("An error occurred. Please try again.");
-        }
+        setError("An error occurred. Please try again.");
         logger.error("Sign-in failed", err);
       } finally {
         setIsLoading(false);
@@ -132,7 +136,7 @@ export default function SignInScreen() {
               autoCorrect={false}
               keyboardType="email-address"
               textContentType="emailAddress"
-              autoFocus
+              autoFocus={false}
             />
           )}
         </form.Field>
@@ -149,6 +153,15 @@ export default function SignInScreen() {
             />
           )}
         </form.Subscribe>
+
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <AppleSignInButton />
+        <GoogleSignInButton />
       </View>
 
       <View style={styles.footer}>
@@ -210,6 +223,22 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: spacing.sm,
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textTertiary,
+    marginHorizontal: spacing.md,
   },
   footer: {
     alignItems: "center",

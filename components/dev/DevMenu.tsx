@@ -24,7 +24,7 @@ import { MIGRATION_COMPLETE_KEY } from "@/hooks/useAutoMigration";
 import { GUIDANCE_DISMISSED_KEY_PREFIX } from "@/hooks/useGuidanceDismissals";
 import { clearEncryptionKeys } from "@/lib/crypto/keys";
 import { queryKeys } from "@/lib/queryKeys";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DevAction {

@@ -14,7 +14,7 @@ import { EncryptionBadge } from "@/components/ui/EncryptionBadge";
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePlan } from "@/data/PlanProvider";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";

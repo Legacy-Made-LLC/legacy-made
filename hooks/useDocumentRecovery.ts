@@ -25,7 +25,7 @@ import {
   RECOVERY_DOCUMENT_PBKDF2_SALT,
 } from "@/lib/crypto/types";
 import { logger } from "@/lib/logger";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { mnemonicToEntropy, validateMnemonic } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { useCallback, useState } from "react";

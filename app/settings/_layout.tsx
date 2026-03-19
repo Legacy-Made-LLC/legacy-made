@@ -1,5 +1,5 @@
 import { colors, spacing, typography } from "@/constants/theme";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackHeaderProps } from "@react-navigation/native-stack";
 import { Redirect, Stack, useRouter } from "expo-router";

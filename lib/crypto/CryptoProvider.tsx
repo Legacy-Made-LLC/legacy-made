@@ -28,7 +28,7 @@ import {
 } from "@/hooks/queries/useCryptoQueries";
 import { logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/queryKeys";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,

@@ -1,9 +1,9 @@
 import { FileAttachment, FileType } from "@/api/types";
 import { toast } from "@/hooks/useToast";
 import { logger } from "@/lib/logger";
+import { generateVideoThumbnail } from "@/lib/video";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
-import * as VideoThumbnails from "expo-video-thumbnails";
 import { useCallback, useState } from "react";
 import { Alert } from "react-native";
 
@@ -57,15 +57,11 @@ function getFileType(mimeType: string): FileType {
 /**
  * Generates a thumbnail for a video file
  */
-async function generateVideoThumbnail(
+async function safeGenerateVideoThumbnail(
   videoUri: string,
 ): Promise<string | undefined> {
   try {
-    const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
-      time: 1000, // 1 second into the video
-      quality: 0.7,
-    });
-    return uri;
+    return await generateVideoThumbnail(videoUri);
   } catch (error) {
     logger.warn("Failed to generate video thumbnail", { error: String(error) });
     return undefined;
@@ -153,18 +149,24 @@ export function useFilePicker(
       // return null for fileName, and we need the extension for sharing)
       let fileName = asset.fileName;
       if (!fileName) {
-        const ext = mimeType === "image/png" ? "png"
-          : mimeType === "image/heic" ? "heic"
-          : mimeType === "video/mp4" ? "mp4"
-          : mimeType === "video/quicktime" ? "mov"
-          : isVideo ? "mp4"
-          : "jpg";
+        const ext =
+          mimeType === "image/png"
+            ? "png"
+            : mimeType === "image/heic"
+              ? "heic"
+              : mimeType === "video/mp4"
+                ? "mp4"
+                : mimeType === "video/quicktime"
+                  ? "mov"
+                  : isVideo
+                    ? "mp4"
+                    : "jpg";
         fileName = `photo_${Date.now()}.${ext}`;
       }
 
       let thumbnailUri: string | undefined;
       if (isVideo) {
-        thumbnailUri = await generateVideoThumbnail(asset.uri);
+        thumbnailUri = await safeGenerateVideoThumbnail(asset.uri);
       }
 
       return {

@@ -1,5 +1,5 @@
-import { ClerkProvider } from "@clerk/clerk-expo";
-import { tokenCache } from "@clerk/clerk-expo/token-cache";
+import { ClerkProvider } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import {
   DMSans_400Regular,
   DMSans_500Medium,
@@ -143,7 +143,6 @@ export default Sentry.wrap(function RootLayout() {
                                 name="invitations/[token]"
                                 options={{
                                   headerShown: false,
-                                  presentation: "modal",
                                 }}
                               />
                               <Stack.Screen
