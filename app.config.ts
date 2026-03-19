@@ -95,6 +95,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     "expo-apple-authentication",
     "@clerk/expo",
+    // Removes AD_ID permission injected transitively by Clerk's credential library.
+    "./plugins/withRemoveAdId",
     [
       "expo-build-properties",
       {
