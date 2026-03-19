@@ -7,7 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: IS_PROD ? "Legacy Made" : "Legacy Made (Dev)",
   slug: "legacy-made",
-  version: "1.1.0",
+  version: "1.2.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "legacymade",
@@ -95,6 +95,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     "expo-apple-authentication",
     "@clerk/expo",
+    // Removes AD_ID permission injected transitively by Clerk's credential library.
+    "./plugins/withRemoveAdId",
     [
       "expo-build-properties",
       {
