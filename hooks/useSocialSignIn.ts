@@ -67,20 +67,12 @@ export function useSocialSignIn(
         return;
       }
 
-      const message =
-        err != null &&
-        typeof err === "object" &&
-        "message" in err &&
-        typeof (err as Record<string, unknown>).message === "string"
-          ? ((err as Record<string, unknown>).message as string)
-          : undefined;
-
-      Alert.alert(
-        "Error",
-        message ||
-          `An error occurred during ${options.providerName} sign-in`,
-      );
+      // Log the full error for debugging, but show a generic message to users
       logger.error(`${options.providerName} sign-in failed`, err);
+      Alert.alert(
+        "Sign-In Unavailable",
+        `We couldn't complete ${options.providerName} sign-in right now. Please try again or use another sign-in method.`,
+      );
     } finally {
       setIsLoading(false);
     }

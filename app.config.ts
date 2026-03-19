@@ -87,8 +87,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         color: "#8a9785",
       },
     ],
+    // Super overrides react-native-quick-crypto's override, which manually pins
+    // the deployment target to 16.1. MUST APPEAR BEFORE "react-native-quick-crypto"!
     "./plugins/withIOSDeploymentTarget",
     "react-native-quick-crypto",
+    // Increases memory allowance for local builds.
     ["./plugins/withGradleMemory", { maxMetaspaceSize: "1024m" }],
     "expo-apple-authentication",
     "@clerk/expo",
@@ -122,6 +125,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     clerkPublishableKey: IS_PROD
       ? process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
       : process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY_DEV,
+    // CLERK looks for these variables at runtime. Relying on build time environment
+    // variables alone will not work, so they need to be declared here as well.
+    EXPO_PUBLIC_CLERK_GOOGLE_WEB_CLIENT_ID:
+      process.env.EXPO_PUBLIC_CLERK_GOOGLE_WEB_CLIENT_ID,
+    EXPO_PUBLIC_CLERK_GOOGLE_IOS_CLIENT_ID:
+      process.env.EXPO_PUBLIC_CLERK_GOOGLE_IOS_CLIENT_ID,
+    EXPO_PUBLIC_CLERK_GOOGLE_ANDROID_CLIENT_ID:
+      process.env.EXPO_PUBLIC_CLERK_GOOGLE_ANDROID_CLIENT_ID,
     EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME:
       process.env.EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME,
   },
