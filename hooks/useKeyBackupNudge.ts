@@ -62,9 +62,13 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
     ? Object.values(entryCounts).reduce((sum, count) => sum + count, 0)
     : 0;
 
-  // Check if backup is already configured
+  // Check if backup is already configured.
+  // If backup status hasn't loaded yet (e.g. network error), treat as unknown
+  // so we don't falsely nudge the user.
+  const backupStatusLoaded = crypto?.backupStatusLoaded ?? false;
   const hasBackup =
     crypto?.isReady &&
+    backupStatusLoaded &&
     (crypto.backupStatus.escrow.configured ||
       crypto.backupStatus.recoveryPhrase.configured);
 
@@ -85,6 +89,16 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
         // Don't show if no encryption keys
         const keysExist = await hasEncryptionKeys(userId);
         if (!keysExist) {
+          if (mounted) {
+            setPreconditionsMet(false);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // Don't show if backup status hasn't loaded yet (network error, etc.)
+        // — we can't know whether a backup exists, so don't nudge.
+        if (!backupStatusLoaded) {
           if (mounted) {
             setPreconditionsMet(false);
             setIsLoading(false);
@@ -150,7 +164,7 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
     return () => {
       mounted = false;
     };
-  }, [crypto, userId, planId, totalEntries, hasBackup]);
+  }, [crypto, userId, planId, totalEntries, hasBackup, backupStatusLoaded]);
 
   const onModalDismissed = useCallback(() => {
     setNudgeState("modal_shown");

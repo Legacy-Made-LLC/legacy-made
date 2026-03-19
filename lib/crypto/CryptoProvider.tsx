@@ -70,6 +70,8 @@ interface CryptoContextType {
   decryptFile: (data: ArrayBuffer) => Promise<ArrayBuffer>;
   /** Current backup status */
   backupStatus: KeyBackupStatus;
+  /** Whether the backup status query has successfully loaded (false while loading or errored) */
+  backupStatusLoaded: boolean;
   /** Get the DEK for a shared plan (unwrap with our private key) */
   getSharedPlanDEK: (
     planId: string,
@@ -123,6 +125,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
 
   // Backup status is always for the user's own plan (not shared plans).
   const backupStatusQuery = useBackupStatusQuery(myPlanId, isReady);
+  const backupStatusLoaded = backupStatusQuery.isSuccess;
   const backupStatus: KeyBackupStatus = useMemo(
     () =>
       backupStatusQuery.data ?? {
@@ -441,6 +444,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       encryptFile,
       decryptFile,
       backupStatus,
+      backupStatusLoaded,
       getSharedPlanDEK,
       recoverFromEscrow,
       clearSharedDEKCache,
@@ -459,6 +463,7 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       encryptFile,
       decryptFile,
       backupStatus,
+      backupStatusLoaded,
       getSharedPlanDEK,
       recoverFromEscrow,
       clearSharedDEKCache,

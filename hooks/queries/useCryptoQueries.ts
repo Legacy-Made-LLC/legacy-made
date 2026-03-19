@@ -108,62 +108,55 @@ export function useBackupStatusQuery(
   return useQuery({
     queryKey: queryKeys.crypto.backupStatus(planId!),
     queryFn: async () => {
-      const notConfigured = {
-        configured: false,
-        createdAt: null,
-        removedAt: null,
-      } as const;
-      try {
-        const [dekRecords, recoveryEvents] = await Promise.all([
-          keys.listDeks(planId ?? undefined),
-          keys.listRecoveryEvents().catch(() => []),
-        ]);
+      // Let network errors propagate so TanStack Query retries and stays
+      // in loading/error state rather than returning a false "not configured".
+      const [dekRecords, recoveryEvents] = await Promise.all([
+        keys.listDeks(planId ?? undefined),
+        keys.listRecoveryEvents().catch(() => []),
+      ]);
 
-        const escrowRecord = dekRecords.find((d) => d.dekType === "escrow");
-        const recoveryRecord = dekRecords.find((d) => d.dekType === "recovery");
+      const escrowRecord = dekRecords.find((d) => d.dekType === "escrow");
+      const recoveryRecord = dekRecords.find((d) => d.dekType === "recovery");
 
-        // Find most recent revocation events for each method
-        const escrowRevokedEvent = recoveryEvents
-          .filter((e) => e.eventType === "escrow_revoked")
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          )[0];
+      // Find most recent revocation events for each method
+      const escrowRevokedEvent = recoveryEvents
+        .filter((e) => e.eventType === "escrow_revoked")
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
 
-        const recoveryDeregisteredEvent = recoveryEvents
-          .filter((e) => e.eventType === "recovery_key_deregistered")
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          )[0];
+      const recoveryDeregisteredEvent = recoveryEvents
+        .filter((e) => e.eventType === "recovery_key_deregistered")
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
 
-        return {
-          escrow: escrowRecord
-            ? {
-                configured: true,
-                createdAt: escrowRecord.createdAt,
-                removedAt: null,
-              }
-            : {
-                configured: false,
-                createdAt: null,
-                removedAt: escrowRevokedEvent?.createdAt ?? null,
-              },
-          recoveryPhrase: recoveryRecord
-            ? {
-                configured: true,
-                createdAt: recoveryRecord.createdAt,
-                removedAt: null,
-              }
-            : {
-                configured: false,
-                createdAt: null,
-                removedAt: recoveryDeregisteredEvent?.createdAt ?? null,
-              },
-        };
-      } catch {
-        return { escrow: notConfigured, recoveryPhrase: notConfigured };
-      }
+      return {
+        escrow: escrowRecord
+          ? {
+              configured: true,
+              createdAt: escrowRecord.createdAt,
+              removedAt: null,
+            }
+          : {
+              configured: false,
+              createdAt: null,
+              removedAt: escrowRevokedEvent?.createdAt ?? null,
+            },
+        recoveryPhrase: recoveryRecord
+          ? {
+              configured: true,
+              createdAt: recoveryRecord.createdAt,
+              removedAt: null,
+            }
+          : {
+              configured: false,
+              createdAt: null,
+              removedAt: recoveryDeregisteredEvent?.createdAt ?? null,
+            },
+      };
     },
     enabled: !!planId && isReady,
   });

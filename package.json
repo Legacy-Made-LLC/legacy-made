@@ -11,7 +11,8 @@
     "prebuild:dev": "APP_VARIANT=development expo prebuild --clean",
     "prebuild:prod": "APP_VARIANT=production expo prebuild --clean",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@clerk/expo": "3.1.2",
