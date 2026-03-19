@@ -2,7 +2,8 @@ import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
 import { onboardingStyles as styles } from "@/components/onboarding/onboardingStyles";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useSignUp } from "@clerk/expo/legacy";
+import { logger } from "@/lib/logger";
+import { useSignUp } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -20,7 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signUp, setActive, isLoaded } = useSignUp();
+  const { signUp } = useSignUp();
   const {
     userEmail,
     otpCode,
@@ -39,19 +40,23 @@ export default function VerifyOtpScreen() {
   const [error, setError] = useState("");
 
   const handleVerifyOtp = async () => {
-    if (!isLoaded) return;
+    if (!signUp) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      const result = await signUp.attemptEmailAddressVerification({
-        code: otpCode,
-      });
+      const { error: verifyError } =
+        await signUp.verifications.verifyEmailCode({
+          code: otpCode,
+        });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
+      if (verifyError) {
+        setError(verifyError.message || "Invalid code. Please try again.");
+        return;
+      }
 
+      if (signUp.status === "complete") {
         // Save the pending contact for later (only if user entered contact info)
         if (contactFirstName.trim() && contactLastName.trim()) {
           setPendingContact({
@@ -69,34 +74,32 @@ export default function VerifyOtpScreen() {
         // Reset the temporary form state
         resetOnboardingState();
 
-        // Navigate to the main app
+        // Activate session and navigate to the main app
+        await signUp.finalize();
         router.replace("/(app)");
       } else {
         setError("Verification could not be completed. Please try again.");
       }
-    } catch (err: unknown) {
-      const clerkError = err as { errors?: { message: string }[] };
-      if (clerkError.errors && clerkError.errors.length > 0) {
-        setError(clerkError.errors[0].message);
-      } else {
-        setError("Invalid code. Please try again.");
-      }
+    } catch (err) {
+      setError("Invalid code. Please try again.");
+      logger.error("OTP verification failed", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleResendCode = async () => {
-    if (!isLoaded || !signUp) return;
+    if (!signUp) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      await signUp.verifications.sendEmailCode();
       setOtpCode("");
-    } catch {
+    } catch (err) {
       setError("Could not resend code. Please try again.");
+      logger.error("OTP resend failed", err);
     } finally {
       setIsLoading(false);
     }

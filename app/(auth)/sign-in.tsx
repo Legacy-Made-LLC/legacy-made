@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/expo/legacy";
+import { useSignIn } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { Link, useRouter } from "expo-router";
@@ -16,7 +16,7 @@ import { logger } from "@/lib/logger";
 import { isReviewerEmail } from "@/utils/reviewAuth";
 
 export default function SignInScreen() {
-  const { signIn, isLoaded } = useSignIn();
+  const { signIn } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -32,16 +32,21 @@ export default function SignInScreen() {
       onDynamic: signInSchema,
     },
     onSubmit: async ({ value }) => {
-      if (!isLoaded) return;
+      if (!signIn) return;
 
       setIsLoading(true);
       setError("");
 
       try {
-        // Create sign-in attempt and send OTP
-        const { supportedFirstFactors } = await signIn.create({
+        // Create sign-in attempt
+        const { error: createError } = await signIn.create({
           identifier: value.email,
         });
+
+        if (createError) {
+          setError(createError.message || "An error occurred. Please try again.");
+          return;
+        }
 
         // Reviewer accounts use password auth instead of OTP
         if (isReviewerEmail(value.email)) {
@@ -53,16 +58,18 @@ export default function SignInScreen() {
         }
 
         // Find the email code factor
-        const emailCodeFactor = supportedFirstFactors?.find(
+        const emailCodeFactor = signIn.supportedFirstFactors?.find(
           (factor) => factor.strategy === "email_code",
         );
 
-        if (emailCodeFactor && "emailAddressId" in emailCodeFactor) {
+        if (emailCodeFactor) {
           // Send the OTP
-          await signIn.prepareFirstFactor({
-            strategy: "email_code",
-            emailAddressId: emailCodeFactor.emailAddressId,
-          });
+          const { error: sendError } = await signIn.emailCode.sendCode();
+
+          if (sendError) {
+            setError(sendError.message || "Could not send verification code.");
+            return;
+          }
 
           // Navigate to OTP verification
           router.push({
@@ -73,12 +80,7 @@ export default function SignInScreen() {
           setError("Email sign-in is not available for this account.");
         }
       } catch (err: unknown) {
-        const clerkError = err as { errors?: { message: string }[] };
-        if (clerkError.errors && clerkError.errors.length > 0) {
-          setError(clerkError.errors[0].message);
-        } else {
-          setError("An error occurred. Please try again.");
-        }
+        setError("An error occurred. Please try again.");
         logger.error("Sign-in failed", err);
       } finally {
         setIsLoading(false);

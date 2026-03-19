@@ -1,4 +1,4 @@
-import { useSignUp } from "@clerk/expo/legacy";
+import { useSignUp } from "@clerk/expo";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -15,7 +15,7 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SignUpScreen() {
-  const { signUp, isLoaded } = useSignUp();
+  const { signUp } = useSignUp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -33,22 +33,31 @@ export default function SignUpScreen() {
       onDynamic: signUpSchema,
     },
     onSubmit: async ({ value }) => {
-      if (!isLoaded) return;
+      if (!signUp) return;
 
       setIsLoading(true);
       setError("");
 
       try {
-        // Create account with name and email, then send OTP
-        await signUp.create({
+        // Create account with name and email
+        const { error: createError } = await signUp.create({
           firstName: value.firstName.trim(),
           lastName: value.lastName.trim(),
           emailAddress: value.email.trim(),
         });
 
-        await signUp.prepareEmailAddressVerification({
-          strategy: "email_code",
-        });
+        if (createError) {
+          setError(createError.message || "An error occurred. Please try again.");
+          return;
+        }
+
+        // Send OTP
+        const { error: sendError } = await signUp.verifications.sendEmailCode();
+
+        if (sendError) {
+          setError(sendError.message || "Could not send verification code.");
+          return;
+        }
 
         // Navigate to OTP verification
         router.push({
@@ -56,12 +65,7 @@ export default function SignUpScreen() {
           params: { email: value.email, mode: "sign-up" },
         });
       } catch (err: unknown) {
-        const clerkError = err as { errors?: { message: string }[] };
-        if (clerkError.errors && clerkError.errors.length > 0) {
-          setError(clerkError.errors[0].message);
-        } else {
-          setError("An error occurred. Please try again.");
-        }
+        setError("An error occurred. Please try again.");
         logger.error("Sign-up failed", err);
       } finally {
         setIsLoading(false);

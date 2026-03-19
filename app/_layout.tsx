@@ -143,7 +143,6 @@ export default Sentry.wrap(function RootLayout() {
                                 name="invitations/[token]"
                                 options={{
                                   headerShown: false,
-                                  presentation: "modal",
                                 }}
                               />
                               <Stack.Screen

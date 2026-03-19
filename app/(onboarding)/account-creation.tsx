@@ -6,7 +6,8 @@ import { onboardingStyles as styles } from "@/components/onboarding/onboardingSt
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors } from "@/constants/theme";
 import { useOnboardingContext } from "@/data/OnboardingContext";
-import { useSignUp } from "@clerk/expo/legacy";
+import { logger } from "@/lib/logger";
+import { useSignUp } from "@clerk/expo";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -23,7 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function AccountCreationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signUp, isLoaded } = useSignUp();
+  const { signUp } = useSignUp();
   const {
     firstName,
     setFirstName,
@@ -47,7 +48,7 @@ export default function AccountCreationScreen() {
       onDynamic: signUpSchema,
     },
     onSubmit: async ({ value }) => {
-      if (!isLoaded) return;
+      if (!signUp) return;
 
       setIsLoading(true);
       setError("");
@@ -58,23 +59,29 @@ export default function AccountCreationScreen() {
         setLastName(value.lastName.trim());
         setUserEmail(value.email.trim());
 
-        await signUp.create({
+        const { error: createError } = await signUp.create({
           firstName: value.firstName.trim(),
           lastName: value.lastName.trim(),
           emailAddress: value.email.trim(),
         });
 
-        await signUp.prepareEmailAddressVerification({
-          strategy: "email_code",
-        });
-        router.push("/(onboarding)/verify-otp");
-      } catch (err: unknown) {
-        const clerkError = err as { errors?: { message: string }[] };
-        if (clerkError.errors && clerkError.errors.length > 0) {
-          setError(clerkError.errors[0].message);
-        } else {
-          setError("An error occurred. Please try again.");
+        if (createError) {
+          setError(createError.message || "An error occurred. Please try again.");
+          return;
         }
+
+        const { error: sendError } =
+          await signUp.verifications.sendEmailCode();
+
+        if (sendError) {
+          setError(sendError.message || "Could not send verification code.");
+          return;
+        }
+
+        router.push("/(onboarding)/verify-otp");
+      } catch (err) {
+        setError("An error occurred. Please try again.");
+        logger.error("Account creation failed", err);
       } finally {
         setIsLoading(false);
       }
