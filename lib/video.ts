@@ -1,30 +1,28 @@
 /**
  * Video Utilities
  *
- * Shared helpers for video processing. Uses expo-video's
- * generateThumbnailsAsync (replacing the deprecated expo-video-thumbnails)
- * and expo-image-manipulator for format conversion.
+ * Shared helpers for video processing. Uses expo-video-thumbnails for
+ * generating thumbnail file URIs from video files.
+ *
+ * Note: expo-video-thumbnails is deprecated and will be removed in SDK 56.
+ * The intended replacement (expo-video's generateThumbnailsAsync +
+ * expo-image-manipulator) has a native interop bug in SDK 55 where
+ * ImageManipulator.manipulate() rejects the VideoThumbnail SharedRef.
+ * Revisit this when upgrading to SDK 56.
  */
 
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
-import { createVideoPlayer } from "expo-video";
+import * as VideoThumbnails from "expo-video-thumbnails";
 
 /**
- * Generates a thumbnail for a video file
+ * Generates a thumbnail for a video file.
+ * Returns a local file:// URI suitable for display and upload.
  */
 export async function generateVideoThumbnail(
   videoUri: string,
 ): Promise<string> {
-  const player = createVideoPlayer(videoUri);
-  try {
-    const [result] = await player.generateThumbnailsAsync(1000); // 1 second into the video
-    const rendered = await ImageManipulator.manipulate(result).renderAsync();
-    const { uri } = await rendered.saveAsync({
-      compress: 0.8,
-      format: SaveFormat.JPEG,
-    });
-    return uri;
-  } finally {
-    player.release();
-  }
+  const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
+    time: 1000, // 1 second into the video (milliseconds)
+    quality: 0.7,
+  });
+  return uri;
 }
