@@ -14,7 +14,7 @@
 import type { FileAttachment } from "@/api/types";
 import { logger } from "@/lib/logger";
 import * as FileSystem from "expo-file-system";
-import * as VideoThumbnails from "expo-video-thumbnails";
+import { generateVideoThumbnail } from "./video";
 
 type VideoRecordedCallback = (attachment: FileAttachment) => void;
 
@@ -61,13 +61,11 @@ export async function emitVideoRecorded(videoUri: string) {
     // Generate thumbnail
     let thumbnailUri: string | undefined;
     try {
-      const result = await VideoThumbnails.getThumbnailAsync(videoUri, {
-        time: 1000,
-        quality: 0.7,
-      });
-      thumbnailUri = result.uri;
+      thumbnailUri = await generateVideoThumbnail(videoUri);
     } catch (error) {
-      logger.warn("Failed to generate video thumbnail", { error: String(error) });
+      logger.warn("Failed to generate video thumbnail", {
+        error: String(error),
+      });
     }
 
     const attachment: FileAttachment = {

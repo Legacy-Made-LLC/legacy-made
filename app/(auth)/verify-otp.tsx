@@ -1,4 +1,4 @@
-import { isClerkAPIResponseError, useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { useSignIn, useSignUp } from "@clerk/expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -21,16 +21,8 @@ import { useOnboardingContext } from "@/data/OnboardingContext";
 import { logger } from "@/lib/logger";
 
 export default function VerifyOtpScreen() {
-  const {
-    signIn,
-    setActive: setSignInActive,
-    isLoaded: isSignInLoaded,
-  } = useSignIn();
-  const {
-    signUp,
-    setActive: setSignUpActive,
-    isLoaded: isSignUpLoaded,
-  } = useSignUp();
+  const { signIn } = useSignIn();
+  const { signUp } = useSignUp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
@@ -48,8 +40,8 @@ export default function VerifyOtpScreen() {
   const isSignIn = mode === "sign-in";
 
   const onVerifyPress = async () => {
-    if (isSignIn && !isSignInLoaded) return;
-    if (!isSignIn && !isSignUpLoaded) return;
+    if (isSignIn && !signIn) return;
+    if (!isSignIn && !signUp) return;
 
     setIsLoading(true);
     setError("");
@@ -57,37 +49,43 @@ export default function VerifyOtpScreen() {
     try {
       if (isSignIn) {
         // Verify sign-in OTP
-        const result = await signIn!.attemptFirstFactor({
-          strategy: "email_code",
+        const { error: verifyError } = await signIn!.emailCode.verifyCode({
           code,
         });
 
-        if (result.status === "complete") {
-          await setSignInActive!({ session: result.createdSessionId });
+        if (verifyError) {
+          setError(verifyError.message || "Invalid code. Please try again.");
+          return;
+        }
+
+        if (signIn!.status === "complete") {
           setHasCompletedInitialOnboarding(true);
+          await signIn!.finalize();
           router.replace("/(app)");
         } else {
           setError("Verification could not be completed. Please try again.");
         }
       } else {
         // Verify sign-up OTP
-        const result = await signUp!.attemptEmailAddressVerification({ code });
+        const { error: verifyError } =
+          await signUp!.verifications.verifyEmailCode({ code });
 
-        if (result.status === "complete") {
-          await setSignUpActive!({ session: result.createdSessionId });
+        if (verifyError) {
+          setError(verifyError.message || "Invalid code. Please try again.");
+          return;
+        }
+
+        if (signUp!.status === "complete") {
           setHasCompletedInitialOnboarding(true);
+          await signUp!.finalize();
           router.replace("/(app)");
         } else {
           setError("Verification could not be completed. Please try again.");
         }
       }
     } catch (err: unknown) {
-      if (isClerkAPIResponseError(err) && err.errors.length > 0) {
-        setError(err.errors[0].longMessage ?? err.errors[0].message);
-      } else {
-        setError("Invalid code. Please try again.");
-      }
-      logger.info("OTP verification failed", { error: err });
+      setError("Invalid code. Please try again.");
+      logger.error("OTP verification failed", err);
     } finally {
       setIsLoading(false);
     }
@@ -99,22 +97,18 @@ export default function VerifyOtpScreen() {
 
     try {
       if (isSignIn && signIn) {
-        const { supportedFirstFactors } = signIn;
-        const emailCodeFactor = supportedFirstFactors?.find(
-          (factor) => factor.strategy === "email_code",
-        );
-        if (emailCodeFactor && "emailAddressId" in emailCodeFactor) {
-          await signIn.prepareFirstFactor({
-            strategy: "email_code",
-            emailAddressId: emailCodeFactor.emailAddressId,
-          });
+        const { error: sendError } = await signIn.emailCode.sendCode();
+        if (sendError) {
+          setError(sendError.message || "Could not resend code. Please try again.");
+          return;
         }
       } else if (signUp) {
-        await signUp.prepareEmailAddressVerification({
-          strategy: "email_code",
-        });
+        const { error: sendError } = await signUp.verifications.sendEmailCode();
+        if (sendError) {
+          setError(sendError.message || "Could not resend code. Please try again.");
+          return;
+        }
       }
-      setError("");
       setCode("");
     } catch (err) {
       setError("Could not resend code. Please try again.");

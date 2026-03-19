@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import * as Linking from "expo-linking";
 import { Text, TouchableOpacity } from "react-native";
 

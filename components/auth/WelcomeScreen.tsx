@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/Button";
@@ -9,10 +9,28 @@ import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const canGoBack = router.canGoBack();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.xxl }]}>
       <View style={styles.content}>
+        {canGoBack ? (
+          <Pressable
+            onPress={router.back}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.backButtonPressed,
+            ]}
+            hitSlop={12}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={colors.textPrimary}
+            />
+          </Pressable>
+        ) : null}
         <View style={styles.header}>
           <Image
             source={require("@/assets/images/muted-green-circle-logo.png")}
@@ -103,6 +121,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  backButtonPressed: {
+    backgroundColor: colors.surfaceSecondary,
   },
   header: {
     alignItems: "center",

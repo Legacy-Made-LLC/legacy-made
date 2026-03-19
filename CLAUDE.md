@@ -82,6 +82,7 @@ The MVP focuses on the **primary entry point** — helping users organize critic
 - **Minimize type assertions** — Prefer type-safe solutions over type assertions in general. When assertions are unavoidable, use the most specific type possible (e.g., `as AccountType` rather than `as string`).
 - **No eslint-disable comments** — Do not suppress linter warnings with `eslint-disable` comments. Fix the underlying issue instead.
 - **Data-driven animations** — When animating lists of items (stanzas, cards, list items, etc.), create animation values dynamically based on the data array length. Never hardcode animation values for a fixed number of items. This ensures animations automatically adapt when items are added or removed. Extract timing constants to a configuration object for easy tuning.
+- **Always log caught errors** — Every `catch` block that handles an unexpected error must log it via `logger.error()` (or `logger.info()` for expected/non-critical cases). Never silently swallow errors that could aid debugging. The only exceptions are intentionally silent catches with an explanatory comment (e.g., polling retries, optional storage writes where failure is acceptable).
 
 ### End-to-End Encryption (E2EE)
 

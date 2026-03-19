@@ -24,7 +24,7 @@ import {
 } from "@/hooks/queries/useKeyBackupMutations";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { logger } from "@/lib/logger";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { Stack } from "expo-router";
