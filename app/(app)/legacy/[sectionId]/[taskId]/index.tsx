@@ -52,7 +52,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { toast } from "@/hooks/useToast";
+import { toast, UNDO_TOAST_DURATION } from "@/hooks/useToast";
+import { useFormUndo } from "@/hooks/useFormUndo";
+import { UndoButton } from "@/components/ui/UndoButton";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
 export default function LegacyTaskScreen() {
@@ -152,6 +154,13 @@ export default function LegacyTaskScreen() {
   const getSaveDataRef = useRef<(() => LegacySaveData) | null>(null);
 
   // ============================================================================
+  // Undo / Redo (Singleton Only)
+  // ============================================================================
+
+  const formUndo = useFormUndo<Record<string, unknown>>();
+  const isUndoingRef = useRef(false);
+
+  // ============================================================================
   // Auto-Save Integration (Singleton Only)
   // ============================================================================
 
@@ -212,6 +221,12 @@ export default function LegacyTaskScreen() {
         }
       }
     },
+    onSaveInitiated: () => {
+      const form = formRef.current;
+      if (form) {
+        formUndo.archive(form.state.values as Record<string, unknown>);
+      }
+    },
   });
 
   // Update autoSave when existingMessage changes
@@ -245,6 +260,72 @@ export default function LegacyTaskScreen() {
 
     return unsubscribe;
   }, [autoSave, isReadOnly, isSingleton]);
+
+  // Seed the undo stack with initial form values as baseline (singleton only)
+  const initialSnapshotTaken = useRef(false);
+  useEffect(() => {
+    if (!isSingleton || initialSnapshotTaken.current) return;
+    const form = formRef.current;
+    if (form) {
+      initialSnapshotTaken.current = true;
+      formUndo.archive(form.state.values as Record<string, unknown>);
+    }
+  });
+
+  /** Apply a snapshot to the form and trigger a save */
+  const applySnapshot = useCallback(
+    (snapshot: Record<string, unknown>) => {
+      const form = formRef.current;
+      if (!form) return;
+
+      isUndoingRef.current = true;
+      for (const [key, value] of Object.entries(snapshot)) {
+        form.setFieldValue(key, value);
+      }
+      isUndoingRef.current = false;
+
+      const getSaveData = getSaveDataRef.current;
+      if (getSaveData) {
+        const saveData = getSaveData();
+        autoSave.triggerSave(saveData, true);
+      }
+    },
+    [autoSave],
+  );
+
+  const handleRedo = useCallback(() => {
+    if (!formUndo.canRedo) return;
+    const restored = formUndo.redo();
+    if (!restored) return;
+    applySnapshot(restored);
+    toast.info({ message: "Redid change", duration: UNDO_TOAST_DURATION });
+  }, [formUndo, applySnapshot]);
+
+  const handleUndo = useCallback(() => {
+    const form = formRef.current;
+    if (!form || !formUndo.canUndo) return;
+
+    const reverted = formUndo.undo();
+    if (!reverted) return;
+    applySnapshot(reverted);
+
+    toast.undo({
+      message: "Undid last change",
+      duration: UNDO_TOAST_DURATION,
+      actionLabel: "Redo",
+      onAction: handleRedo,
+    });
+  }, [formUndo, applySnapshot, handleRedo]);
+
+  // Set undo button in header (singleton only)
+  useEffect(() => {
+    if (!isSingleton || isReadOnly) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <UndoButton canUndo={formUndo.canUndo} onUndo={handleUndo} />
+      ),
+    });
+  }, [navigation, isReadOnly, isSingleton, formUndo.canUndo, handleUndo]);
 
   // Navigation protection for singleton (ensure pending saves complete before leaving)
   useEffect(() => {
