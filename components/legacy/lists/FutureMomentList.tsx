@@ -108,7 +108,6 @@ export function FutureMomentList({
         const subtitle = metadata.recipientName
           ? `For: ${metadata.recipientName}`
           : "";
-        const isDraft = message.completionStatus === "draft";
 
         return (
           <AnimatedListItem key={message.id} index={index}>
@@ -126,11 +125,8 @@ export function FutureMomentList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   ) : null}
                 </View>
-                {isDraft && (
-                  <EntryDraftBadge
-                    color={colors.featureLegacy}
-                    backgroundColor={colors.featureLegacyTint}
-                  />
+                {message.completionStatus === "draft" && (
+                  <EntryDraftBadge />
                 )}
                 <Text style={listStyles.chevron}>›</Text>
               </View>

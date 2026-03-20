@@ -4,7 +4,7 @@
  * Used for: contacts.primary, contacts.backup, people
  */
 
-import { type Entry, isEntryDraft } from "@/api/types";
+import { type Entry } from "@/api/types";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -198,11 +198,8 @@ export function ContactList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
-                {isEntryDraft(entry) && (
-                  <EntryDraftBadge
-                    color={colors.featureInformation}
-                    backgroundColor={colors.featureInformationTint}
-                  />
+                {entry.completionStatus === "draft" && (
+                  <EntryDraftBadge />
                 )}
                 <Text style={listStyles.chevron}>›</Text>
               </View>

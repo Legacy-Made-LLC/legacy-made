@@ -58,42 +58,6 @@ export const legacyFormStyles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },
-  // Buttons
-  buttonContainer: {
-    marginTop: spacing.lg,
-  },
-  primaryButton: {
-    backgroundColor: colors.featureLegacy,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  primaryButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  primaryButtonDisabled: {
-    backgroundColor: colors.border,
-  },
-  primaryButtonText: {
-    fontFamily: typography.fontFamily.semibold,
-    fontSize: typography.sizes.body,
-    color: colors.surface,
-  },
-  primaryButtonTextDisabled: {
-    color: colors.textTertiary,
-  },
-  draftLinkContainer: {
-    marginTop: spacing.sm,
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-  },
-  draftLinkText: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textTertiary,
-  },
   // Delete button
   deleteContainer: {
     marginTop: spacing.xl,

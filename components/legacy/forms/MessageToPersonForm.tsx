@@ -1,12 +1,12 @@
 /**
  * MessageToPersonForm - Form for creating/editing a message to a specific person
  *
- * Used for: messages.people (list-based, save/cancel pattern)
+ * Used for: messages.people (list-based, auto-save pattern)
  * Fields: recipient name, relationship (select), message type toggle,
  *         video recording / written message, short description, delivery timing
  */
 
-import type { EntryCompletionStatus, FileAttachment, MessageToPersonMetadata, MetadataSchema } from "@/api/types";
+import type { FileAttachment, MessageToPersonMetadata, MetadataSchema } from "@/api/types";
 import { FilePicker, FormInput, FormTextArea } from "@/components/forms";
 import { RELATIONSHIP_OPTIONS } from "@/components/forms/ContactFormFields";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
@@ -18,7 +18,7 @@ import { setVideoRecordedCallback } from "@/lib/videoRecordingBridge";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -27,7 +27,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { LegacyEntryFormProps } from "../registry";
+import type { LegacyEntryFormProps, LegacyEntrySaveData } from "../registry";
 import { legacyFormStyles } from "./formStyles";
 import { RecordedVideoPreview } from "./RecordedVideoPreview";
 
@@ -69,15 +69,15 @@ export function MessageToPersonForm({
   taskKey,
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: LegacyEntryFormProps) {
   const navigation = useNavigation();
   const router = useRouter();
@@ -89,7 +89,6 @@ export function MessageToPersonForm({
   const isNew = !entryId;
   const task = getLegacyTaskByKey(taskKey);
   const section = getLegacySectionByTaskKey(taskKey);
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as
     | MessageToPersonMetadata
@@ -108,49 +107,45 @@ export function MessageToPersonForm({
     [initialMetadata],
   );
 
-  const submitForm = async (value: FormValues) => {
-    const metadata: MessageToPersonMetadata = {
-      recipientName: value.recipientName.trim(),
-      recipientRelationship: value.recipientRelationship || undefined,
-      messageType: value.messageType,
-      writtenMessage:
-        value.messageType === "written" || value.messageType === "both"
-          ? value.writtenMessage.trim() || undefined
-          : undefined,
-      shortDescription: value.shortDescription.trim() || undefined,
-      deliveryTiming: value.deliveryTiming || undefined,
-      deliveryTimingDetail:
-        value.deliveryTiming === "specific_date" ||
-        value.deliveryTiming === "specific_event"
-          ? value.deliveryTimingDetail.trim() || undefined
-          : undefined,
-    };
-
-    try {
-      await onSave({
-        title: value.recipientName.trim() || "Draft",
-        notes: null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: MESSAGE_TO_PERSON_SCHEMA,
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save message";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
-    onSubmit: async ({ value }) => {
-      await submitForm(value);
-    },
   });
 
   useEffect(() => {
     onFormReady?.(form);
   }, [form, onFormReady]);
+
+  useEffect(() => {
+    const getSaveData = (): LegacyEntrySaveData => {
+      const value = form.state.values;
+
+      const metadata: MessageToPersonMetadata = {
+        recipientName: value.recipientName.trim(),
+        recipientRelationship: value.recipientRelationship || undefined,
+        messageType: value.messageType,
+        writtenMessage:
+          value.messageType === "written" || value.messageType === "both"
+            ? value.writtenMessage.trim() || undefined
+            : undefined,
+        shortDescription: value.shortDescription.trim() || undefined,
+        deliveryTiming: value.deliveryTiming || undefined,
+        deliveryTimingDetail:
+          value.deliveryTiming === "specific_date" ||
+          value.deliveryTiming === "specific_event"
+            ? value.deliveryTimingDetail.trim() || undefined
+            : undefined,
+      };
+
+      return {
+        title: value.recipientName.trim() || "Draft",
+        notes: null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: MESSAGE_TO_PERSON_SCHEMA,
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -161,15 +156,6 @@ export function MessageToPersonForm({
           : "Edit Message",
     });
   }, [isNew, readOnly, navigation]);
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
-  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -269,7 +255,11 @@ export function MessageToPersonForm({
             <Select
               label="Your relationship"
               value={field.state.value}
-              onValueChange={(val) => !readOnly && field.handleChange(val)}
+              onValueChange={(val) => {
+                if (readOnly) return;
+                field.handleChange(val);
+                onDiscreteChange?.();
+              }}
               options={RELATIONSHIP_OPTIONS.map((opt) => ({
                 value: opt,
                 label: opt,
@@ -294,7 +284,11 @@ export function MessageToPersonForm({
                   field.state.value === "written" &&
                     legacyFormStyles.typeButtonSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange("written")}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange("written");
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
               >
                 <Ionicons
@@ -322,7 +316,11 @@ export function MessageToPersonForm({
                   field.state.value === "video" &&
                     legacyFormStyles.typeButtonSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange("video")}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange("video");
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
               >
                 <Ionicons
@@ -350,7 +348,11 @@ export function MessageToPersonForm({
                   field.state.value === "both" &&
                     legacyFormStyles.typeButtonSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange("both")}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange("both");
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
               >
                 <Text
@@ -447,6 +449,7 @@ export function MessageToPersonForm({
                 if (val !== "specific_date" && val !== "specific_event") {
                   form.setFieldValue("deliveryTimingDetail", "");
                 }
+                onDiscreteChange?.();
               }}
               options={DELIVERY_TIMING_OPTIONS}
               disabled={readOnly}
@@ -494,52 +497,6 @@ export function MessageToPersonForm({
           showStorageIndicator
           onUpgradeRequired={onStorageUpgradeRequired}
         />
-      )}
-
-      {!readOnly && (
-        <View style={legacyFormStyles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [
-                      legacyFormStyles.primaryButton,
-                      pressed && legacyFormStyles.primaryButtonPressed,
-                      (busy || !canSubmit) && legacyFormStyles.primaryButtonDisabled,
-                    ]}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  >
-                    <Text
-                      style={[
-                        legacyFormStyles.primaryButtonText,
-                        (busy || !canSubmit) && legacyFormStyles.primaryButtonTextDisabled,
-                      ]}
-                    >
-                      {buttonTitle}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={legacyFormStyles.draftLinkContainer}
-                  >
-                    <Text style={legacyFormStyles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
       )}
 
       {!readOnly && !isNew && onDelete && (

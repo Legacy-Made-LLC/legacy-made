@@ -1,11 +1,11 @@
 /**
  * FutureMomentForm - Form for creating/editing a future moment message
  *
- * Used for: messages.future (list-based, save/cancel pattern)
+ * Used for: messages.future (list-based, auto-save pattern)
  * Fields: occasion, recipient name, message type (video/written/both), written message
  */
 
-import type { EntryCompletionStatus, FileAttachment, FutureMomentMetadata, MetadataSchema } from "@/api/types";
+import type { FileAttachment, FutureMomentMetadata, MetadataSchema } from "@/api/types";
 import { FilePicker, FormInput, FormTextArea } from "@/components/forms";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { colors, spacing } from "@/constants/theme";
@@ -15,7 +15,7 @@ import { setVideoRecordedCallback } from "@/lib/videoRecordingBridge";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -24,7 +24,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { LegacyEntryFormProps } from "../registry";
+import type { LegacyEntryFormProps, LegacyEntrySaveData } from "../registry";
 import { legacyFormStyles } from "./formStyles";
 import { RecordedVideoPreview } from "./RecordedVideoPreview";
 
@@ -55,15 +55,15 @@ export function FutureMomentForm({
   taskKey,
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: LegacyEntryFormProps) {
   const navigation = useNavigation();
   const router = useRouter();
@@ -75,7 +75,6 @@ export function FutureMomentForm({
   const isNew = !entryId;
   const task = getLegacyTaskByKey(taskKey);
   const section = getLegacySectionByTaskKey(taskKey);
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as
     | FutureMomentMetadata
@@ -92,43 +91,38 @@ export function FutureMomentForm({
     [initialMetadata],
   );
 
-  const submitForm = async (value: FormValues) => {
-    const metadata: FutureMomentMetadata = {
-      occasion: value.occasion.trim(),
-      recipientName: value.recipientName.trim() || undefined,
-      messageType: value.messageType,
-      writtenMessage:
-        value.messageType === "written" || value.messageType === "both"
-          ? value.writtenMessage.trim() || undefined
-          : undefined,
-      deliveryNote: value.deliveryNote.trim() || undefined,
-    };
-
-    try {
-      await onSave({
-        title: value.occasion.trim() || "Draft",
-        notes: null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: FUTURE_MOMENT_SCHEMA,
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save moment";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
-    onSubmit: async ({ value }) => {
-      await submitForm(value);
-    },
   });
 
   useEffect(() => {
     onFormReady?.(form);
   }, [form, onFormReady]);
+
+  useEffect(() => {
+    const getSaveData = (): LegacyEntrySaveData => {
+      const values = form.state.values;
+      const metadata: FutureMomentMetadata = {
+        occasion: values.occasion.trim(),
+        recipientName: values.recipientName.trim() || undefined,
+        messageType: values.messageType,
+        writtenMessage:
+          values.messageType === "written" || values.messageType === "both"
+            ? values.writtenMessage.trim() || undefined
+            : undefined,
+        deliveryNote: values.deliveryNote.trim() || undefined,
+      };
+
+      return {
+        title: values.occasion.trim() || "Draft",
+        notes: null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: FUTURE_MOMENT_SCHEMA,
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -139,15 +133,6 @@ export function FutureMomentForm({
           : "Edit Moment",
     });
   }, [isNew, readOnly, navigation]);
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
-  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -264,7 +249,11 @@ export function FutureMomentForm({
                   field.state.value === "written" &&
                     legacyFormStyles.typeButtonSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange("written")}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange("written");
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
               >
                 <Ionicons
@@ -292,7 +281,11 @@ export function FutureMomentForm({
                   field.state.value === "video" &&
                     legacyFormStyles.typeButtonSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange("video")}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange("video");
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
               >
                 <Ionicons
@@ -320,7 +313,11 @@ export function FutureMomentForm({
                   field.state.value === "both" &&
                     legacyFormStyles.typeButtonSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange("both")}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange("both");
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
               >
                 <Text
@@ -418,52 +415,6 @@ export function FutureMomentForm({
           showStorageIndicator
           onUpgradeRequired={onStorageUpgradeRequired}
         />
-      )}
-
-      {!readOnly && (
-        <View style={legacyFormStyles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [
-                      legacyFormStyles.primaryButton,
-                      pressed && legacyFormStyles.primaryButtonPressed,
-                      (busy || !canSubmit) && legacyFormStyles.primaryButtonDisabled,
-                    ]}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  >
-                    <Text
-                      style={[
-                        legacyFormStyles.primaryButtonText,
-                        (busy || !canSubmit) && legacyFormStyles.primaryButtonTextDisabled,
-                      ]}
-                    >
-                      {buttonTitle}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={legacyFormStyles.draftLinkContainer}
-                  >
-                    <Text style={legacyFormStyles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
       )}
 
       {!readOnly && !isNew && onDelete && (

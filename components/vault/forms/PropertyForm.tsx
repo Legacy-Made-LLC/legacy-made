@@ -4,9 +4,10 @@
  * Uses a segmented control to toggle between Property and Vehicle modes.
  * The form fields adapt contextually based on the selected type.
  * Metadata field keys are unchanged for backwards compatibility.
+ * Auto-save enabled — the orchestrator handles saving via registerGetSaveData.
  */
 
-import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
+import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, propertySchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -24,7 +25,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EntryFormProps } from "../registry";
+import type { EntryFormProps, EntrySaveData } from "../registry";
 import { formStyles } from "./formStyles";
 
 /** Top-level type segments */
@@ -116,20 +117,19 @@ function deriveTopLevelType(responsibilityType: string | undefined): "Property" 
 export function PropertyForm({
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as PropertyMetadata | undefined;
 
@@ -163,51 +163,49 @@ export function PropertyForm({
     [initialData, initialMetadata],
   );
 
-  const submitForm = async (value: typeof defaultValues) => {
-    const vehicleEntry = value.propertyType === "Vehicle";
-
-    const metadata: PropertyMetadata = {
-      responsibilityType: value.propertyType as ResponsibilityType,
-      ownership: value.ownership as OwnershipType,
-      addressDescription: value.addressDescription.trim() || null,
-      lienHolder: value.lienHolder.trim() || null,
-      documentsLocation: value.documentsLocation.trim() || null,
-      keyLocation: value.keyLocation.trim() || null,
-      notes: value.notes.trim() || null,
-    };
-
-    const title = vehicleEntry
-      ? value.addressDescription.trim() || "Draft"
-      : value.propertyType || "Draft";
-
-    try {
-      await onSave({
-        title,
-        notes: value.notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: buildMetadataSchema(vehicleEntry),
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: propertySchema,
     },
-    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
   useEffect(() => {
     onFormReady?.(form);
   }, [form, onFormReady]);
+
+  // Register getSaveData for auto-save orchestrator
+  useEffect(() => {
+    const getSaveData = (): EntrySaveData | null => {
+      const value = form.state.values;
+      const vehicleEntry = value.propertyType === "Vehicle";
+
+      const metadata: PropertyMetadata = {
+        responsibilityType: value.propertyType as ResponsibilityType,
+        ownership: value.ownership as OwnershipType,
+        addressDescription: value.addressDescription.trim() || null,
+        lienHolder: value.lienHolder.trim() || null,
+        documentsLocation: value.documentsLocation.trim() || null,
+        keyLocation: value.keyLocation.trim() || null,
+        notes: value.notes.trim() || null,
+      };
+
+      const title = vehicleEntry
+        ? value.addressDescription.trim() || "Draft"
+        : value.propertyType || "Draft";
+
+      return {
+        title,
+        notes: value.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: buildMetadataSchema(vehicleEntry),
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   // Contextual header title
   useEffect(() => {
@@ -231,15 +229,7 @@ export function PropertyForm({
       form.setFieldValue("propertyType", lastPropertySubtypeRef.current);
       setTopLevelType("Property");
     }
-  };
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
+    onDiscreteChange?.();
   };
 
   const handleDelete = () => {
@@ -298,7 +288,10 @@ export function PropertyForm({
               <Select
                 label="Property Type"
                 value={field.state.value}
-                onValueChange={(val) => field.handleChange(val)}
+                onValueChange={(val) => {
+                  field.handleChange(val);
+                  onDiscreteChange?.();
+                }}
                 options={PROPERTY_SUBTYPES.map((s) => ({
                   value: s.value,
                   label: s.label,
@@ -338,7 +331,10 @@ export function PropertyForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={readOnly ? undefined : () => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => {
+                      field.handleChange(type);
+                      onDiscreteChange?.();
+                    }}
                   >
                     <Text
                       style={[
@@ -442,39 +438,6 @@ export function PropertyForm({
             showStorageIndicator
             onUpgradeRequired={onStorageUpgradeRequired}
           />
-        )}
-
-        {!readOnly && (
-        <View style={formStyles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Button
-                    title={buttonTitle}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  />
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={formStyles.draftLinkContainer}
-                  >
-                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
         )}
 
         {!readOnly && !isNew && onDelete && (

@@ -106,7 +106,6 @@ export function MessageToPersonList({
         const metadata = message.metadata as unknown as MessageToPersonMetadata;
         const name = metadata.recipientName || message.title || "Untitled";
         const subtitle = metadata.recipientRelationship || "";
-        const isDraft = message.completionStatus === "draft";
 
         return (
           <AnimatedListItem key={message.id} index={index}>
@@ -124,11 +123,8 @@ export function MessageToPersonList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   ) : null}
                 </View>
-                {isDraft && (
-                  <EntryDraftBadge
-                    color={colors.featureLegacy}
-                    backgroundColor={colors.featureLegacyTint}
-                  />
+                {message.completionStatus === "draft" && (
+                  <EntryDraftBadge />
                 )}
                 <Text style={listStyles.chevron}>›</Text>
               </View>

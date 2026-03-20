@@ -1,8 +1,10 @@
 /**
  * DigitalForm - Form for creating/editing digital access entries
+ *
+ * Auto-save enabled — the orchestrator handles saving via registerGetSaveData.
  */
 
-import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
+import type { MetadataSchema } from "@/api/types";
 import {
   FormInput,
   FormTextArea,
@@ -15,7 +17,7 @@ import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -24,7 +26,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EntryFormProps } from "../registry";
+import type { EntryFormProps, EntrySaveData } from "../registry";
 import { formStyles } from "./formStyles";
 
 const importanceLevels = ["Critical", "High", "Medium", "Low"] as const;
@@ -104,20 +106,19 @@ export function DigitalForm({
   taskKey,
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
   const isSocial = taskKey === "digital.social";
   const labels = getLabels(taskKey);
 
@@ -134,40 +135,12 @@ export function DigitalForm({
     [initialData, initialMetadata],
   );
 
-  const submitForm = async (value: typeof defaultValues) => {
-    const metadata: DigitalMetadata = {
-      service: value.service.trim(),
-      username: value.username.trim() || null,
-      importance: value.importance as ImportanceLevel,
-      notes: value.accessNotes.trim() || null,
-    };
-
-    const title = isSocial
-      ? value.service.trim() || "Draft"
-      : value.accountName.trim() || "Draft";
-
-    try {
-      await onSave({
-        title,
-        notes: value.accessNotes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: DIGITAL_METADATA_SCHEMA,
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save account";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: isSocial ? digitalSocialSchema : digitalSchema,
     },
-    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -175,20 +148,38 @@ export function DigitalForm({
     onFormReady?.(form);
   }, [form, onFormReady]);
 
+  // Register getSaveData function with orchestrator
+  useEffect(() => {
+    const getSaveData = (): EntrySaveData => {
+      const value = form.state.values;
+
+      const metadata: DigitalMetadata = {
+        service: value.service.trim(),
+        username: value.username.trim() || null,
+        importance: value.importance as ImportanceLevel,
+        notes: value.accessNotes.trim() || null,
+      };
+
+      const title = isSocial
+        ? value.service.trim() || "Draft"
+        : value.accountName.trim() || "Draft";
+
+      return {
+        title,
+        notes: value.accessNotes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: DIGITAL_METADATA_SCHEMA,
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData, isSocial]);
+
   useEffect(() => {
     navigation.setOptions({
       title: readOnly ? labels.editTitle.replace("Edit", "View") : isNew ? labels.addTitle : labels.editTitle,
     });
   }, [isNew, readOnly, labels.addTitle, labels.editTitle, navigation]);
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
-  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -279,7 +270,10 @@ export function DigitalForm({
                       field.state.value === level &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={readOnly ? undefined : () => field.handleChange(level)}
+                    onPress={readOnly ? undefined : () => {
+                      field.handleChange(level);
+                      onDiscreteChange?.();
+                    }}
                   >
                     <Text
                       style={[
@@ -320,39 +314,6 @@ export function DigitalForm({
             showStorageIndicator
             onUpgradeRequired={onStorageUpgradeRequired}
           />
-        )}
-
-        {!readOnly && (
-        <View style={formStyles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Button
-                    title={buttonTitle}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  />
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={formStyles.draftLinkContainer}
-                  >
-                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
         )}
 
         {!readOnly && !isNew && onDelete && (

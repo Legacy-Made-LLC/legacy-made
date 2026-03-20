@@ -3,11 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Animated } from "react-native";
 
 import { logger } from "@/lib/logger";
+import type { StartAppleAuthenticationFlowReturnType } from "@clerk/expo/apple";
+import type { StartGoogleAuthenticationFlowReturnType } from "@clerk/expo/google";
 
-interface SocialAuthResult {
-  createdSessionId?: string | null;
-  setActive?: (params: { session: string }) => Promise<void>;
-}
+type SocialAuthResult =
+  | StartGoogleAuthenticationFlowReturnType
+  | StartAppleAuthenticationFlowReturnType;
 
 /**
  * Shared hook for social sign-in buttons (Apple, Google).

@@ -1,8 +1,10 @@
 /**
  * PetForm - Form for creating/editing pet entries
+ *
+ * Auto-save enabled — the orchestrator handles saving via registerGetSaveData.
  */
 
-import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
+import type { MetadataSchema } from "@/api/types";
 import {
   formatPhoneNumber,
   FormInput,
@@ -15,7 +17,7 @@ import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -24,7 +26,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EntryFormProps } from "../registry";
+import type { EntryFormProps, EntrySaveData } from "../registry";
 import { formStyles } from "./formStyles";
 
 const speciesTypes = ["Dog", "Cat", "Bird", "Fish", "Other"] as const;
@@ -60,20 +62,19 @@ interface PetMetadata {
 export function PetForm({
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as PetMetadata | undefined;
 
@@ -91,59 +92,48 @@ export function PetForm({
     [initialData, initialMetadata],
   );
 
-  const submitForm = async (value: typeof defaultValues) => {
-    const metadata: PetMetadata = {
-      species: value.species as SpeciesType,
-      breed: value.breed.trim() || null,
-      veterinarian: value.veterinarian.trim() || null,
-      vetPhone: value.vetPhone.trim() || null,
-      designatedCaretaker: value.designatedCaretaker.trim() || null,
-      careInstructions: value.careInstructions.trim() || null,
-    };
-
-    try {
-      await onSave({
-        title: value.name.trim() || "Draft",
-        notes: value.careInstructions.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: PET_METADATA_SCHEMA,
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save pet";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: petSchema,
     },
-    onSubmit: async ({ value }) => submitForm(value),
   });
 
-  // Report form instance to parent for unsaved-changes guard
+  // Report form instance to parent for auto-save subscription
   useEffect(() => {
     onFormReady?.(form);
   }, [form, onFormReady]);
+
+  // Register getSaveData function with orchestrator
+  useEffect(() => {
+    const getSaveData = (): EntrySaveData => {
+      const value = form.state.values;
+      const metadata: PetMetadata = {
+        species: value.species as SpeciesType,
+        breed: value.breed.trim() || null,
+        veterinarian: value.veterinarian.trim() || null,
+        vetPhone: value.vetPhone.trim() || null,
+        designatedCaretaker: value.designatedCaretaker.trim() || null,
+        careInstructions: value.careInstructions.trim() || null,
+      };
+
+      return {
+        title: value.name.trim() || "Draft",
+        notes: value.careInstructions.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: PET_METADATA_SCHEMA,
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
 
   useEffect(() => {
     navigation.setOptions({
       title: readOnly ? "View Pet" : isNew ? "Add Pet" : "Edit Pet",
     });
   }, [isNew, readOnly, navigation]);
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
-  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -207,7 +197,10 @@ export function PetForm({
                       field.state.value === type &&
                         formStyles.typeButtonSelected,
                     ]}
-                    onPress={readOnly ? undefined : () => field.handleChange(type)}
+                    onPress={readOnly ? undefined : () => {
+                      field.handleChange(type);
+                      onDiscreteChange?.();
+                    }}
                   >
                     <Text
                       style={[
@@ -303,39 +296,6 @@ export function PetForm({
             showStorageIndicator
             onUpgradeRequired={onStorageUpgradeRequired}
           />
-        )}
-
-        {!readOnly && (
-        <View style={formStyles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Button
-                    title={buttonTitle}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  />
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={formStyles.draftLinkContainer}
-                  >
-                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
         )}
 
         {!readOnly && !isNew && onDelete && (

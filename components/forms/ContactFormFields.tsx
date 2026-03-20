@@ -54,6 +54,8 @@ interface ContactFormFieldsWithFormProps {
   reasonPlaceholder?: string;
   /** When true, all fields are non-interactive (view-only) */
   disabled?: boolean;
+  /** Called when a discrete field changes (select) — triggers immediate save */
+  onDiscreteChange?: () => void;
 }
 
 export function ContactFormFieldsWithForm({
@@ -63,6 +65,7 @@ export function ContactFormFieldsWithForm({
   reasonLabel = 'Why this person?',
   reasonPlaceholder = 'What makes them the right contact?',
   disabled,
+  onDiscreteChange,
 }: ContactFormFieldsWithFormProps) {
   return (
     <>
@@ -110,7 +113,10 @@ export function ContactFormFieldsWithForm({
             <Select
               label="Relationship"
               value={field.state.value}
-              onValueChange={field.handleChange}
+              onValueChange={(val) => {
+                field.handleChange(val);
+                onDiscreteChange?.();
+              }}
               onBlur={field.handleBlur}
               options={RELATIONSHIP_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
               placeholder="Select relationship"
