@@ -15,15 +15,18 @@ import type {
   CreateMessageRequest,
   EntitlementInfo,
   EntryCompletionStatus,
+  Message,
   MetadataSchema,
   UpdateMessageRequest,
-  Message,
 } from "@/api/types";
-import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
-import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import {
+  encryptForCreate,
+  encryptForUpdate,
+} from "@/lib/crypto/entryEncryption";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -207,7 +210,12 @@ export function useCreateMessage<T = Record<string, unknown>>(
           if (!old) return [typedMessage];
           const optimistic = old.find((m) => m.id.startsWith("temp-"));
           const merged = optimistic
-            ? { ...optimistic, id: typedMessage.id, createdAt: typedMessage.createdAt, updatedAt: typedMessage.updatedAt }
+            ? {
+                ...optimistic,
+                id: typedMessage.id,
+                createdAt: typedMessage.createdAt,
+                updatedAt: typedMessage.updatedAt,
+              }
             : typedMessage;
           return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
         },
@@ -221,14 +229,22 @@ export function useCreateMessage<T = Record<string, unknown>>(
         },
       );
 
-      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
-        if (!old) return [typedMessage as unknown as Message];
-        const optimistic = old.find((m) => m.id.startsWith("temp-"));
-        const merged = optimistic
-          ? { ...optimistic, id: typedMessage.id, createdAt: typedMessage.createdAt, updatedAt: typedMessage.updatedAt }
-          : (typedMessage as unknown as Message);
-        return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
-      });
+      queryClient.setQueryData<Message[]>(
+        queryKeys.messages.all(planId),
+        (old) => {
+          if (!old) return [typedMessage as unknown as Message];
+          const optimistic = old.find((m) => m.id.startsWith("temp-"));
+          const merged = optimistic
+            ? {
+                ...optimistic,
+                id: typedMessage.id,
+                createdAt: typedMessage.createdAt,
+                updatedAt: typedMessage.updatedAt,
+              }
+            : (typedMessage as unknown as Message);
+          return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
+        },
+      );
     },
     onSettled: (_data, error) => {
       if (!planId || !taskKey) return;
@@ -461,10 +477,13 @@ export function useDeleteMessage<T = Record<string, unknown>>(
         },
       );
 
-      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
-        if (!old) return [];
-        return old.filter((m) => m.id !== messageId);
-      });
+      queryClient.setQueryData<Message[]>(
+        queryKeys.messages.all(planId),
+        (old) => {
+          if (!old) return [];
+          return old.filter((m) => m.id !== messageId);
+        },
+      );
 
       queryClient.removeQueries({
         queryKey: queryKeys.messages.single(planId, messageId),

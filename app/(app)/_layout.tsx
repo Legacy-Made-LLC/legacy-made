@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackHeaderProps } from "@react-navigation/native-stack";
 import { onlineManager } from "@tanstack/react-query";
 import { Redirect, Stack } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
@@ -109,8 +109,24 @@ const headerStyles = StyleSheet.create({
   },
 });
 
+/**
+ * Auth guard — absorbs Clerk's ~45-second token refresh re-renders.
+ *
+ * Clerk's useAuth() re-renders on every JWT refresh (~45s). By isolating it
+ * here and memoizing AppContent, the rest of the tree only re-renders when
+ * isSignedIn actually changes (sign-in / sign-out).
+ */
 export default function AppLayout() {
   const { isSignedIn } = useAuth();
+
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)" />;
+  }
+
+  return <AppContent />;
+}
+
+const AppContent = React.memo(function AppContent() {
   const { pendingContact, clearPendingContact } = useOnboardingContext();
   const {
     planId,
@@ -177,10 +193,6 @@ export default function AppLayout() {
 
   // Access crypto context for recovery detection
   const crypto = useCrypto();
-
-  if (!isSignedIn) {
-    return <Redirect href="/(auth)" />;
-  }
 
   // Show loading while plan is being fetched
   if ((isPlanLoading && !planId) || entitlements.isLoading) {
@@ -319,7 +331,7 @@ export default function AppLayout() {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
