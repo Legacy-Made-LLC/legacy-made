@@ -164,6 +164,8 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
   const keySyncMutate = keySyncMutation.mutate;
   const isKeySyncPending = keySyncMutation.isPending;
   const escrowRecoveryMutation = useEscrowRecoveryMutation();
+  const escrowRecoveryMutateAsync = escrowRecoveryMutation.mutateAsync;
+
   // ── Derived state ────────────────────────────────────────────────────
 
   const isLoading =
@@ -401,13 +403,13 @@ export function CryptoProvider({ children }: CryptoProviderProps) {
       return false;
     }
     try {
-      await escrowRecoveryMutation.mutateAsync({ planId: myPlanId, userId });
+      await escrowRecoveryMutateAsync({ planId: myPlanId, userId });
       return true;
     } catch (error) {
       logger.warn("E2EE: Escrow recovery failed", { error });
       return false;
     }
-  }, [escrowRecoveryMutation, myPlanId, userId]);
+  }, [escrowRecoveryMutateAsync, myPlanId, userId]);
 
   const completeRecovery = useCallback(async () => {
     if (!userId) return;

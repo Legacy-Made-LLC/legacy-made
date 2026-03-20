@@ -60,6 +60,14 @@ export interface EntryListProps {
 // Form Component Types
 // ============================================================================
 
+/** Data shape returned by form's getSaveData function */
+export interface EntrySaveData {
+  title: string;
+  notes?: string | null;
+  metadata: Record<string, unknown>;
+  metadataSchema: MetadataSchema;
+}
+
 export interface EntryFormProps {
   /** The task key for this form */
   taskKey: string;
@@ -67,20 +75,12 @@ export interface EntryFormProps {
   entryId?: string;
   /** Initial data for the form (when editing) */
   initialData?: Entry;
-  /** Callback when form is saved */
-  onSave: (data: {
-    title: string;
-    notes?: string | null;
-    metadata: Record<string, unknown>;
-    metadataSchema: MetadataSchema;
-    completionStatus?: EntryCompletionStatus;
-  }) => Promise<void>;
+  /** Register a function the orchestrator calls to get current form values for auto-save */
+  registerGetSaveData?: (fn: () => EntrySaveData | null) => void;
+  /** Current completion status (from orchestrator) */
+  completionStatus?: EntryCompletionStatus;
   /** Callback when entry is deleted (only for editing) */
   onDelete?: () => Promise<void>;
-  /** Callback when form is cancelled */
-  onCancel: () => void;
-  /** Whether save is in progress */
-  isSaving?: boolean;
   /** Current file attachments (including pending uploads) */
   attachments?: FileAttachment[];
   /** Callback when attachments change (for forms that support file uploads) */
@@ -95,6 +95,8 @@ export interface EntryFormProps {
   readOnly?: boolean;
   /** Callback to expose the form instance to the parent (for unsaved-changes guard) */
   onFormReady?: (form: AnyFormApi) => void;
+  /** Called when a discrete field changes (toggle, select, pill) — triggers immediate save */
+  onDiscreteChange?: () => void;
 }
 
 export const listRegistry: Record<string, ComponentType<EntryListProps>> = {

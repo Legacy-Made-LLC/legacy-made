@@ -1,15 +1,17 @@
 /**
  * FinancialForm - Form for creating/editing financial account entries
+ *
+ * Auto-save enabled — the orchestrator handles saving via registerGetSaveData.
  */
 
-import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
+import type { MetadataSchema } from "@/api/types";
 import { FormInput, FormTextArea, financialSchema, FilePicker } from "@/components/forms";
 import { Button } from "@/components/ui/Button";
 import { spacing } from "@/constants/theme";
 import { toast } from "@/hooks/useToast";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -18,7 +20,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EntryFormProps } from "../registry";
+import type { EntryFormProps, EntrySaveData } from "../registry";
 import { formStyles } from "./formStyles";
 
 const accountTypes = [
@@ -63,20 +65,19 @@ interface FinancialMetadata {
 export function FinancialForm({
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const isNew = !entryId;
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   const initialMetadata = initialData?.metadata as
     | FinancialMetadata
@@ -100,44 +101,12 @@ export function FinancialForm({
     [initialData, initialMetadata],
   );
 
-  const submitForm = async (value: typeof defaultValues) => {
-    const selectedTypes = value.accountTypes as AccountType[];
-    const metadata: FinancialMetadata = {
-      institution: value.institution.trim(),
-      accountTypes: selectedTypes.length > 0 ? selectedTypes : ["Other"],
-      accountOwners: value.accountOwners.trim() || null,
-      accountNumber: value.accountNumber.trim() || null,
-      notes: value.notes.trim() || null,
-    };
-
-    const typesLabel = selectedTypes.join(", ");
-    const title =
-      value.accountName.trim() ||
-      `${value.institution.trim()} ${typesLabel}`.trim() ||
-      "Draft";
-
-    try {
-      await onSave({
-        title,
-        notes: value.notes.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: FINANCIAL_METADATA_SCHEMA,
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save account";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: financialSchema,
     },
-    onSubmit: async ({ value }) => submitForm(value),
   });
 
   // Report form instance to parent for unsaved-changes guard
@@ -145,20 +114,41 @@ export function FinancialForm({
     onFormReady?.(form);
   }, [form, onFormReady]);
 
+  // Register getSaveData for auto-save orchestrator
+  useEffect(() => {
+    const getSaveData = (): EntrySaveData | null => {
+      const value = form.state.values;
+      const selectedTypes = value.accountTypes as AccountType[];
+      const metadata: FinancialMetadata = {
+        institution: value.institution.trim(),
+        accountTypes: selectedTypes.length > 0 ? selectedTypes : ["Other"],
+        accountOwners: value.accountOwners.trim() || null,
+        accountNumber: value.accountNumber.trim() || null,
+        notes: value.notes.trim() || null,
+      };
+
+      const typesLabel = selectedTypes.join(", ");
+      const title =
+        value.accountName.trim() ||
+        `${value.institution.trim()} ${typesLabel}`.trim() ||
+        "Draft";
+
+      return {
+        title,
+        notes: value.notes.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: FINANCIAL_METADATA_SCHEMA,
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData]);
+
   useEffect(() => {
     navigation.setOptions({
       title: readOnly ? "View Account" : isNew ? "Add Account" : "Edit Account",
     });
   }, [isNew, readOnly, navigation]);
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
-  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -217,6 +207,7 @@ export function FinancialForm({
                 ? selected.filter((t) => t !== type)
                 : [...selected, type];
               field.handleChange(updated);
+              onDiscreteChange?.();
             };
             return (
               <View style={formStyles.fieldContainer}>
@@ -307,39 +298,6 @@ export function FinancialForm({
             showStorageIndicator
             onUpgradeRequired={onStorageUpgradeRequired}
           />
-        )}
-
-        {!readOnly && (
-        <View style={formStyles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Button
-                    title={buttonTitle}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  />
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={formStyles.draftLinkContainer}
-                  >
-                    <Text style={formStyles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
         )}
 
         {!readOnly && !isNew && onDelete && (

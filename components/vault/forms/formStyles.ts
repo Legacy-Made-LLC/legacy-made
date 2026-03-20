@@ -59,19 +59,6 @@ export const formStyles = StyleSheet.create({
   typeButtonTextSelected: {
     color: colors.surface,
   },
-  buttonContainer: {
-    marginTop: spacing.lg,
-  },
-  draftLinkContainer: {
-    marginTop: spacing.sm,
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-  },
-  draftLinkText: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textTertiary,
-  },
   deleteContainer: {
     marginTop: spacing.xl,
     alignItems: "center",

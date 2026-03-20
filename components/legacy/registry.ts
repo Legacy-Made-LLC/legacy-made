@@ -69,20 +69,23 @@ export interface LegacySingletonFormProps {
 // Form Props - List Entry (save/cancel, like vault)
 // ============================================================================
 
+/** Data shape returned by legacy form's getSaveData function */
+export interface LegacyEntrySaveData {
+  title: string;
+  notes?: string | null;
+  metadata: Record<string, unknown>;
+  metadataSchema: MetadataSchema;
+}
+
 export interface LegacyEntryFormProps {
   taskKey: string;
   entryId?: string;
   initialData?: Message;
-  onSave: (data: {
-    title: string;
-    notes?: string | null;
-    metadata: Record<string, unknown>;
-    metadataSchema: MetadataSchema;
-    completionStatus?: EntryCompletionStatus;
-  }) => Promise<void>;
+  /** Register a function the orchestrator calls to get current form values for auto-save */
+  registerGetSaveData?: (fn: () => LegacyEntrySaveData | null) => void;
+  /** Current completion status (from orchestrator) */
+  completionStatus?: EntryCompletionStatus;
   onDelete?: () => Promise<void>;
-  onCancel: () => void;
-  isSaving?: boolean;
   attachments?: FileAttachment[];
   onAttachmentsChange?: (files: FileAttachment[]) => void;
   isUploading?: boolean;
@@ -90,6 +93,8 @@ export interface LegacyEntryFormProps {
   onStorageUpgradeRequired?: () => void;
   readOnly?: boolean;
   onFormReady?: (form: AnyFormApi) => void;
+  /** Called when a discrete field changes (toggle, select, pill) — triggers immediate save */
+  onDiscreteChange?: () => void;
 }
 
 // ============================================================================

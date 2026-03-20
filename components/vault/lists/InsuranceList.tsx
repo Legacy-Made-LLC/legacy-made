@@ -2,7 +2,7 @@
  * InsuranceList - Displays a list of insurance policy entries
  */
 
-import { type Entry, isEntryDraft } from "@/api/types";
+import { type Entry } from "@/api/types";
 import { EntryDraftBadge } from "@/components/ui/EntryDraftBadge";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
 import { PressableCard } from "@/components/ui/Card";
@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { SkeletonList } from "@/components/ui/SkeletonCard";
 import { SortControl } from "@/components/ui/SortControl";
-import { colors, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { getSectionByTaskKey, getTaskByKey } from "@/constants/vault";
 import { useSortedEntries } from "@/hooks/useSortedEntries";
 import { Ionicons } from "@expo/vector-icons";
@@ -152,7 +152,7 @@ export function InsuranceList({
                     <Text style={listStyles.cardSubtitle}>{subtitle}</Text>
                   )}
                 </View>
-                {isEntryDraft(entry) && <EntryDraftBadge color={colors.featureInformation} backgroundColor={colors.featureInformationTint} />}
+                {entry.completionStatus === "draft" && <EntryDraftBadge />}
                 <Text style={listStyles.chevron}>›</Text>
               </View>
             </PressableCard>

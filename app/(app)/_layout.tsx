@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackHeaderProps } from "@react-navigation/native-stack";
 import { onlineManager } from "@tanstack/react-query";
 import { Redirect, Stack } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
@@ -11,6 +11,7 @@ import {
   EncryptionMigrationModalRef,
 } from "@/components/home/EncryptionMigrationModal";
 
+import { ApiClientError } from "@/api/errors";
 import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
 import Loader from "@/components/ui/Loader";
@@ -61,7 +62,11 @@ function StackHeader({ navigation, options, back }: NativeStackHeaderProps) {
           </Text>
         )}
       </View>
-      {back && <View style={headerStyles.spacer} />}
+      {back && (
+        options.headerRight
+          ? options.headerRight({ canGoBack: !!back })
+          : <View style={headerStyles.spacer} />
+      )}
     </View>
   );
 }
@@ -104,8 +109,24 @@ const headerStyles = StyleSheet.create({
   },
 });
 
+/**
+ * Auth guard — absorbs Clerk's ~45-second token refresh re-renders.
+ *
+ * Clerk's useAuth() re-renders on every JWT refresh (~45s). By isolating it
+ * here and memoizing AppContent, the rest of the tree only re-renders when
+ * isSignedIn actually changes (sign-in / sign-out).
+ */
 export default function AppLayout() {
   const { isSignedIn } = useAuth();
+
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)" />;
+  }
+
+  return <AppContent />;
+}
+
+const AppContent = React.memo(function AppContent() {
   const { pendingContact, clearPendingContact } = useOnboardingContext();
   const {
     planId,
@@ -173,10 +194,6 @@ export default function AppLayout() {
   // Access crypto context for recovery detection
   const crypto = useCrypto();
 
-  if (!isSignedIn) {
-    return <Redirect href="/(auth)" />;
-  }
-
   // Show loading while plan is being fetched
   if ((isPlanLoading && !planId) || entitlements.isLoading) {
     return <Loader branded />;
@@ -190,9 +207,16 @@ export default function AppLayout() {
     return <Redirect href="/settings/recovery" />;
   }
 
-  // Log and show error screen if plan failed to load and we have no data
-  if (planError && !planId) {
-    logger.error("Plan failed to load", planError);
+  // Show error screen if plan failed to load.
+  // Two cases: (1) no cached data at all, or (2) auth error (token expired after idle)
+  // — in the latter case stale planId may still exist, but all queries will fail.
+  const isAuthError =
+    planError instanceof ApiClientError && planError.statusCode === 401;
+  if (planError && (!planId || isAuthError)) {
+    logger.error("Plan failed to load", planError, {
+      hasCachedPlanId: !!planId,
+      isAuthError: String(isAuthError),
+    });
     return (
       <ErrorScreen
         isOffline={!onlineManager.isOnline()}
@@ -307,7 +331,7 @@ export default function AppLayout() {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -11,9 +11,9 @@ import { useEffect } from "react";
 
 import { useApi } from "@/api";
 import type { Message } from "@/api/types";
+import { usePlan } from "@/data/PlanProvider";
 import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
 import { decryptEntry, isEncryptedEntry } from "@/lib/crypto/entryEncryption";
-import { usePlan } from "@/data/PlanProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -94,7 +94,9 @@ export function useMessageQuery<T = Record<string, unknown>>(
       const allData = queryClient.getQueryData<Message[]>(
         queryKeys.messages.all(planId),
       );
-      return allData?.find((msg) => msg.id === messageId) as Message<T> | undefined;
+      return allData?.find((msg) => msg.id === messageId) as
+        | Message<T>
+        | undefined;
     },
     initialDataUpdatedAt: () => {
       if (!planId) return undefined;
@@ -156,7 +158,9 @@ export function useMessageCountsQuery() {
       // Seed individual task caches for instant navigation —
       // but NOT when crypto is active, since this raw data is encrypted.
       if (!crypto) {
-        for (const [taskKey, taskMessages] of Object.entries(groupedByTaskKey)) {
+        for (const [taskKey, taskMessages] of Object.entries(
+          groupedByTaskKey,
+        )) {
           queryClient.setQueryData(
             queryKeys.messages.byTaskKey(planId!, taskKey),
             taskMessages,

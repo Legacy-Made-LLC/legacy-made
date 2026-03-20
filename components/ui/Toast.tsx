@@ -3,15 +3,22 @@
  *
  * Styled to match the Legacy Made design system.
  * Renders at the bottom of the screen with calm, non-intrusive feedback.
+ *
+ * Toast types:
+ * - success: Green accent, for confirmations
+ * - error: Red accent, for failures
+ * - info: Primary accent, for neutral info
+ * - undo: Primary accent with an action button (e.g., "Redo")
  */
 
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ToastMessage, {
   type BaseToastProps,
   type ToastConfig,
+  type ToastConfigParams,
 } from "react-native-toast-message";
 
 function SuccessToast({ text1, text2 }: BaseToastProps) {
@@ -50,10 +57,52 @@ function InfoToast({ text1, text2 }: BaseToastProps) {
   );
 }
 
+/**
+ * Undo toast — shows a message with an action button (typically "Redo").
+ *
+ * Usage:
+ *   toast.undo({
+ *     message: "Undid last change",
+ *     actionLabel: "Redo",
+ *     onAction: handleRedo,
+ *   });
+ */
+function UndoToast({ text1, text2, props }: ToastConfigParams<any>) {
+  const actionLabel = props?.actionLabel ?? "Redo";
+  const onAction = props?.onAction as (() => void) | undefined;
+
+  return (
+    <View style={[styles.container, styles.infoContainer]}>
+      <View style={[styles.accent, styles.infoAccent]} />
+      <View style={styles.undoContent}>
+        <View style={styles.textContainer}>
+          {text1 ? <Text style={styles.title}>{text1}</Text> : null}
+          {text2 ? <Text style={styles.message}>{text2}</Text> : null}
+        </View>
+        {onAction ? (
+          <Pressable
+            onPress={() => {
+              onAction();
+              ToastMessage.hide();
+            }}
+            style={styles.actionButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+          >
+            <Text style={styles.actionText}>{actionLabel}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const toastConfig: ToastConfig = {
   success: (props) => <SuccessToast {...props} />,
   error: (props) => <ErrorToast {...props} />,
   info: (props) => <InfoToast {...props} />,
+  undo: (props) => <UndoToast {...props} />,
 };
 
 /**
@@ -130,5 +179,22 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
     lineHeight: typography.sizes.caption * typography.lineHeights.normal,
+  },
+  undoContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginRight: spacing.sm,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  actionText: {
+    fontFamily: typography.fontFamily.semibold,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
   },
 });

@@ -166,21 +166,28 @@ export function YourStoryForm({
     });
   }, [navigation]);
 
+  // Primary recorded video: any video that isn't explicitly an attachment.
+  // Covers role "primary-video" (new) and no role (legacy data).
+  const isRecordedVideo = (a: FileAttachment) =>
+    a.type === "video" && a.role !== "attachment";
+
   const recordedVideo = useMemo(
-    () => attachments?.find((a) => a.type === "video"),
+    () => attachments?.find(isRecordedVideo),
     [attachments],
   );
 
-  const nonVideoAttachments = useMemo(
-    () => attachments?.filter((a) => a.type !== "video") ?? [],
+  const supplementalAttachments = useMemo(
+    () => attachments?.filter((a) => !isRecordedVideo(a)) ?? [],
     [attachments],
   );
 
   const handleRecordVideo = useCallback(() => {
     setVideoRecordedCallback((attachment: FileAttachment) => {
       if (onAttachmentsChange) {
-        const withoutVideo = (attachments ?? []).filter((a) => a.type !== "video");
-        onAttachmentsChange([...withoutVideo, attachment]);
+        const withoutRecorded = (attachments ?? []).filter(
+          (a) => !isRecordedVideo(a),
+        );
+        onAttachmentsChange([...withoutRecorded, attachment]);
       }
     });
     router.push(
@@ -190,7 +197,7 @@ export function YourStoryForm({
 
   const handleRemoveVideo = useCallback(() => {
     if (onAttachmentsChange) {
-      onAttachmentsChange((attachments ?? []).filter((a) => a.type !== "video"));
+      onAttachmentsChange((attachments ?? []).filter((a) => !isRecordedVideo(a)));
     }
   }, [attachments, onAttachmentsChange]);
 
@@ -396,16 +403,20 @@ export function YourStoryForm({
       {!readOnly && onAttachmentsChange && (
         <FilePicker
           label="Life Photos"
-          value={nonVideoAttachments}
+          value={supplementalAttachments}
           onChange={(newFiles) => {
-            const video = (attachments ?? []).filter((a) => a.type === "video");
-            onAttachmentsChange([...video, ...newFiles]);
+            const tagged = newFiles.map((f) =>
+              f.type === "video" && !f.role ? { ...f, role: "attachment" as const } : f,
+            );
+            const recorded = (attachments ?? []).filter(isRecordedVideo);
+            onAttachmentsChange([...recorded, ...tagged]);
           }}
           mode="all"
           maxFiles={20}
           placeholder="Add photos that tell your story"
           showStorageIndicator
           onUpgradeRequired={onStorageUpgradeRequired}
+          accentColor={colors.featureLegacy}
         />
       )}
     </KeyboardAwareScrollView>

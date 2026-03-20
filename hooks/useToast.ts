@@ -6,6 +6,9 @@
 
 import ToastMessage from "react-native-toast-message";
 
+/** Duration for undo/redo toasts (ms) — long enough to tap Redo */
+export const UNDO_TOAST_DURATION = 5000;
+
 interface ToastOptions {
   /** Primary text (short, bold) */
   title?: string;
@@ -13,6 +16,13 @@ interface ToastOptions {
   message?: string;
   /** Auto-hide duration in ms (default: 4000) */
   duration?: number;
+}
+
+interface UndoToastOptions extends ToastOptions {
+  /** Label for the action button (default: "Redo") */
+  actionLabel?: string;
+  /** Callback when the action button is pressed */
+  onAction?: () => void;
 }
 
 function showSuccess({ title, message, duration }: ToastOptions) {
@@ -42,10 +52,27 @@ function showInfo({ title, message, duration }: ToastOptions) {
   });
 }
 
+function showUndo({
+  title,
+  message,
+  duration,
+  actionLabel,
+  onAction,
+}: UndoToastOptions) {
+  ToastMessage.show({
+    type: "undo",
+    text1: title ?? "",
+    text2: message,
+    visibilityTime: duration ?? 4000,
+    props: { actionLabel, onAction },
+  });
+}
+
 export const toast = {
   success: showSuccess,
   error: showError,
   info: showInfo,
+  undo: showUndo,
 };
 
 /**

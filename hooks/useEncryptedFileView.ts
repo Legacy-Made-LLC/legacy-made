@@ -50,6 +50,11 @@ export function useEncryptedFileView(
 
   const cachedFileRef = useRef<string | null>(null);
 
+  // Keep downloadUrl in a ref so loadFile doesn't get recreated when presigned
+  // URLs rotate (every query refetch returns fresh URLs for the same content).
+  const downloadUrlRef = useRef(downloadUrl);
+  downloadUrlRef.current = downloadUrl;
+
   /**
    * Clean up cached decrypted file
    */
@@ -77,7 +82,7 @@ export function useEncryptedFileView(
 
     try {
       // 1. Use provided download URL, or fetch a fresh one as fallback
-      let url = downloadUrl || null;
+      let url = downloadUrlRef.current || null;
       if (!url) {
         const downloadInfo = await files.getDownloadUrl(fileId);
         url = downloadInfo.downloadUrl;
@@ -87,7 +92,7 @@ export function useEncryptedFileView(
       let response = await fetch(url);
 
       // If the provided URL expired, fetch a fresh one and retry
-      if (!response.ok && downloadUrl) {
+      if (!response.ok && downloadUrlRef.current) {
         const downloadInfo = await files.getDownloadUrl(fileId);
         response = await fetch(downloadInfo.downloadUrl);
       }
@@ -141,7 +146,7 @@ export function useEncryptedFileView(
     } finally {
       setIsLoading(false);
     }
-  }, [fileId, files, crypto, mimeType, cryptoReady, downloadUrl, isEncrypted]);
+  }, [fileId, files, crypto, mimeType, cryptoReady, isEncrypted]);
 
   // Load file on mount / fileId change — wait for crypto to be ready
   useEffect(() => {

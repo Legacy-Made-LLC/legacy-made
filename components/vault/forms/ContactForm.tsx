@@ -2,9 +2,10 @@
  * ContactForm - Form for creating/editing contact entries
  *
  * Used for: contacts.primary, contacts.backup, people
+ * Auto-save enabled — the orchestrator handles saving via registerGetSaveData.
  */
 
-import type { EntryCompletionStatus, MetadataSchema } from "@/api/types";
+import type { MetadataSchema } from "@/api/types";
 import { contactSchemaWithRequiredPhone, FilePicker } from "@/components/forms";
 import { ContactFormFieldsWithForm } from "@/components/forms/ContactFormFields";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -13,11 +14,11 @@ import { toast } from "@/hooks/useToast";
 import { Ionicons } from "@expo/vector-icons";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { EntryFormProps } from "../registry";
+import type { EntryFormProps, EntrySaveData } from "../registry";
 
 const formText = {
   owner: {
@@ -70,22 +71,21 @@ export function ContactForm({
   taskKey,
   entryId,
   initialData,
-  onSave,
+  registerGetSaveData,
   onDelete,
-  isSaving,
   attachments,
   onAttachmentsChange,
   isUploading,
   onStorageUpgradeRequired,
   readOnly,
   onFormReady,
+  onDiscreteChange,
 }: EntryFormProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { perspective } = usePerspective();
   const t = formText[perspective];
   const isNew = !entryId;
-  const completionStatusRef = useRef<EntryCompletionStatus>("complete");
 
   // Extract initial values from initialData
   const initialMetadata = initialData?.metadata as unknown as
@@ -107,62 +107,51 @@ export function ContactForm({
     [initialMetadata, initialData?.notes],
   );
 
-  const submitForm = async (value: ContactFormValues) => {
-    const title =
-      `${value.firstName.trim()} ${value.lastName.trim()}`.trim() || "Draft";
-    const metadata: ContactMetadata = {
-      firstName: value.firstName.trim(),
-      lastName: value.lastName.trim(),
-      relationship: value.relationship.trim(),
-      phone: value.phone.trim(),
-      email: value.email.trim() || null,
-      reason: value.reason.trim() || null,
-      isPrimary: showPriorityToggle ? value.isPrimary : false,
-    };
-
-    try {
-      await onSave({
-        title,
-        notes: value.reason.trim() || null,
-        metadata: metadata as unknown as Record<string, unknown>,
-        metadataSchema: CONTACT_METADATA_SCHEMA,
-        completionStatus: completionStatusRef.current,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save contact";
-      toast.error({ message });
-    }
-  };
-
   const form = useForm({
     defaultValues,
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: contactSchemaWithRequiredPhone,
     },
-    onSubmit: async ({ value }) => submitForm(value),
   });
 
-  // Report form instance to parent for unsaved-changes guard
+  // Report form instance to parent for auto-save subscription
   useEffect(() => {
     onFormReady?.(form);
   }, [form, onFormReady]);
+
+  // Register getSaveData function with orchestrator
+  useEffect(() => {
+    const getSaveData = (): EntrySaveData => {
+      const value = form.state.values;
+      const title =
+        `${value.firstName.trim()} ${value.lastName.trim()}`.trim() || "Draft";
+      const metadata: ContactMetadata = {
+        firstName: value.firstName.trim(),
+        lastName: value.lastName.trim(),
+        relationship: value.relationship.trim(),
+        phone: value.phone.trim(),
+        email: value.email.trim() || null,
+        reason: value.reason.trim() || null,
+        isPrimary: showPriorityToggle ? value.isPrimary : false,
+      };
+
+      return {
+        title,
+        notes: value.reason.trim() || null,
+        metadata: metadata as unknown as Record<string, unknown>,
+        metadataSchema: CONTACT_METADATA_SCHEMA,
+      };
+    };
+
+    registerGetSaveData?.(getSaveData);
+  }, [form, registerGetSaveData, showPriorityToggle]);
 
   useEffect(() => {
     navigation.setOptions({
       title: readOnly ? "View Contact" : isNew ? "Add Contact" : "Edit Contact",
     });
   }, [isNew, readOnly, navigation]);
-
-  const handleSaveWithStatus = async (status: EntryCompletionStatus) => {
-    completionStatusRef.current = status;
-    if (status === "draft") {
-      await submitForm(form.state.values);
-    } else {
-      form.handleSubmit();
-    }
-  };
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -204,6 +193,7 @@ export function ContactForm({
         showReasonField={true}
         phoneRequired={true}
         disabled={readOnly}
+        onDiscreteChange={onDiscreteChange}
       />
 
       {showPriorityToggle && (
@@ -219,7 +209,11 @@ export function ContactForm({
                   styles.priorityCard,
                   isSelected && styles.priorityCardSelected,
                 ]}
-                onPress={() => !readOnly && field.handleChange(!isSelected)}
+                onPress={() => {
+                  if (readOnly) return;
+                  field.handleChange(!isSelected);
+                  onDiscreteChange?.();
+                }}
                 disabled={readOnly}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: isSelected }}
@@ -270,52 +264,6 @@ export function ContactForm({
         />
       )}
 
-      {!readOnly && (
-        <View style={styles.buttonContainer}>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          >
-            {([canSubmit, isSubmitting]) => {
-              const busy = isSaving || isSubmitting || isUploading;
-              const buttonTitle = isUploading
-                ? "Uploading..."
-                : busy
-                  ? "Saving..."
-                  : "Finish & Save";
-              return (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.primaryButton,
-                      pressed && styles.primaryButtonPressed,
-                      (busy || !canSubmit) && styles.primaryButtonDisabled,
-                    ]}
-                    onPress={() => handleSaveWithStatus("complete")}
-                    disabled={busy || !canSubmit}
-                  >
-                    <Text
-                      style={[
-                        styles.primaryButtonText,
-                        busy && styles.primaryButtonTextDisabled,
-                      ]}
-                    >
-                      {buttonTitle}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleSaveWithStatus("draft")}
-                    disabled={busy}
-                    style={styles.draftLinkContainer}
-                  >
-                    <Text style={styles.draftLinkText}>Save as Draft</Text>
-                  </Pressable>
-                </>
-              );
-            }}
-          </form.Subscribe>
-        </View>
-      )}
-
       {!readOnly && !isNew && onDelete && (
         <View style={styles.deleteContainer}>
           <Pressable
@@ -338,46 +286,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollView: {
-    flex: 1,
-  },
   content: {
     paddingHorizontal: spacing.lg,
-  },
-  buttonContainer: {
-    marginTop: spacing.lg,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  primaryButtonPressed: {
-    backgroundColor: colors.primaryPressed,
-    transform: [{ scale: 0.98 }],
-  },
-  primaryButtonDisabled: {
-    backgroundColor: colors.border,
-  },
-  primaryButtonText: {
-    fontFamily: typography.fontFamily.semibold,
-    fontSize: typography.sizes.body,
-    color: colors.surface,
-  },
-  primaryButtonTextDisabled: {
-    color: colors.textTertiary,
-  },
-  draftLinkContainer: {
-    marginTop: spacing.sm,
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-  },
-  draftLinkText: {
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textTertiary,
   },
   deleteContainer: {
     marginTop: spacing.xl,

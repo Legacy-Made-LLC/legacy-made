@@ -71,7 +71,7 @@ export interface DigitalAccessMetadata {
 // File Types (Backend Response)
 // ============================================================================
 
-export type FileRole = "primary" | "thumbnail";
+export type FileRole = "primary" | "primary-video" | "attachment" | "thumbnail";
 
 export type ApiFileStorageType = "r2";
 export type ApiFileUploadStatus =
@@ -155,6 +155,8 @@ export interface FileAttachment {
   isThumbnailEncrypted?: boolean;
   /** Whether this file is still being processed (e.g., video transcoding) */
   isProcessing?: boolean;
+  /** Role distinguishes primary recorded videos from regular file attachments */
+  role?: FileRole;
 }
 
 /**
@@ -174,6 +176,7 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
     fileSize: file.sizeBytes,
     mimeType: file.mimeType,
     type,
+    role: file.role === "primary-video" || file.role === "attachment" ? file.role : undefined,
     thumbnailUri: file.thumbnailUrl || undefined,
     uploadStatus: file.uploadStatus === "complete" ? "complete" : "pending",
     isRemote: true,
@@ -244,7 +247,6 @@ export interface InitUploadRequest {
   /** Whether the file data is encrypted with E2EE */
   isEncrypted?: boolean;
 }
-
 
 /**
  * Response from POST /entries/:entryId/files/upload/init
@@ -534,9 +536,7 @@ export interface EntitlementInfo {
 /**
  * Entitlement error codes from the API
  */
-export type EntitlementErrorCode =
-  | "FEATURE_LOCKED"
-  | "QUOTA_EXCEEDED";
+export type EntitlementErrorCode = "FEATURE_LOCKED" | "QUOTA_EXCEEDED";
 
 /**
  * Entitlement error response from API
@@ -644,11 +644,11 @@ export interface CreateTrustedContactRequest {
     keyVersion: number;
   };
   /** Pre-shared DEKs for atomic encryption key sharing (one per recipient device) */
-  deks?: Array<{
+  deks?: {
     recipientId: string;
     encryptedDek: string;
     keyVersion: number;
-  }>;
+  }[];
 }
 
 /**

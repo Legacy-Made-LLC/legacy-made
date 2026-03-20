@@ -27,6 +27,13 @@ export interface UseAutoSaveOptions<T> {
   initialId?: string;
   /** Callback when save completes successfully (with id) */
   onSaveComplete?: (id: string) => void;
+  /** Callback when a save is about to start (after debounce, before network call) */
+  onSaveInitiated?: () => void;
+}
+
+export interface TriggerSaveOptions {
+  /** When true, bypass debounce and save immediately (for discrete changes like toggles/selects) */
+  immediate?: boolean;
 }
 
 export interface UseAutoSaveReturn<T> {
@@ -34,8 +41,8 @@ export interface UseAutoSaveReturn<T> {
   status: AutoSaveStatus;
   /** Error message if status is "error" */
   errorMessage?: string;
-  /** Trigger a save with the given data (respects isDirty) */
-  triggerSave: (data: T, isDirty: boolean) => void;
+  /** Trigger a save. Debounced by default; pass { immediate: true } for discrete changes. */
+  triggerSave: (data: T, isDirty: boolean, options?: TriggerSaveOptions) => void;
   /** Immediately flush any pending save. Returns the current recordId after flush. */
   flushSave: () => Promise<string | undefined>;
   /** Current record ID (undefined until first save for new records) */
@@ -53,6 +60,7 @@ export function useAutoSave<T>({
   onUpdate,
   initialId,
   onSaveComplete,
+  onSaveInitiated,
 }: UseAutoSaveOptions<T>): UseAutoSaveReturn<T> {
   const [status, setStatus] = useState<AutoSaveStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
@@ -72,9 +80,11 @@ export function useAutoSave<T>({
   const onCreateRef = useRef(onCreate);
   const onUpdateRef = useRef(onUpdate);
   const onSaveCompleteRef = useRef(onSaveComplete);
+  const onSaveInitiatedRef = useRef(onSaveInitiated);
   onCreateRef.current = onCreate;
   onUpdateRef.current = onUpdate;
   onSaveCompleteRef.current = onSaveComplete;
+  onSaveInitiatedRef.current = onSaveInitiated;
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -101,6 +111,7 @@ export function useAutoSave<T>({
     isSavingRef.current = true;
     setStatus("saving");
     setErrorMessage(undefined);
+    onSaveInitiatedRef.current?.();
 
     try {
       let savedId: string;
@@ -155,12 +166,25 @@ export function useAutoSave<T>({
   }, [savedDurationMs]);
 
   /**
-   * Trigger a debounced save
+   * Trigger a save with the given data.
+   * - Default: debounced (for text field typing)
+   * - { immediate: true }: bypasses debounce (for discrete changes like toggles, selects, pills)
    */
   const triggerSave = useCallback(
-    (data: T, isDirty: boolean) => {
+    (data: T, isDirty: boolean, options?: TriggerSaveOptions) => {
       // Don't save if not dirty
       if (!isDirty) {
+        return;
+      }
+
+      if (options?.immediate) {
+        // Clear any pending debounce timer since we're saving now
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+        pendingDataRef.current = null;
+        performSave(data);
         return;
       }
 

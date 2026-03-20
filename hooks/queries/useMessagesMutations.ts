@@ -15,15 +15,18 @@ import type {
   CreateMessageRequest,
   EntitlementInfo,
   EntryCompletionStatus,
+  Message,
   MetadataSchema,
   UpdateMessageRequest,
-  Message,
 } from "@/api/types";
-import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
-import { encryptForCreate, encryptForUpdate } from "@/lib/crypto/entryEncryption";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
+import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
+import {
+  encryptForCreate,
+  encryptForUpdate,
+} from "@/lib/crypto/entryEncryption";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -197,12 +200,24 @@ export function useCreateMessage<T = Record<string, unknown>>(
     onSuccess: (newMessage) => {
       if (!planId || !taskKey) return;
 
+      // Replace temp-ID optimistic entry with the real entry.
+      // Preserve decrypted metadata from the optimistic entry since the
+      // server response contains encrypted fields.
       const typedMessage = newMessage as Message<T>;
       queryClient.setQueryData<Message<T>[]>(
         queryKeys.messages.byTaskKey(planId, taskKey),
         (old) => {
           if (!old) return [typedMessage];
-          return [...old.filter((m) => !m.id.startsWith("temp-")), typedMessage];
+          const optimistic = old.find((m) => m.id.startsWith("temp-"));
+          const merged = optimistic
+            ? {
+                ...optimistic,
+                id: typedMessage.id,
+                createdAt: typedMessage.createdAt,
+                updatedAt: typedMessage.updatedAt,
+              }
+            : typedMessage;
+          return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
         },
       );
 
@@ -214,19 +229,33 @@ export function useCreateMessage<T = Record<string, unknown>>(
         },
       );
 
-      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
-        if (!old) return [newMessage as Message];
-        return [
-          ...old.filter((m) => !m.id.startsWith("temp-")),
-          newMessage as Message,
-        ];
-      });
+      queryClient.setQueryData<Message[]>(
+        queryKeys.messages.all(planId),
+        (old) => {
+          if (!old) return [typedMessage as unknown as Message];
+          const optimistic = old.find((m) => m.id.startsWith("temp-"));
+          const merged = optimistic
+            ? {
+                ...optimistic,
+                id: typedMessage.id,
+                createdAt: typedMessage.createdAt,
+                updatedAt: typedMessage.updatedAt,
+              }
+            : (typedMessage as unknown as Message);
+          return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
+        },
+      );
     },
     onSettled: (_data, error) => {
       if (!planId || !taskKey) return;
 
       queryClient.invalidateQueries({
         queryKey: queryKeys.entitlements.all(),
+      });
+
+      // Refetch to ensure cache has decrypted data (server returns encrypted)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.messages.byTaskKey(planId, taskKey),
       });
 
       if (!error) {
@@ -327,6 +356,9 @@ export function useUpdateMessage<T = Record<string, unknown>>(
                   ...(data.metadataSchema && {
                     metadataSchema: data.metadataSchema,
                   }),
+                  ...(data.completionStatus !== undefined && {
+                    completionStatus: data.completionStatus,
+                  }),
                   updatedAt: new Date().toISOString(),
                 }
               : msg,
@@ -344,40 +376,21 @@ export function useUpdateMessage<T = Record<string, unknown>>(
         context.previousMessages,
       );
     },
-    onSuccess: (updatedMessage, variables) => {
+    onSettled: (_data, _error, variables) => {
       if (!planId || !taskKey) return;
 
-      // The update response may not include `files` — preserve them from the
-      // previous cache so file attachments aren't lost between saves.
-      const typedMessage = updatedMessage as Message<T>;
-      queryClient.setQueryData<Message<T>[]>(
-        queryKeys.messages.byTaskKey(planId, taskKey),
-        (old) => {
-          if (!old) return [typedMessage];
-          return old.map((m) => {
-            if (m.id !== variables.messageId) return m;
-            return { ...typedMessage, files: typedMessage.files ?? m.files };
-          });
-        },
-      );
-
-      const oldSingle = queryClient.getQueryData<Message<T>>(
-        queryKeys.messages.single(planId, variables.messageId),
-      );
-      queryClient.setQueryData(
-        queryKeys.messages.single(planId, variables.messageId),
-        { ...typedMessage, files: typedMessage.files ?? oldSingle?.files },
-      );
-
-      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
-        if (!old) return [updatedMessage as Message];
-        return old.map((m) => {
-          if (m.id !== variables.messageId) return m;
-          return {
-            ...(updatedMessage as Message),
-            files: (updatedMessage as Message).files ?? m.files,
-          };
-        });
+      // Refetch to ensure cache has decrypted data.
+      // Unlike vault entries, we intentionally skip onSuccess cache writes
+      // because the server returns encrypted fields that would overwrite
+      // the decrypted optimistic data from onMutate, causing a visible flash.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.messages.byTaskKey(planId, taskKey),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.messages.single(planId, variables.messageId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.messages.all(planId),
       });
     },
   });
@@ -464,10 +477,13 @@ export function useDeleteMessage<T = Record<string, unknown>>(
         },
       );
 
-      queryClient.setQueryData<Message[]>(queryKeys.messages.all(planId), (old) => {
-        if (!old) return [];
-        return old.filter((m) => m.id !== messageId);
-      });
+      queryClient.setQueryData<Message[]>(
+        queryKeys.messages.all(planId),
+        (old) => {
+          if (!old) return [];
+          return old.filter((m) => m.id !== messageId);
+        },
+      );
 
       queryClient.removeQueries({
         queryKey: queryKeys.messages.single(planId, messageId),
