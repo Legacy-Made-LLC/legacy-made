@@ -6,25 +6,27 @@
  *         video recording / written message, short description, delivery timing
  */
 
-import type { FileAttachment, MessageToPersonMetadata, MetadataSchema } from "@/api/types";
+import type {
+  FileAttachment,
+  MessageToPersonMetadata,
+  MetadataSchema,
+} from "@/api/types";
 import { FilePicker, FormInput, FormTextArea } from "@/components/forms";
 import { RELATIONSHIP_OPTIONS } from "@/components/forms/ContactFormFields";
 import { ExpandableGuidanceCard } from "@/components/ui/ExpandableGuidanceCard";
 import { Select } from "@/components/ui/Select";
+import {
+  getLegacySectionByTaskKey,
+  getLegacyTaskByKey,
+} from "@/constants/legacy";
 import { colors, spacing } from "@/constants/theme";
-import { getLegacySectionByTaskKey, getLegacyTaskByKey } from "@/constants/legacy";
 import { toast } from "@/hooks/useToast";
 import { setVideoRecordedCallback } from "@/lib/videoRecordingBridge";
 import { Ionicons } from "@expo/vector-icons";
 import { useForm } from "@tanstack/react-form";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo } from "react";
-import {
-  Alert,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { LegacyEntryFormProps, LegacyEntrySaveData } from "../registry";
@@ -149,11 +151,7 @@ export function MessageToPersonForm({
 
   useEffect(() => {
     navigation.setOptions({
-      title: readOnly
-        ? "View Message"
-        : isNew
-          ? "New Message"
-          : "Edit Message",
+      title: readOnly ? "View Message" : isNew ? "New Message" : "Edit Message",
     });
   }, [isNew, readOnly, navigation]);
 
@@ -182,32 +180,39 @@ export function MessageToPersonForm({
     );
   };
 
+  // Primary recorded video: any video that isn't explicitly an attachment.
+  // Covers role "primary-video" (new) and no role (legacy data).
+  const isRecordedVideo = (a: FileAttachment) =>
+    a.type === "video" && a.role !== "attachment";
+
   const recordedVideo = useMemo(
-    () => attachments?.find((a) => a.role === "primary-video"),
+    () => attachments?.find(isRecordedVideo),
     [attachments],
   );
 
+  // Supplemental: everything that is NOT the primary recorded video
   const supplementalAttachments = useMemo(
-    () => attachments?.filter((a) => a.role !== "primary-video") ?? [],
+    () => attachments?.filter((a) => !isRecordedVideo(a)) ?? [],
     [attachments],
   );
 
   const handleRecordVideo = useCallback(() => {
     setVideoRecordedCallback((attachment: FileAttachment) => {
       if (onAttachmentsChange) {
-        // Remove any existing primary video, then add the new one
-        const withoutPrimary = (attachments ?? []).filter((a) => a.role !== "primary-video");
-        onAttachmentsChange([...withoutPrimary, attachment]);
+        const withoutRecorded = (attachments ?? []).filter(
+          (a) => !isRecordedVideo(a),
+        );
+        onAttachmentsChange([...withoutRecorded, attachment]);
       }
     });
-    router.push(
-      `/(app)/legacy/${sectionId}/${taskId}/record` as never,
-    );
+    router.push(`/(app)/legacy/${sectionId}/${taskId}/record` as never);
   }, [router, sectionId, taskId, attachments, onAttachmentsChange]);
 
   const handleRemoveVideo = useCallback(() => {
     if (onAttachmentsChange) {
-      onAttachmentsChange((attachments ?? []).filter((a) => a.role !== "primary-video"));
+      onAttachmentsChange(
+        (attachments ?? []).filter((a) => !isRecordedVideo(a)),
+      );
     }
   }, [attachments, onAttachmentsChange]);
 
@@ -373,38 +378,43 @@ export function MessageToPersonForm({
       <form.Subscribe selector={(state) => state.values.messageType}>
         {(messageType) => (
           <>
-            {(messageType === "video" || messageType === "both") && !readOnly && (
-              <View style={legacyFormStyles.fieldContainer}>
-                {recordedVideo ? (
-                  <RecordedVideoPreview
-                    video={recordedVideo}
-                    onReRecord={handleRecordVideo}
-                    onRemove={handleRemoveVideo}
-                  />
-                ) : (
-                  <>
-                    <Text style={legacyFormStyles.encouragingText}>
-                      {"You don't need to be perfect. Just be yourself."}
-                    </Text>
-                    <Pressable
-                      style={({ pressed }) => [
-                        legacyFormStyles.recordVideoButton,
-                        pressed && legacyFormStyles.recordVideoButtonPressed,
-                      ]}
-                      onPress={handleRecordVideo}
-                    >
-                      <Ionicons name="videocam" size={20} color={colors.surface} />
-                      <Text style={legacyFormStyles.recordVideoButtonText}>
-                        Record Video
+            {(messageType === "video" || messageType === "both") &&
+              !readOnly && (
+                <View style={legacyFormStyles.fieldContainer}>
+                  {recordedVideo ? (
+                    <RecordedVideoPreview
+                      video={recordedVideo}
+                      onReRecord={handleRecordVideo}
+                      onRemove={handleRemoveVideo}
+                    />
+                  ) : (
+                    <>
+                      <Text style={legacyFormStyles.encouragingText}>
+                        {"You don't need to be perfect. Just be yourself."}
                       </Text>
-                    </Pressable>
-                    <Text style={legacyFormStyles.recordVideoHint}>
-                      Tap to start recording (up to 3 minutes)
-                    </Text>
-                  </>
-                )}
-              </View>
-            )}
+                      <Pressable
+                        style={({ pressed }) => [
+                          legacyFormStyles.recordVideoButton,
+                          pressed && legacyFormStyles.recordVideoButtonPressed,
+                        ]}
+                        onPress={handleRecordVideo}
+                      >
+                        <Ionicons
+                          name="videocam"
+                          size={20}
+                          color={colors.surface}
+                        />
+                        <Text style={legacyFormStyles.recordVideoButtonText}>
+                          Record Video
+                        </Text>
+                      </Pressable>
+                      <Text style={legacyFormStyles.recordVideoHint}>
+                        Tap to start recording (up to 3 minutes)
+                      </Text>
+                    </>
+                  )}
+                </View>
+              )}
             {(messageType === "written" || messageType === "both") && (
               <form.Field name="writtenMessage">
                 {(field) => (
@@ -467,7 +477,9 @@ export function MessageToPersonForm({
                 <View style={legacyFormStyles.fieldContainer}>
                   <FormInput
                     field={field}
-                    label={timing === "specific_date" ? "When?" : "Which event?"}
+                    label={
+                      timing === "specific_date" ? "When?" : "Which event?"
+                    }
                     placeholder={
                       timing === "specific_date"
                         ? "e.g., When they turn 21, June 2030"
@@ -487,9 +499,12 @@ export function MessageToPersonForm({
           label="Photos & Files"
           value={supplementalAttachments}
           onChange={(newFiles) => {
-            // Merge supplemental changes back with the primary video
-            const primary = (attachments ?? []).filter((a) => a.role === "primary-video");
-            onAttachmentsChange([...primary, ...newFiles]);
+            // Tag any untagged videos as attachments so they stay in this section
+            const tagged = newFiles.map((f) =>
+              f.type === "video" && !f.role ? { ...f, role: "attachment" as const } : f,
+            );
+            const recorded = (attachments ?? []).filter(isRecordedVideo);
+            onAttachmentsChange([...recorded, ...tagged]);
           }}
           mode="all"
           maxFiles={10}

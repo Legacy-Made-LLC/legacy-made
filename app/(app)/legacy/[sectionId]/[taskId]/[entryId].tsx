@@ -20,7 +20,6 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   apiFilesToAttachments,
-  tagPrimaryVideo,
   type EntryCompletionStatus,
   type FileAttachment,
 } from "@/api/types";
@@ -43,9 +42,9 @@ import {
   useUpdateMessage,
 } from "@/hooks/queries";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { useFormUndo } from "@/hooks/useFormUndo";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useFormUndo } from "@/hooks/useFormUndo";
 import { toast, UNDO_TOAST_DURATION } from "@/hooks/useToast";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
@@ -89,7 +88,9 @@ export default function LegacyEntryScreen() {
 
   // Form and save data refs
   const formRef = useRef<AnyFormApi | null>(null);
-  const getSaveDataRef = useRef<(() => LegacyEntrySaveData | null) | null>(null);
+  const getSaveDataRef = useRef<(() => LegacyEntrySaveData | null) | null>(
+    null,
+  );
   const attachmentsRef = useRef<FileAttachment[]>([]);
 
   // Track completion status locally
@@ -154,7 +155,7 @@ export default function LegacyEntryScreen() {
   useEffect(() => {
     if (isSavingRef.current) return;
     if (message?.files) {
-      setAttachments(tagPrimaryVideo(apiFilesToAttachments(message.files)));
+      setAttachments(apiFilesToAttachments(message.files));
     }
   }, [message?.files, setAttachments]);
 
@@ -187,7 +188,9 @@ export default function LegacyEntryScreen() {
   // Auto-Save Integration
   // ============================================================================
 
-  const autoSave = useAutoSave<LegacyEntrySaveData & { completionStatus?: EntryCompletionStatus }>({
+  const autoSave = useAutoSave<
+    LegacyEntrySaveData & { completionStatus?: EntryCompletionStatus }
+  >({
     debounceMs: 600,
     savedDurationMs: 1500,
     initialId: isNew ? undefined : entryId,
@@ -196,7 +199,8 @@ export default function LegacyEntryScreen() {
       try {
         const created = await createMutation.mutateAsync({
           ...data,
-          completionStatus: data.completionStatus ?? completionStatusRef.current,
+          completionStatus:
+            data.completionStatus ?? completionStatusRef.current,
         });
         hasCreatedRef.current = true;
         return created.id;
@@ -211,7 +215,8 @@ export default function LegacyEntryScreen() {
           messageId: id,
           data: {
             ...data,
-            completionStatus: data.completionStatus ?? completionStatusRef.current,
+            completionStatus:
+              data.completionStatus ?? completionStatusRef.current,
           },
         });
       } finally {
@@ -552,9 +557,7 @@ export default function LegacyEntryScreen() {
       if (!hadRemoteDeletions) {
         setAttachments(newAttachments);
       } else {
-        const finalIds = new Set(
-          finalAttachments.map((a) => a.id || a.uri),
-        );
+        const finalIds = new Set(finalAttachments.map((a) => a.id || a.uri));
         const newLocalFiles = newAttachments.filter(
           (a) => !a.isRemote && !finalIds.has(a.id || a.uri),
         );
@@ -600,12 +603,7 @@ export default function LegacyEntryScreen() {
         }
       }
     },
-    [
-      handleRemoteFileDeletions,
-      setAttachments,
-      autoSave,
-      uploadFiles,
-    ],
+    [handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles],
   );
 
   // Handle delete

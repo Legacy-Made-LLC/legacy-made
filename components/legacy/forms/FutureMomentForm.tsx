@@ -159,21 +159,28 @@ export function FutureMomentForm({
     );
   };
 
+  // Primary recorded video: any video that isn't explicitly an attachment.
+  // Covers role "primary-video" (new) and no role (legacy data).
+  const isRecordedVideo = (a: FileAttachment) =>
+    a.type === "video" && a.role !== "attachment";
+
   const recordedVideo = useMemo(
-    () => attachments?.find((a) => a.role === "primary-video"),
+    () => attachments?.find(isRecordedVideo),
     [attachments],
   );
 
   const supplementalAttachments = useMemo(
-    () => attachments?.filter((a) => a.role !== "primary-video") ?? [],
+    () => attachments?.filter((a) => !isRecordedVideo(a)) ?? [],
     [attachments],
   );
 
   const handleRecordVideo = useCallback(() => {
     setVideoRecordedCallback((attachment: FileAttachment) => {
       if (onAttachmentsChange) {
-        const withoutPrimary = (attachments ?? []).filter((a) => a.role !== "primary-video");
-        onAttachmentsChange([...withoutPrimary, attachment]);
+        const withoutRecorded = (attachments ?? []).filter(
+          (a) => !isRecordedVideo(a),
+        );
+        onAttachmentsChange([...withoutRecorded, attachment]);
       }
     });
     router.push(
@@ -183,7 +190,7 @@ export function FutureMomentForm({
 
   const handleRemoveVideo = useCallback(() => {
     if (onAttachmentsChange) {
-      onAttachmentsChange((attachments ?? []).filter((a) => a.role !== "primary-video"));
+      onAttachmentsChange((attachments ?? []).filter((a) => !isRecordedVideo(a)));
     }
   }, [attachments, onAttachmentsChange]);
 
@@ -406,8 +413,11 @@ export function FutureMomentForm({
           label="Photos & Files"
           value={supplementalAttachments}
           onChange={(newFiles) => {
-            const primary = (attachments ?? []).filter((a) => a.role === "primary-video");
-            onAttachmentsChange([...primary, ...newFiles]);
+            const tagged = newFiles.map((f) =>
+              f.type === "video" && !f.role ? { ...f, role: "attachment" as const } : f,
+            );
+            const recorded = (attachments ?? []).filter(isRecordedVideo);
+            onAttachmentsChange([...recorded, ...tagged]);
           }}
           mode="all"
           maxFiles={10}
