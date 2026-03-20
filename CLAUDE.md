@@ -83,6 +83,7 @@ The MVP focuses on the **primary entry point** — helping users organize critic
 - **No eslint-disable comments** — Do not suppress linter warnings with `eslint-disable` comments. Fix the underlying issue instead.
 - **Data-driven animations** — When animating lists of items (stanzas, cards, list items, etc.), create animation values dynamically based on the data array length. Never hardcode animation values for a fixed number of items. This ensures animations automatically adapt when items are added or removed. Extract timing constants to a configuration object for easy tuning.
 - **Always log caught errors** — Every `catch` block that handles an unexpected error must log it via `logger.error()` (or `logger.info()` for expected/non-critical cases). Never silently swallow errors that could aid debugging. The only exceptions are intentionally silent catches with an explanatory comment (e.g., polling retries, optional storage writes where failure is acceptable).
+- **Never use a whole mutation object as a dependency** — TanStack Query's `useMutation()` returns a new object reference on every render. Using the full mutation object in a `useCallback` or `useEffect` dependency array causes those callbacks to be recreated on every render, which can cascade re-renders through context providers to all consumers. Instead, extract the specific stable function you need (e.g., `const mutateAsync = mutation.mutateAsync`) and depend on that.
 
 ### End-to-End Encryption (E2EE)
 
