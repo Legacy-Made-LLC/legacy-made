@@ -22,6 +22,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import "react-native-reanimated";
 
+import { DevMenu } from "@/components/dev/DevMenu";
 import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
 import { PausedMutationBanner } from "@/components/ui/PausedMutationBanner";
@@ -152,7 +153,7 @@ export default Sentry.wrap(function RootLayout() {
                               <StatusBar style="dark" />
                               <Toast />
                               <PausedMutationBanner />
-                              {/* <DevMenu /> */}
+                              <DevMenu />
                             </PlanTransitionProvider>
                           </EntitlementsProvider>
                         </CryptoProvider>

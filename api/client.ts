@@ -5,6 +5,7 @@
 import Constants from "expo-constants";
 
 import { ApiClientError } from "./errors";
+import { logger } from "@/lib/logger";
 import type { ApiError } from "./types";
 
 export { ApiClientError };
@@ -68,6 +69,10 @@ async function request<T>(
   const token = await getToken();
 
   if (!token) {
+    logger.warn("Clerk getToken() returned null — session token may have expired", {
+      path,
+      method,
+    });
     throw new ApiClientError("Not authenticated", 401);
   }
 

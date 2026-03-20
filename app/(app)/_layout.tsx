@@ -11,6 +11,7 @@ import {
   EncryptionMigrationModalRef,
 } from "@/components/home/EncryptionMigrationModal";
 
+import { ApiClientError } from "@/api/errors";
 import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
 import Loader from "@/components/ui/Loader";
@@ -194,9 +195,16 @@ export default function AppLayout() {
     return <Redirect href="/settings/recovery" />;
   }
 
-  // Log and show error screen if plan failed to load and we have no data
-  if (planError && !planId) {
-    logger.error("Plan failed to load", planError);
+  // Show error screen if plan failed to load.
+  // Two cases: (1) no cached data at all, or (2) auth error (token expired after idle)
+  // — in the latter case stale planId may still exist, but all queries will fail.
+  const isAuthError =
+    planError instanceof ApiClientError && planError.statusCode === 401;
+  if (planError && (!planId || isAuthError)) {
+    logger.error("Plan failed to load", planError, {
+      hasCachedPlanId: !!planId,
+      isAuthError: String(isAuthError),
+    });
     return (
       <ErrorScreen
         isOffline={!onlineManager.isOnline()}
