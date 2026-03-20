@@ -1,13 +1,18 @@
 /**
- * Legacy Entry Screen - Create/Edit Form
+ * Legacy Entry Screen - Create/Edit Form (Auto-Save Orchestrator)
  *
  * Displays the form for creating or editing a legacy message entry
  * (used for list-based tasks: Messages to People, Future Moments).
  *
+ * Auto-save behavior:
+ * - Subscribes to form state changes and triggers debounced saves when dirty
+ * - New entries: only persists when at least one field is non-empty
+ * - After first create: replaces route with real entry ID
+ * - Navigation away flushes pending saves (no "discard" dialog)
+ * - Status toggle writes bypass debounce for immediate persistence
+ *
  * entryId = "new" for creating a new entry
  * entryId = <uuid> for editing an existing entry
- *
- * Follows the vault [entryId].tsx pattern.
  */
 
 import type { AnyFormApi } from "@tanstack/form-core";
@@ -17,32 +22,52 @@ import {
   apiFilesToAttachments,
   type EntryCompletionStatus,
   type FileAttachment,
-  type MetadataSchema,
 } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
-import { getLegacyEntryFormComponent } from "@/components/legacy/registry";
+import {
+  getLegacyEntryFormComponent,
+  type LegacyEntrySaveData,
+} from "@/components/legacy/registry";
+import { EntryStatusFooter } from "@/components/ui/EntryStatusFooter";
 import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
+import { SavedIndicator } from "@/components/ui/SavedIndicator";
+import { UndoButton } from "@/components/ui/UndoButton";
 import { useLegacyTask } from "@/constants/legacy";
 import { colors, spacing, typography } from "@/constants/theme";
 import { usePlan } from "@/data/PlanProvider";
 import {
-  MessageQuotaExceededError,
   useCreateMessage,
   useDeleteMessage,
   useMessageQuery,
   useUpdateMessage,
 } from "@/hooks/queries";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { useFormUndo } from "@/hooks/useFormUndo";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { toast } from "@/hooks/useToast";
-import {
-  isQuotaExceededError,
-  isStorageQuotaError,
-} from "@/lib/entitlementHelpers";
+import { toast, UNDO_TOAST_DURATION } from "@/hooks/useToast";
+import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
+
+/**
+ * Check if form data has any non-empty content worth saving.
+ */
+function isFormNonEmpty(data: LegacyEntrySaveData): boolean {
+  if (data.title && data.title !== "Draft" && data.title.trim() !== "") {
+    return true;
+  }
+  if (data.notes && data.notes.trim() !== "") return true;
+  for (const value of Object.values(data.metadata)) {
+    if (value === null || value === undefined || value === false) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    return true;
+  }
+  return false;
+}
 
 export default function LegacyEntryScreen() {
   const { sectionId, taskId, entryId } = useLocalSearchParams<{
@@ -58,17 +83,26 @@ export default function LegacyEntryScreen() {
   const [showStorageUpgradePrompt, setShowStorageUpgradePrompt] =
     useState(false);
 
-  // Unsaved-changes guard refs
+  const task = useLegacyTask(sectionId, taskId);
+  const isNew = entryId === "new";
+
+  // Form and save data refs
   const formRef = useRef<AnyFormApi | null>(null);
-  const allowNavigationRef = useRef(false);
+  const getSaveDataRef = useRef<(() => LegacyEntrySaveData | null) | null>(null);
   const attachmentsRef = useRef<FileAttachment[]>([]);
+
+  // Track completion status locally
+  const [completionStatus, setCompletionStatus] =
+    useState<EntryCompletionStatus>("draft");
+  const completionStatusRef = useRef(completionStatus);
+  completionStatusRef.current = completionStatus;
+
+  // Track if the entry has been created (for new entries)
+  const hasCreatedRef = useRef(!isNew);
 
   const handleFormReady = useCallback((form: AnyFormApi) => {
     formRef.current = form;
   }, []);
-
-  const task = useLegacyTask(sectionId, taskId);
-  const isNew = entryId === "new";
 
   // Redirect back if trying to create new entry on a read-only plan
   useEffect(() => {
@@ -76,37 +110,6 @@ export default function LegacyEntryScreen() {
       router.back();
     }
   }, [isReadOnly, isNew, router]);
-
-  // Warn user about unsaved changes when navigating away
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (allowNavigationRef.current) return;
-      if (isReadOnly) return;
-      // Check for pending file attachments (added but not yet saved/uploaded)
-      const hasPendingFiles = attachmentsRef.current.some(
-        (f) => !f.isRemote && f.uploadStatus !== "complete",
-      );
-      // Allow navigation if form has no unsaved changes and no pending files
-      if (!formRef.current?.state.isDirty && !hasPendingFiles) return;
-
-      e.preventDefault();
-
-      Alert.alert(
-        "Unsaved Changes",
-        "You have unsaved changes. Are you sure you want to leave?",
-        [
-          { text: "Keep Editing", style: "cancel" },
-          {
-            text: "Discard",
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-
-    return unsubscribe;
-  }, [navigation, isReadOnly]);
 
   // Get the form component for this task
   const FormComponent = task
@@ -119,15 +122,20 @@ export default function LegacyEntryScreen() {
     task?.taskKey,
   );
 
+  // Initialize completion status from message data
+  useEffect(() => {
+    if (message?.completionStatus) {
+      setCompletionStatus(message.completionStatus);
+    }
+  }, [message?.completionStatus]);
+
   // Mutations
   const createMutation = useCreateMessage(task?.taskKey);
   const updateMutation = useUpdateMessage(task?.taskKey);
   const deleteMutation = useDeleteMessage(task?.taskKey);
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  // Track the saved message ID so subsequent saves use update instead of create
-  const savedMessageIdRef = useRef<string | null>(null);
+  // Guard against concurrent file uploads
+  const isUploadingRef = useRef(false);
 
   // File attachments management
   const {
@@ -140,7 +148,6 @@ export default function LegacyEntryScreen() {
 
   const isSavingRef = useRef(false);
   const filesDeletedRef = useRef(false);
-  const attachmentsDirtyRef = useRef(false);
 
   // Initialize attachments when message data loads
   useEffect(() => {
@@ -175,7 +182,310 @@ export default function LegacyEntryScreen() {
     };
   }, [queryClient]);
 
-  // File upload hook
+  // ============================================================================
+  // Auto-Save Integration
+  // ============================================================================
+
+  const autoSave = useAutoSave<LegacyEntrySaveData & { completionStatus?: EntryCompletionStatus }>({
+    debounceMs: 600,
+    savedDurationMs: 1500,
+    initialId: isNew ? undefined : entryId,
+    onCreate: async (data) => {
+      isSavingRef.current = true;
+      try {
+        const created = await createMutation.mutateAsync({
+          ...data,
+          completionStatus: data.completionStatus ?? completionStatusRef.current,
+        });
+        hasCreatedRef.current = true;
+        return created.id;
+      } finally {
+        isSavingRef.current = false;
+      }
+    },
+    onUpdate: async (id, data) => {
+      isSavingRef.current = true;
+      try {
+        await updateMutation.mutateAsync({
+          messageId: id,
+          data: {
+            ...data,
+            completionStatus: data.completionStatus ?? completionStatusRef.current,
+          },
+        });
+      } finally {
+        isSavingRef.current = false;
+      }
+    },
+    onSaveComplete: async (savedMessageId) => {
+      // After first create for a "new" entry, replace the route
+      if (isNew && hasCreatedRef.current && entryId === "new") {
+        router.replace(
+          `/(app)/legacy/${sectionId}/${taskId}/${savedMessageId}`,
+        );
+      }
+
+      // Upload any pending files
+      if (isUploadingRef.current) return;
+      const pendingFiles = attachmentsRef.current.filter(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      if (pendingFiles.length > 0 && planId && task) {
+        try {
+          isUploadingRef.current = true;
+          const uploadResults = await uploadFiles(
+            { messageId: savedMessageId },
+            attachmentsRef.current,
+          );
+
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.messages.single(planId, savedMessageId),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.messages.byTaskKey(planId, task.taskKey),
+            }),
+          ]);
+
+          const failedUploads = uploadResults.filter(
+            (r) => !r.success && !r.isStorageQuotaError,
+          );
+          if (failedUploads.length > 0) {
+            toast.error({
+              title: "Upload failed",
+              message: `${failedUploads.length} file${failedUploads.length > 1 ? "s" : ""} failed to upload. Try adding them again.`,
+            });
+          }
+        } catch (uploadError) {
+          if (isStorageQuotaError(uploadError)) {
+            setShowStorageUpgradePrompt(true);
+          } else {
+            toast.error({
+              title: "Upload error",
+              message: "An error occurred during file upload.",
+            });
+          }
+        } finally {
+          isUploadingRef.current = false;
+        }
+      }
+    },
+    onSaveInitiated: () => {
+      const form = formRef.current;
+      if (form) {
+        formUndo.archive(form.state.values as Record<string, unknown>);
+      }
+    },
+  });
+
+  // Set up form value subscription for auto-save
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    if (isReadOnly) return;
+
+    const unsubscribe = form.store.subscribe(() => {
+      const state = form.store.state;
+      const getSaveData = getSaveDataRef.current;
+
+      if (state.isDirty && getSaveData) {
+        const saveData = getSaveData();
+        if (saveData) {
+          if (!hasCreatedRef.current && !isFormNonEmpty(saveData)) {
+            return;
+          }
+          autoSave.triggerSave(
+            { ...saveData, completionStatus: completionStatusRef.current },
+            state.isDirty,
+          );
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [autoSave, isReadOnly]);
+
+  // Handle auto-save errors (quota exceeded)
+  useEffect(() => {
+    if (autoSave.status === "error") {
+      const error = autoSave.errorMessage;
+      if (error?.includes("quota") || error?.includes("limit")) {
+        if (error.toLowerCase().includes("storage")) {
+          setShowStorageUpgradePrompt(true);
+        } else {
+          setShowUpgradePrompt(true);
+        }
+        autoSave.dismissError();
+      }
+    }
+  }, [autoSave]);
+
+  // Navigation protection: flush pending save on navigate
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      if (isReadOnly) return;
+
+      const form = formRef.current;
+      const hasPendingSave =
+        autoSave.status === "pending" || autoSave.status === "saving";
+      const isDirty = form?.state.isDirty ?? false;
+      const hasPendingFiles = attachmentsRef.current.some(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+
+      if (!hasPendingSave && !isDirty && !hasPendingFiles) {
+        return;
+      }
+
+      e.preventDefault();
+
+      autoSave
+        .flushSave()
+        .then(() => {
+          navigation.dispatch(e.data.action);
+        })
+        .catch(() => {
+          Alert.alert(
+            "Could Not Save",
+            "Your changes could not be saved. Discard them?",
+            [
+              { text: "Stay", style: "cancel" },
+              {
+                text: "Discard",
+                style: "destructive",
+                onPress: () => navigation.dispatch(e.data.action),
+              },
+            ],
+          );
+        });
+    });
+
+    return unsubscribe;
+  }, [navigation, isReadOnly, autoSave]);
+
+  // ============================================================================
+  // Status Toggle
+  // ============================================================================
+
+  const handleToggleStatus = useCallback(async () => {
+    const newStatus: EntryCompletionStatus =
+      completionStatus === "draft" ? "complete" : "draft";
+    setCompletionStatus(newStatus);
+
+    const getSaveData = getSaveDataRef.current;
+    if (getSaveData) {
+      const saveData = getSaveData();
+      if (saveData) {
+        try {
+          autoSave.triggerSave(
+            { ...saveData, completionStatus: newStatus },
+            true,
+            { immediate: true },
+          );
+        } catch (error) {
+          setCompletionStatus(completionStatus);
+          const msg =
+            error instanceof Error ? error.message : "Failed to update status";
+          toast.error({ message: msg });
+        }
+      }
+    }
+  }, [completionStatus, autoSave]);
+
+  // ============================================================================
+  // Undo Support
+  // ============================================================================
+
+  const formUndo = useFormUndo<Record<string, unknown>>();
+  const isUndoingRef = useRef(false);
+
+  // Seed the undo stack with initial form values as baseline
+  const initialSnapshotTaken = useRef(false);
+  useEffect(() => {
+    if (initialSnapshotTaken.current) return;
+    const form = formRef.current;
+    if (form) {
+      initialSnapshotTaken.current = true;
+      formUndo.archive(form.state.values as Record<string, unknown>);
+    }
+  });
+
+  const handleDiscreteChange = useCallback(() => {
+    const getSaveData = getSaveDataRef.current;
+    if (!getSaveData) return;
+    const saveData = getSaveData();
+    if (!saveData) return;
+    if (!hasCreatedRef.current && !isFormNonEmpty(saveData)) return;
+    autoSave.triggerSave(
+      { ...saveData, completionStatus: completionStatusRef.current },
+      true,
+      { immediate: true },
+    );
+  }, [autoSave]);
+
+  /** Apply a snapshot to the form and trigger a save */
+  const applySnapshot = useCallback(
+    (snapshot: Record<string, unknown>) => {
+      const form = formRef.current;
+      if (!form) return;
+
+      isUndoingRef.current = true;
+      for (const [key, value] of Object.entries(snapshot)) {
+        form.setFieldValue(key, value);
+      }
+      isUndoingRef.current = false;
+
+      const getSaveData = getSaveDataRef.current;
+      if (getSaveData) {
+        const saveData = getSaveData();
+        if (saveData) {
+          autoSave.triggerSave(
+            { ...saveData, completionStatus: completionStatusRef.current },
+            true,
+          );
+        }
+      }
+    },
+    [autoSave],
+  );
+
+  const handleRedo = useCallback(() => {
+    if (!formUndo.canRedo) return;
+    const restored = formUndo.redo();
+    if (!restored) return;
+    applySnapshot(restored);
+    toast.info({ message: "Redid change", duration: UNDO_TOAST_DURATION });
+  }, [formUndo, applySnapshot]);
+
+  const handleUndo = useCallback(() => {
+    const form = formRef.current;
+    if (!form || !formUndo.canUndo) return;
+
+    const reverted = formUndo.undo();
+    if (!reverted) return;
+    applySnapshot(reverted);
+
+    toast.undo({
+      message: "Undid last change",
+      duration: UNDO_TOAST_DURATION,
+      actionLabel: "Redo",
+      onAction: handleRedo,
+    });
+  }, [formUndo, applySnapshot, handleRedo]);
+
+  useEffect(() => {
+    if (isReadOnly) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <UndoButton canUndo={formUndo.canUndo} onUndo={handleUndo} />
+      ),
+    });
+  }, [navigation, isReadOnly, formUndo.canUndo, handleUndo]);
+
+  // ============================================================================
+  // File Upload
+  // ============================================================================
+
   const {
     uploadFiles,
     uploadStates,
@@ -231,8 +541,6 @@ export default function LegacyEntryScreen() {
 
   const handleAttachmentsChange = useCallback(
     async (newAttachments: FileAttachment[]) => {
-      attachmentsDirtyRef.current = true;
-
       const { hadRemoteDeletions, hadSuccessfulDeletions, finalAttachments } =
         await handleRemoteFileDeletions(newAttachments);
 
@@ -243,9 +551,6 @@ export default function LegacyEntryScreen() {
       if (!hadRemoteDeletions) {
         setAttachments(newAttachments);
       } else {
-        // Remote deletions were processed — finalAttachments only has the old
-        // files minus the deleted ones. Merge in any new local files from
-        // newAttachments that aren't already present (e.g. a re-recorded video).
         const finalIds = new Set(
           finalAttachments.map((a) => a.id || a.uri),
         );
@@ -256,118 +561,49 @@ export default function LegacyEntryScreen() {
           setAttachments([...finalAttachments, ...newLocalFiles]);
         }
       }
-    },
-    [handleRemoteFileDeletions, setAttachments],
-  );
 
-  // Handle save
-  const handleSave = useCallback(
-    async (data: {
-      title: string;
-      notes?: string | null;
-      metadata: Record<string, unknown>;
-      metadataSchema: MetadataSchema;
-      completionStatus?: EntryCompletionStatus;
-    }) => {
-      if (!task || !planId) return;
+      // If there are new local files, ensure entry is saved first then upload
+      const addedLocalFiles = newAttachments.filter(
+        (f) => !f.isRemote && f.uploadStatus !== "complete",
+      );
+      if (addedLocalFiles.length > 0 && !isUploadingRef.current) {
+        let savedId = autoSave.recordId;
 
-      try {
-        isSavingRef.current = true;
-
-        let savedMessageId: string;
-
-        if (isNew && !savedMessageIdRef.current) {
-          const created = await createMutation.mutateAsync(data);
-          savedMessageId = created.id;
-          savedMessageIdRef.current = savedMessageId;
-        } else {
-          const existingId = savedMessageIdRef.current ?? entryId;
-          await updateMutation.mutateAsync({
-            messageId: existingId,
-            data,
-          });
-          savedMessageId = existingId;
-        }
-
-        // Upload any pending files
-        const pendingFiles = attachments.filter(
-          (f) => !f.isRemote && f.uploadStatus !== "complete",
-        );
-        if (pendingFiles.length > 0) {
-          const handleUploadFailure = (errorMessage: string) => {
-            toast.error({
-              title: "Upload failed",
-              message: `${errorMessage} Your message has been saved. Try adding the files again.`,
-            });
-          };
-
-          try {
-            const uploadResults = await uploadFiles(
-              { messageId: savedMessageId },
-              attachments,
-            );
-
-            // Invalidate both the single message cache and the list cache
-            // so that initialData in useMessageQuery returns fresh data with files
-            await Promise.all([
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.messages.single(planId, savedMessageId),
-              }),
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.messages.byTaskKey(planId, task.taskKey),
-              }),
-            ]);
-
-            const failedUploads = uploadResults.filter(
-              (r) => !r.success && !r.isStorageQuotaError,
-            );
-
-            if (failedUploads.length > 0) {
-              handleUploadFailure(
-                `${failedUploads.length} file${failedUploads.length > 1 ? "s" : ""} failed to upload.`,
+        if (!savedId) {
+          const getSaveData = getSaveDataRef.current;
+          if (getSaveData) {
+            const saveData = getSaveData();
+            if (saveData) {
+              autoSave.triggerSave(
+                { ...saveData, completionStatus: completionStatusRef.current },
+                true,
               );
-              return;
+              try {
+                savedId = await autoSave.flushSave();
+              } catch {
+                toast.error({
+                  message:
+                    "Could not save before uploading files. Please try again.",
+                });
+                return;
+              }
             }
-          } catch (uploadError) {
-            if (isStorageQuotaError(uploadError)) {
-              setShowStorageUpgradePrompt(true);
-              return;
-            }
-            handleUploadFailure("An error occurred during file upload.");
-            return;
           }
         }
 
-        allowNavigationRef.current = true;
-        router.back();
-      } catch (error) {
-        if (isStorageQuotaError(error)) {
-          setShowStorageUpgradePrompt(true);
-          return;
+        if (savedId) {
+          isUploadingRef.current = true;
+          uploadFiles({ messageId: savedId }, newAttachments).finally(() => {
+            isUploadingRef.current = false;
+          });
         }
-        if (
-          error instanceof MessageQuotaExceededError ||
-          isQuotaExceededError(error)
-        ) {
-          setShowUpgradePrompt(true);
-          return;
-        }
-        throw error;
-      } finally {
-        isSavingRef.current = false;
       }
     },
     [
-      task,
-      planId,
-      isNew,
-      entryId,
-      createMutation,
-      updateMutation,
-      attachments,
+      handleRemoteFileDeletions,
+      setAttachments,
+      autoSave,
       uploadFiles,
-      queryClient,
-      router,
     ],
   );
 
@@ -376,16 +612,13 @@ export default function LegacyEntryScreen() {
     if (!entryId || isNew) return;
 
     await deleteMutation.mutateAsync(entryId);
-    allowNavigationRef.current = true;
     router.back();
   }, [entryId, isNew, deleteMutation, router]);
 
-  // Handle cancel
-  const handleCancel = useCallback(() => {
-    router.back();
-  }, [router]);
+  // ============================================================================
+  // Render
+  // ============================================================================
 
-  // Task not found
   if (!task) {
     return (
       <View style={styles.errorContainer}>
@@ -394,7 +627,6 @@ export default function LegacyEntryScreen() {
     );
   }
 
-  // No form component registered for this task
   if (!FormComponent) {
     return (
       <View style={styles.errorContainer}>
@@ -405,7 +637,6 @@ export default function LegacyEntryScreen() {
     );
   }
 
-  // Loading existing entry
   if (!isNew && isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -420,10 +651,11 @@ export default function LegacyEntryScreen() {
         taskKey={task.taskKey}
         entryId={isNew ? undefined : entryId}
         initialData={message}
-        onSave={handleSave}
-        onDelete={isNew ? undefined : handleDelete}
-        onCancel={handleCancel}
-        isSaving={isSaving || deletingFileIds.size > 0}
+        registerGetSaveData={(fn) => {
+          getSaveDataRef.current = fn;
+        }}
+        completionStatus={completionStatus}
+        onDelete={isNew && !hasCreatedRef.current ? undefined : handleDelete}
         attachments={attachmentsWithUploadState}
         onAttachmentsChange={handleAttachmentsChange}
         isUploading={isUploading}
@@ -431,8 +663,28 @@ export default function LegacyEntryScreen() {
         onStorageUpgradeRequired={() => setShowStorageUpgradePrompt(true)}
         readOnly={isReadOnly}
         onFormReady={handleFormReady}
+        onDiscreteChange={handleDiscreteChange}
       />
-      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureLegacy} />}
+      {!isReadOnly && (
+        <EntryStatusFooter
+          status={completionStatus}
+          onToggleStatus={handleToggleStatus}
+          autoSaveStatus={autoSave.status}
+          pillarColor={colors.featureLegacy}
+          errorMessage={autoSave.errorMessage}
+          onDismissError={autoSave.dismissError}
+          readOnly={isReadOnly}
+        />
+      )}
+      {!isReadOnly && (
+        <SavedIndicator
+          status={autoSave.status}
+          errorMessage={autoSave.errorMessage}
+          onDismissError={autoSave.dismissError}
+          accentColor={colors.featureLegacy}
+        />
+      )}
+      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureLegacy} autoSave />}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
