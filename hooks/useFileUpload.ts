@@ -46,6 +46,7 @@ interface UseFileUploadOptions {
     file: FileAttachment,
     fileId: string,
     downloadUrl: string | null,
+    isEncrypted: boolean,
   ) => void;
   /** Callback when a file upload fails */
   onFileError?: (file: FileAttachment, error: string) => void;
@@ -320,7 +321,7 @@ export function useFileUpload(
         }
 
         updateFileState(uri, { status: "complete", progress: 1 });
-        onFileUploaded?.(file, initResponse.fileId, completedFile.downloadUrl);
+        onFileUploaded?.(file, initResponse.fileId, completedFile.downloadUrl, isEncrypted);
 
         return { uri, success: true, fileId: initResponse.fileId };
       } catch (error) {

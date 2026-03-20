@@ -511,6 +511,7 @@ export function MessageToPersonForm({
           placeholder="Add photos or files"
           showStorageIndicator
           onUpgradeRequired={onStorageUpgradeRequired}
+          accentColor={colors.featureLegacy}
         />
       )}
 

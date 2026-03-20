@@ -165,10 +165,15 @@ export default function EntryScreen() {
   // Refs to capture current values for unmount cleanup
   const planIdRef = useRef(planId);
   const entryIdRef = useRef(entryId);
+  const taskKeyRef = useRef(task?.taskKey);
   planIdRef.current = planId;
   entryIdRef.current = entryId;
+  taskKeyRef.current = task?.taskKey;
 
-  // Invalidate entry cache on unmount if files were deleted during this session
+  // Remove stale cache on unmount if files were deleted.
+  // We use removeQueries (not invalidateQueries) because invalidation marks
+  // queries as stale but leaves data in place — initialData in useEntryQuery
+  // would still return the stale entry with deleted file references.
   useEffect(() => {
     return () => {
       if (
@@ -177,12 +182,20 @@ export default function EntryScreen() {
         entryIdRef.current &&
         entryIdRef.current !== "new"
       ) {
-        queryClient.invalidateQueries({
+        queryClient.removeQueries({
           queryKey: queryKeys.entries.single(
             planIdRef.current,
             entryIdRef.current,
           ),
         });
+        if (taskKeyRef.current) {
+          queryClient.removeQueries({
+            queryKey: queryKeys.entries.byTaskKey(
+              planIdRef.current,
+              taskKeyRef.current,
+            ),
+          });
+        }
       }
     };
   }, [queryClient]);
@@ -540,7 +553,7 @@ export default function EntryScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    onFileUploaded: (file, fileId, downloadUrl) => {
+    onFileUploaded: (file, fileId, downloadUrl, isEncrypted) => {
       setAttachments((prev) =>
         prev.map((a) =>
           a.uri === file.uri
@@ -550,6 +563,7 @@ export default function EntryScreen() {
                 uri: downloadUrl || a.uri,
                 uploadStatus: "complete",
                 isRemote: true,
+                isEncrypted,
               }
             : a,
         ),
@@ -598,6 +612,18 @@ export default function EntryScreen() {
 
       if (hadSuccessfulDeletions) {
         filesDeletedRef.current = true;
+        // Immediately clear stale cache so deleted file references aren't
+        // served via initialData if the user navigates away and back
+        if (planId && entryId && entryId !== "new") {
+          queryClient.removeQueries({
+            queryKey: queryKeys.entries.single(planId, entryId),
+          });
+          if (task?.taskKey) {
+            queryClient.removeQueries({
+              queryKey: queryKeys.entries.byTaskKey(planId, task.taskKey),
+            });
+          }
+        }
       }
 
       if (!hadRemoteDeletions) {
@@ -657,6 +683,10 @@ export default function EntryScreen() {
       setAttachments,
       autoSave,
       uploadFiles,
+      planId,
+      entryId,
+      task,
+      queryClient,
     ],
   );
 

@@ -416,6 +416,7 @@ export function YourStoryForm({
           placeholder="Add photos that tell your story"
           showStorageIndicator
           onUpgradeRequired={onStorageUpgradeRequired}
+          accentColor={colors.featureLegacy}
         />
       )}
     </KeyboardAwareScrollView>

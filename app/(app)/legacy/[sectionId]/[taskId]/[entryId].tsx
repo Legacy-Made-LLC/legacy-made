@@ -162,10 +162,15 @@ export default function LegacyEntryScreen() {
   // Refs for cleanup
   const planIdRef = useRef(planId);
   const entryIdRef = useRef(entryId);
+  const taskKeyRef = useRef(task?.taskKey);
   planIdRef.current = planId;
   entryIdRef.current = entryId;
+  taskKeyRef.current = task?.taskKey;
 
-  // Invalidate cache on unmount if files were deleted
+  // Remove stale cache on unmount if files were deleted.
+  // We use removeQueries (not invalidateQueries) because invalidation marks
+  // queries as stale but leaves data in place — initialData in useMessageQuery
+  // would still return the stale entry with deleted file references.
   useEffect(() => {
     return () => {
       if (
@@ -174,12 +179,20 @@ export default function LegacyEntryScreen() {
         entryIdRef.current &&
         entryIdRef.current !== "new"
       ) {
-        queryClient.invalidateQueries({
+        queryClient.removeQueries({
           queryKey: queryKeys.messages.single(
             planIdRef.current,
             entryIdRef.current,
           ),
         });
+        if (taskKeyRef.current) {
+          queryClient.removeQueries({
+            queryKey: queryKeys.messages.byTaskKey(
+              planIdRef.current,
+              taskKeyRef.current,
+            ),
+          });
+        }
       }
     };
   }, [queryClient]);
@@ -499,7 +512,7 @@ export default function LegacyEntryScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    onFileUploaded: (file, fileId, downloadUrl) => {
+    onFileUploaded: (file, fileId, downloadUrl, isEncrypted) => {
       setAttachments((prev) =>
         prev.map((a) =>
           a.uri === file.uri
@@ -509,6 +522,7 @@ export default function LegacyEntryScreen() {
                 uri: downloadUrl || a.uri,
                 uploadStatus: "complete",
                 isRemote: true,
+                isEncrypted,
               }
             : a,
         ),
@@ -552,6 +566,18 @@ export default function LegacyEntryScreen() {
 
       if (hadSuccessfulDeletions) {
         filesDeletedRef.current = true;
+        // Immediately clear stale cache so deleted file references aren't
+        // served via initialData if the user navigates away and back
+        if (planId && entryId && entryId !== "new") {
+          queryClient.removeQueries({
+            queryKey: queryKeys.messages.single(planId, entryId),
+          });
+          if (task?.taskKey) {
+            queryClient.removeQueries({
+              queryKey: queryKeys.messages.byTaskKey(planId, task.taskKey),
+            });
+          }
+        }
       }
 
       if (!hadRemoteDeletions) {
@@ -603,7 +629,7 @@ export default function LegacyEntryScreen() {
         }
       }
     },
-    [handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles],
+    [handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles, planId, entryId, task, queryClient],
   );
 
   // Handle delete

@@ -430,7 +430,7 @@ export default function WishesTaskScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    onFileUploaded: (file, fileId, downloadUrl) => {
+    onFileUploaded: (file, fileId, downloadUrl, isEncrypted) => {
       // Mark that files changed (for cache invalidation on unmount)
       filesChangedRef.current = true;
       // Update attachment with backend ID, download URL, and mark as remote
@@ -445,6 +445,7 @@ export default function WishesTaskScreen() {
                 uri: downloadUrl || a.uri,
                 uploadStatus: "complete",
                 isRemote: true,
+                isEncrypted,
               }
             : a,
         ),
@@ -500,6 +501,16 @@ export default function WishesTaskScreen() {
       // Track if files were changed for cache invalidation on unmount
       if (hadSuccessfulDeletions) {
         filesChangedRef.current = true;
+        // Immediately clear stale cache so deleted file references aren't
+        // served via initialData if the user navigates away and back
+        if (planId && task?.taskKey) {
+          queryClient.removeQueries({
+            queryKey: queryKeys.wishes.byTaskKey(planId, task.taskKey),
+          });
+          queryClient.removeQueries({
+            queryKey: queryKeys.wishes.all(planId),
+          });
+        }
       }
 
       // If remote files were deleted, the hook already updated state
@@ -547,7 +558,7 @@ export default function WishesTaskScreen() {
         }
       }
     },
-    [attachments, handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles]
+    [attachments, handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles, planId, task, queryClient]
   );
 
   // ============================================================================

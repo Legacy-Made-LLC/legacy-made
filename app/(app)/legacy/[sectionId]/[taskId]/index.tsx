@@ -431,7 +431,7 @@ export default function LegacyTaskScreen() {
     hasStorageQuotaError,
     clearStorageQuotaError,
   } = useFileUpload({
-    onFileUploaded: (file, fileId, downloadUrl) => {
+    onFileUploaded: (file, fileId, downloadUrl, isEncrypted) => {
       filesChangedRef.current = true;
       setAttachments((prev) =>
         prev.map((a) =>
@@ -442,6 +442,7 @@ export default function LegacyTaskScreen() {
                 uri: downloadUrl || a.uri,
                 uploadStatus: "complete",
                 isRemote: true,
+                isEncrypted,
               }
             : a,
         ),
@@ -492,6 +493,16 @@ export default function LegacyTaskScreen() {
 
       if (hadSuccessfulDeletions) {
         filesChangedRef.current = true;
+        // Immediately clear stale cache so deleted file references aren't
+        // served via initialData if the user navigates away and back
+        if (planId && task?.taskKey) {
+          queryClient.removeQueries({
+            queryKey: queryKeys.messages.byTaskKey(planId, task.taskKey),
+          });
+          queryClient.removeQueries({
+            queryKey: queryKeys.messages.all(planId),
+          });
+        }
       }
 
       if (hadRemoteDeletions) {
@@ -536,7 +547,7 @@ export default function LegacyTaskScreen() {
         }
       }
     },
-    [attachments, handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles]
+    [attachments, handleRemoteFileDeletions, setAttachments, autoSave, uploadFiles, planId, task, queryClient]
   );
 
   // ============================================================================

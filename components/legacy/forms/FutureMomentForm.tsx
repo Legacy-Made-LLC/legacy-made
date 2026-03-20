@@ -424,6 +424,7 @@ export function FutureMomentForm({
           placeholder="Add photos or files"
           showStorageIndicator
           onUpgradeRequired={onStorageUpgradeRequired}
+          accentColor={colors.featureLegacy}
         />
       )}
 
