@@ -684,7 +684,7 @@ export default function LegacyEntryScreen() {
           accentColor={colors.featureLegacy}
         />
       )}
-      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureLegacy} autoSave />}
+      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureLegacy} />}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}

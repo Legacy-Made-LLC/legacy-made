@@ -738,7 +738,7 @@ export default function EntryScreen() {
         />
       )}
       {!isReadOnly && (
-        <KeyboardDoneButton accentColor={colors.featureInformation} autoSave />
+        <KeyboardDoneButton accentColor={colors.featureInformation} />
       )}
       <UpgradePrompt
         visible={showUpgradePrompt}

@@ -624,7 +624,7 @@ export default function WishesTaskScreen() {
           accentColor={colors.featureWishes}
         />
       )}
-      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureWishes} autoSave />}
+      {!isReadOnly && <KeyboardDoneButton accentColor={colors.featureWishes} />}
       <UpgradePrompt
         visible={showUpgradePrompt}
         onClose={() => setShowUpgradePrompt(false)}
