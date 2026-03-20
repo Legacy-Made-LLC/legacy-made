@@ -20,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   apiFilesToAttachments,
+  tagPrimaryVideo,
   type EntryCompletionStatus,
   type FileAttachment,
 } from "@/api/types";
@@ -153,7 +154,7 @@ export default function LegacyEntryScreen() {
   useEffect(() => {
     if (isSavingRef.current) return;
     if (message?.files) {
-      setAttachments(apiFilesToAttachments(message.files));
+      setAttachments(tagPrimaryVideo(apiFilesToAttachments(message.files)));
     }
   }, [message?.files, setAttachments]);
 

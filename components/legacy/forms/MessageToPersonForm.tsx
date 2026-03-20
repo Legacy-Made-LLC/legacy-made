@@ -183,21 +183,21 @@ export function MessageToPersonForm({
   };
 
   const recordedVideo = useMemo(
-    () => attachments?.find((a) => a.type === "video"),
+    () => attachments?.find((a) => a.role === "primary-video"),
     [attachments],
   );
 
-  const nonVideoAttachments = useMemo(
-    () => attachments?.filter((a) => a.type !== "video") ?? [],
+  const supplementalAttachments = useMemo(
+    () => attachments?.filter((a) => a.role !== "primary-video") ?? [],
     [attachments],
   );
 
   const handleRecordVideo = useCallback(() => {
     setVideoRecordedCallback((attachment: FileAttachment) => {
       if (onAttachmentsChange) {
-        // Remove any existing video, then add the new one
-        const withoutVideo = (attachments ?? []).filter((a) => a.type !== "video");
-        onAttachmentsChange([...withoutVideo, attachment]);
+        // Remove any existing primary video, then add the new one
+        const withoutPrimary = (attachments ?? []).filter((a) => a.role !== "primary-video");
+        onAttachmentsChange([...withoutPrimary, attachment]);
       }
     });
     router.push(
@@ -207,7 +207,7 @@ export function MessageToPersonForm({
 
   const handleRemoveVideo = useCallback(() => {
     if (onAttachmentsChange) {
-      onAttachmentsChange((attachments ?? []).filter((a) => a.type !== "video"));
+      onAttachmentsChange((attachments ?? []).filter((a) => a.role !== "primary-video"));
     }
   }, [attachments, onAttachmentsChange]);
 
@@ -485,11 +485,11 @@ export function MessageToPersonForm({
       {!readOnly && onAttachmentsChange && (
         <FilePicker
           label="Photos & Files"
-          value={nonVideoAttachments}
+          value={supplementalAttachments}
           onChange={(newFiles) => {
-            // Merge non-video changes back with the recorded video
-            const video = (attachments ?? []).filter((a) => a.type === "video");
-            onAttachmentsChange([...video, ...newFiles]);
+            // Merge supplemental changes back with the primary video
+            const primary = (attachments ?? []).filter((a) => a.role === "primary-video");
+            onAttachmentsChange([...primary, ...newFiles]);
           }}
           mode="all"
           maxFiles={10}

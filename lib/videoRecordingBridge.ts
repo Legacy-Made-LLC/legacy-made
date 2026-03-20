@@ -74,6 +74,7 @@ export async function emitVideoRecorded(videoUri: string) {
       fileSize,
       mimeType: "video/mp4",
       type: "video",
+      role: "primary-video",
       thumbnailUri,
       uploadStatus: "pending",
     };

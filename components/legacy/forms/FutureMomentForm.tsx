@@ -160,20 +160,20 @@ export function FutureMomentForm({
   };
 
   const recordedVideo = useMemo(
-    () => attachments?.find((a) => a.type === "video"),
+    () => attachments?.find((a) => a.role === "primary-video"),
     [attachments],
   );
 
-  const nonVideoAttachments = useMemo(
-    () => attachments?.filter((a) => a.type !== "video") ?? [],
+  const supplementalAttachments = useMemo(
+    () => attachments?.filter((a) => a.role !== "primary-video") ?? [],
     [attachments],
   );
 
   const handleRecordVideo = useCallback(() => {
     setVideoRecordedCallback((attachment: FileAttachment) => {
       if (onAttachmentsChange) {
-        const withoutVideo = (attachments ?? []).filter((a) => a.type !== "video");
-        onAttachmentsChange([...withoutVideo, attachment]);
+        const withoutPrimary = (attachments ?? []).filter((a) => a.role !== "primary-video");
+        onAttachmentsChange([...withoutPrimary, attachment]);
       }
     });
     router.push(
@@ -183,7 +183,7 @@ export function FutureMomentForm({
 
   const handleRemoveVideo = useCallback(() => {
     if (onAttachmentsChange) {
-      onAttachmentsChange((attachments ?? []).filter((a) => a.type !== "video"));
+      onAttachmentsChange((attachments ?? []).filter((a) => a.role !== "primary-video"));
     }
   }, [attachments, onAttachmentsChange]);
 
@@ -404,10 +404,10 @@ export function FutureMomentForm({
       {!readOnly && onAttachmentsChange && (
         <FilePicker
           label="Photos & Files"
-          value={nonVideoAttachments}
+          value={supplementalAttachments}
           onChange={(newFiles) => {
-            const video = (attachments ?? []).filter((a) => a.type === "video");
-            onAttachmentsChange([...video, ...newFiles]);
+            const primary = (attachments ?? []).filter((a) => a.role === "primary-video");
+            onAttachmentsChange([...primary, ...newFiles]);
           }}
           mode="all"
           maxFiles={10}

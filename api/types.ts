@@ -71,7 +71,7 @@ export interface DigitalAccessMetadata {
 // File Types (Backend Response)
 // ============================================================================
 
-export type FileRole = "primary" | "thumbnail";
+export type FileRole = "primary" | "primary-video" | "thumbnail";
 
 export type ApiFileStorageType = "r2";
 export type ApiFileUploadStatus =
@@ -155,6 +155,8 @@ export interface FileAttachment {
   isThumbnailEncrypted?: boolean;
   /** Whether this file is still being processed (e.g., video transcoding) */
   isProcessing?: boolean;
+  /** Role distinguishes primary recorded videos from regular file attachments */
+  role?: FileRole;
 }
 
 /**
@@ -174,6 +176,7 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
     fileSize: file.sizeBytes,
     mimeType: file.mimeType,
     type,
+    role: file.role === "primary-video" ? "primary-video" : undefined,
     thumbnailUri: file.thumbnailUrl || undefined,
     uploadStatus: file.uploadStatus === "complete" ? "complete" : "pending",
     isRemote: true,
@@ -226,6 +229,31 @@ export function apiFilesToAttachments(files: ApiFile[]): FileAttachment[] {
   });
 }
 
+/**
+ * Ensures exactly one video attachment is tagged as the primary recorded video.
+ *
+ * New uploads already carry `role: "primary-video"` from the recording bridge.
+ * For legacy data uploaded before the role field existed, the first video
+ * (by API ordering, which is chronological) is heuristically promoted.
+ *
+ * Call this when loading attachments for legacy message forms that have a
+ * recorded-video concept (Messages to People, Future Moments).
+ */
+export function tagPrimaryVideo(attachments: FileAttachment[]): FileAttachment[] {
+  const hasPrimary = attachments.some((a) => a.role === "primary-video");
+  if (hasPrimary) return attachments;
+
+  // No explicit primary — promote the first video (oldest upload)
+  let found = false;
+  return attachments.map((a) => {
+    if (!found && a.type === "video") {
+      found = true;
+      return { ...a, role: "primary-video" as const };
+    }
+    return a;
+  });
+}
+
 // ============================================================================
 // File Upload API Types
 // ============================================================================
@@ -244,7 +272,6 @@ export interface InitUploadRequest {
   /** Whether the file data is encrypted with E2EE */
   isEncrypted?: boolean;
 }
-
 
 /**
  * Response from POST /entries/:entryId/files/upload/init
@@ -534,9 +561,7 @@ export interface EntitlementInfo {
 /**
  * Entitlement error codes from the API
  */
-export type EntitlementErrorCode =
-  | "FEATURE_LOCKED"
-  | "QUOTA_EXCEEDED";
+export type EntitlementErrorCode = "FEATURE_LOCKED" | "QUOTA_EXCEEDED";
 
 /**
  * Entitlement error response from API
@@ -644,11 +669,11 @@ export interface CreateTrustedContactRequest {
     keyVersion: number;
   };
   /** Pre-shared DEKs for atomic encryption key sharing (one per recipient device) */
-  deks?: Array<{
+  deks?: {
     recipientId: string;
     encryptedDek: string;
     keyVersion: number;
-  }>;
+  }[];
 }
 
 /**

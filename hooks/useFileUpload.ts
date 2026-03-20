@@ -230,6 +230,7 @@ export function useFileUpload(
           mimeType: file.mimeType,
           sizeBytes: uploadSize,
           isEncrypted,
+          ...(file.role && { role: file.role }),
         });
 
         if (signal.aborted) {

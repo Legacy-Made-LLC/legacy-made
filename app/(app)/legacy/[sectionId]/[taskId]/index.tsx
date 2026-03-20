@@ -12,7 +12,7 @@ import type { AnyFormApi } from "@tanstack/form-core";
 import { useQueryClient } from "@tanstack/react-query";
 
 import type { FileAttachment } from "@/api/types";
-import { apiFilesToAttachments } from "@/api/types";
+import { apiFilesToAttachments, tagPrimaryVideo } from "@/api/types";
 import { UpgradePrompt } from "@/components/entitlements";
 import { KeyboardDoneButton } from "@/components/ui/KeyboardDoneButton";
 import { SavedIndicator } from "@/components/ui/SavedIndicator";
@@ -393,7 +393,7 @@ export default function LegacyTaskScreen() {
   // Initialize attachments when message data loads
   useEffect(() => {
     if (isSingleton && existingMessage?.files) {
-      setAttachments(apiFilesToAttachments(existingMessage.files));
+      setAttachments(tagPrimaryVideo(apiFilesToAttachments(existingMessage.files)));
     }
   }, [existingMessage?.files, setAttachments, isSingleton]);
 
