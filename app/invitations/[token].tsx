@@ -18,7 +18,6 @@
 
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -32,17 +31,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { logger } from "@/lib/logger";
 import { fetchInvitationDetails } from "@/api/accessInvitations";
 import { ApiClientError } from "@/api/client";
 import type { InvitationDetails } from "@/api/types";
 import Loader from "@/components/ui/Loader";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "@/constants/theme";
+import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useKeyValue } from "@/contexts/KeyValueContext";
 import {
   useAcceptAccessInvitation,
   useDeclineAccessInvitation,
@@ -51,6 +45,7 @@ import {
 import { PENDING_INVITATION_TOKEN_KEY } from "@/hooks/usePendingInvitation";
 import { usePlanSwitching } from "@/hooks/usePlanSwitching";
 import { toast } from "@/hooks/useToast";
+import { logger } from "@/lib/logger";
 
 const ACCESS_LEVEL_INFO: Record<
   string,
@@ -97,6 +92,7 @@ export default function InvitationScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
+  const { globalStorage } = useKeyValue();
   const acceptMutation = useAcceptAccessInvitation();
   const declineMutation = useDeclineAccessInvitation();
   const { data: sharedPlans } = useSharedPlansQuery();
@@ -144,7 +140,7 @@ export default function InvitationScreen() {
 
   // Pending invitation acceptance after auth is handled exclusively by
   // usePendingInvitation in the (app) layout. This screen saves the token
-  // to AsyncStorage and navigates away — it won't be mounted when the
+  // to KV storage and navigates away — it won't be mounted when the
   // user completes auth.
 
   // ── Handlers ──────────────────────────────────────────────────────────
@@ -162,7 +158,7 @@ export default function InvitationScreen() {
     if (!isSignedIn) {
       // Save the invitation token so it can be auto-accepted after auth
       try {
-        await AsyncStorage.setItem(PENDING_INVITATION_TOKEN_KEY, token);
+        globalStorage.set(PENDING_INVITATION_TOKEN_KEY, token);
       } catch (err) {
         // If storage fails, the user will need to use the link again
         logger.error("Failed to save pending invitation token", err);
@@ -448,8 +444,8 @@ export default function InvitationScreen() {
         <Text style={styles.infoTitle}>What is Legacy Made?</Text>
         <Text style={styles.infoText}>
           Legacy Made helps people organize critical information for their loved
-          ones — accounts, documents, wishes, and messages — so those closest to them are
-          never left guessing.
+          ones — accounts, documents, wishes, and messages — so those closest to
+          them are never left guessing.
         </Text>
       </View>
 

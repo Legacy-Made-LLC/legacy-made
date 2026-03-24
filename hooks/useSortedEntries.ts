@@ -1,11 +1,11 @@
 /**
  * useSortedEntries - Sorts and optionally filters entries
- * Persists the user's sort preference per list via AsyncStorage.
+ * Persists the user's sort preference per list via MMKV Storage.
  */
 
 import type { Entry } from "@/api/types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useKeyValue } from "@/contexts/KeyValueContext";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 export type SortMode = "alphabetical" | "recent";
 
@@ -15,19 +15,35 @@ export function useSortedEntries<T = Record<string, unknown>>(
   entries: Entry<T>[],
   getDisplayTitle: (entry: Entry<T>) => string,
   storageKey?: string,
-) {
-  const [sortMode, setSortMode] = useState<SortMode>("alphabetical");
+): {
+  sortedEntries: Entry<T>[];
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  sortMode: SortMode;
+  setSortMode: (sortMode: SortMode) => void;
+} {
+  const { userStorage } = useKeyValue();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Load persisted sort preference on mount
-  useEffect(() => {
-    if (!storageKey) return;
-    AsyncStorage.getItem(`${SORT_KEY_PREFIX}${storageKey}`).then((value) => {
-      if (value === "alphabetical" || value === "recent") {
-        setSortMode(value);
-      }
-    });
-  }, [storageKey]);
+  const resolvedStorageSortKey = `${SORT_KEY_PREFIX}${storageKey}`;
+  const sortMode = useSyncExternalStore(
+    (cb) => {
+      const listener = userStorage.addOnValueChangedListener(
+        (key) => key === resolvedStorageSortKey && cb(),
+      );
+      return () => listener.remove();
+    },
+    // For backwards compatibility, use getString instead of getBoolean.
+    () =>
+      (userStorage.getString(resolvedStorageSortKey) as SortMode | undefined) ??
+      "alphabetical",
+  );
+  const setSortMode = useCallback(
+    (sortMode: SortMode) => {
+      userStorage.set(resolvedStorageSortKey, sortMode);
+    },
+    [resolvedStorageSortKey, userStorage],
+  );
 
   const sortedEntries = useMemo(() => {
     let copy = [...entries];
@@ -55,20 +71,10 @@ export function useSortedEntries<T = Record<string, unknown>>(
     return copy;
   }, [entries, sortMode, searchQuery, getDisplayTitle]);
 
-  const handleSetSortMode = useCallback(
-    (mode: SortMode) => {
-      setSortMode(mode);
-      if (storageKey) {
-        AsyncStorage.setItem(`${SORT_KEY_PREFIX}${storageKey}`, mode);
-      }
-    },
-    [storageKey],
-  );
-
   return {
     sortedEntries,
     sortMode,
-    setSortMode: handleSetSortMode,
+    setSortMode,
     searchQuery,
     setSearchQuery,
   };

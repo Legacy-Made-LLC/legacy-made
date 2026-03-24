@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -18,6 +17,7 @@ import {
   spacing,
   typography,
 } from "@/constants/theme";
+import { useKeyValue } from "@/contexts/KeyValueContext";
 import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { MIGRATION_COMPLETE_KEY } from "@/hooks/useAutoMigration";
@@ -48,6 +48,7 @@ export function DevMenu() {
   const isLoading = isFetching > 0;
   const { planId } = usePlan();
   const { userId } = useAuth();
+  const { userStorage } = useKeyValue();
 
   const [isOnline, setIsOnline] = useState(() => onlineManager.isOnline());
 
@@ -92,7 +93,7 @@ export function DevMenu() {
       Alert.alert("No plan", "No active plan to clear dismissal for.");
       return;
     }
-    await AsyncStorage.removeItem(`${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`);
+    userStorage.remove(`${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`);
     await queryClient.invalidateQueries();
     setIsOpen(false);
     Alert.alert("Cleared", "Contact guidance dismissal reset for this plan.");
@@ -103,19 +104,22 @@ export function DevMenu() {
       Alert.alert("No plan", "No active plan to reset nudge for.");
       return;
     }
-    await AsyncStorage.multiRemove([
+    [
       `e2ee_backup_nudge_state_${planId}`,
       `e2ee_backup_nudge_silenced_at_count_${planId}`,
-    ]);
+    ].forEach((key) => userStorage.remove(key));
     await queryClient.invalidateQueries();
     setIsOpen(false);
     Alert.alert("Cleared", "Backup nudge state reset for this plan.");
   };
 
   const handleClearMigrationFlag = async () => {
-    await AsyncStorage.removeItem(MIGRATION_COMPLETE_KEY);
+    userStorage.remove(MIGRATION_COMPLETE_KEY);
     setIsOpen(false);
-    Alert.alert("Cleared", "Migration flag removed. Will re-run on next launch.");
+    Alert.alert(
+      "Cleared",
+      "Migration flag removed. Will re-run on next launch.",
+    );
   };
 
   const handleEraseKeys = () => {

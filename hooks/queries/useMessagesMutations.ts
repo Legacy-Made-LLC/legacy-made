@@ -48,6 +48,8 @@ export class MessageQuotaExceededError extends Error {
 }
 
 interface CreateMessageData<T = Record<string, unknown>> {
+  /** Optional client-generated UUID */
+  id?: string;
   title?: string;
   notes?: string | null;
   metadata: T;
@@ -114,6 +116,7 @@ export function useCreateMessage<T = Record<string, unknown>>(
       }
 
       const baseRequest: CreateMessageRequest<T> = {
+        ...(data.id ? { id: data.id } : {}),
         planId,
         taskKey,
         title: data.title,
@@ -154,8 +157,9 @@ export function useCreateMessage<T = Record<string, unknown>>(
         queryKeys.entitlements.current(),
       );
 
+      // Use client-generated ID if provided
       const optimisticMessage: Message<T> = {
-        id: `temp-${Date.now()}`,
+        id: data.id ?? `temp-${Date.now()}`,
         planId,
         taskKey,
         title: data.title ?? null,
@@ -204,11 +208,13 @@ export function useCreateMessage<T = Record<string, unknown>>(
       // Preserve decrypted metadata from the optimistic entry since the
       // server response contains encrypted fields.
       const typedMessage = newMessage as Message<T>;
+      const isOptimistic = (m: Message<T>) =>
+        m.id.startsWith("temp-") || m.id === typedMessage.id;
       queryClient.setQueryData<Message<T>[]>(
         queryKeys.messages.byTaskKey(planId, taskKey),
         (old) => {
           if (!old) return [typedMessage];
-          const optimistic = old.find((m) => m.id.startsWith("temp-"));
+          const optimistic = old.find(isOptimistic);
           const merged = optimistic
             ? {
                 ...optimistic,
@@ -217,7 +223,7 @@ export function useCreateMessage<T = Record<string, unknown>>(
                 updatedAt: typedMessage.updatedAt,
               }
             : typedMessage;
-          return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
+          return [...old.filter((m) => !isOptimistic(m)), merged];
         },
       );
 
@@ -229,11 +235,13 @@ export function useCreateMessage<T = Record<string, unknown>>(
         },
       );
 
+      const isOptimisticAll = (m: Message) =>
+        m.id.startsWith("temp-") || m.id === typedMessage.id;
       queryClient.setQueryData<Message[]>(
         queryKeys.messages.all(planId),
         (old) => {
           if (!old) return [typedMessage as unknown as Message];
-          const optimistic = old.find((m) => m.id.startsWith("temp-"));
+          const optimistic = old.find(isOptimisticAll);
           const merged = optimistic
             ? {
                 ...optimistic,
@@ -242,7 +250,7 @@ export function useCreateMessage<T = Record<string, unknown>>(
                 updatedAt: typedMessage.updatedAt,
               }
             : (typedMessage as unknown as Message);
-          return [...old.filter((m) => !m.id.startsWith("temp-")), merged];
+          return [...old.filter((m) => !isOptimisticAll(m)), merged];
         },
       );
     },

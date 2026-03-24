@@ -21,10 +21,10 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 import { useApi } from "@/api/useApi";
+import { useKeyValue } from "@/contexts/KeyValueContext";
+import { toast } from "@/hooks/useToast";
 import { logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/queryKeys";
-import { toast } from "@/hooks/useToast";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ── Notification data types ─────────────────────────────────────────────────
 type InvitationAcceptedData = {
@@ -72,6 +72,7 @@ Notifications.setNotificationHandler({
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function usePushNotifications() {
   const { isSignedIn } = useAuth();
+  const { userStorage } = useKeyValue();
   const { pushTokens } = useApi();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -99,7 +100,7 @@ export function usePushNotifications() {
       setExpoPushToken(token);
 
       // Persist for sign-out cleanup
-      await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
+      userStorage.set(PUSH_TOKEN_STORAGE_KEY, token);
 
       // Register with backend
       const platform = Platform.OS === "ios" ? "ios" : "android";
@@ -111,7 +112,7 @@ export function usePushNotifications() {
       logger.error("Failed to register push token", error);
       return null;
     }
-  }, [pushTokens]);
+  }, [pushTokens, userStorage]);
 
   // ── Request OS permission and (if granted) register ──────────────────────
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -143,16 +144,16 @@ export function usePushNotifications() {
   // ── Unregister token from backend + clear local storage ──────────────────
   const unregisterToken = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+      const token = userStorage.getString(PUSH_TOKEN_STORAGE_KEY);
       if (token) {
         await pushTokens.unregister(token);
-        await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
+        userStorage.remove(PUSH_TOKEN_STORAGE_KEY);
         logger.debug("Push token unregistered");
       }
     } catch (error) {
       logger.error("Failed to unregister push token", error);
     }
-  }, [pushTokens]);
+  }, [pushTokens, userStorage]);
 
   // ── On mount: check permission, auto-register if already granted ─────────
   useEffect(() => {

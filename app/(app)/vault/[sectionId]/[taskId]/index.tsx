@@ -20,6 +20,7 @@ import {
   useTaskProgressQuery,
 } from "@/hooks/queries";
 import { useSetProgressIfNew } from "@/hooks/queries/useProgressMutations";
+import { randomUUID } from "expo-crypto";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useLayoutEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -86,7 +87,8 @@ export default function TaskScreen() {
   };
 
   const handleAddPress = () => {
-    router.push(`/vault/${sectionId}/${taskId}/new`);
+    const id = randomUUID();
+    router.push(`/vault/${sectionId}/${taskId}/${id}?isNew=1`);
   };
 
   // Section or task not found

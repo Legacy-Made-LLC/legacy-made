@@ -11,31 +11,26 @@
 import { usePlan } from "@/data/PlanProvider";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { logger } from "@/lib/logger";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 
+import { useKeyValue } from "@/contexts/KeyValueContext";
 import { nudgeStateKey } from "./useKeyBackupNudge";
 import { MigrationProgress, useMigration } from "./useMigration";
-
-/**
- * Mark the KeyBackupNudge as "modal_shown" so it shows a subtle guidance card
- * instead of a second modal. This prevents two nearly identical backup prompts
- * from stacking on top of each other after migration completes.
- */
-function suppressBackupNudgeModal(planId: string) {
-  AsyncStorage.setItem(nudgeStateKey(planId), "modal_shown").catch(
-    (err) => logger.error("Failed to suppress backup nudge modal", err),
-  );
-}
 
 // v3: also nulls out plaintext metadata keys alongside the encrypted blob.
 export const MIGRATION_COMPLETE_KEY = "e2ee_migration_complete_v3";
 
 export type MigrationModalPhase =
-  | "hidden"       // No migration needed or already completed
-  | "encrypting"   // Actively encrypting items
-  | "failed"       // Some items failed, user can retry
-  | "complete";    // All done, show backup key encouragement
+  | "hidden" // No migration needed or already completed
+  | "encrypting" // Actively encrypting items
+  | "failed" // Some items failed, user can retry
+  | "complete"; // All done, show backup key encouragement
 
 export interface UseAutoMigrationReturn {
   /** Current phase of the migration modal */
@@ -55,51 +50,58 @@ export interface UseAutoMigrationReturn {
 export function useAutoMigration(): UseAutoMigrationReturn {
   const { isReady, dekCryptoKey } = useCrypto();
   const { planId } = usePlan();
+  const { userStorage } = useKeyValue();
   const { startMigration, progress } = useMigration();
   const attemptedRef = useRef(false);
-  const [phase, setPhase] = useState<MigrationModalPhase>("hidden");
+
+  const [dismissed, setDismissed] = useState(false);
+
+  const readyToMigrate = isReady && dekCryptoKey && planId;
+  const migrationAlreadyComplete = !!userStorage.getBoolean(
+    MIGRATION_COMPLETE_KEY,
+  );
+
+  const onSuccessfulMigration = useEffectEvent((attemptedCount: number) => {
+    userStorage.set(MIGRATION_COMPLETE_KEY, "true");
+
+    if (attemptedCount === 0) {
+      logger.info("E2EE: No items needed migration, skipping modal");
+    } else {
+      if (planId) {
+        userStorage.set(nudgeStateKey(planId), "modal_shown");
+      }
+      logger.info("E2EE: Auto-migration complete, flag saved");
+    }
+  });
+
+  const runMigration = useCallback(() => {
+    startMigration({
+      onComplete: ({ attemptedCount }) => {
+        onSuccessfulMigration(attemptedCount);
+      },
+    });
+  }, [startMigration, onSuccessfulMigration]);
 
   // Check if migration is needed and start it silently.
   // Don't show the modal yet — only present it once we know there are items.
   useEffect(() => {
-    if (!isReady || !dekCryptoKey || !planId || attemptedRef.current) return;
-
-    attemptedRef.current = true;
-
-    (async () => {
-      try {
-        // Check if migration already completed
-        const alreadyDone = await AsyncStorage.getItem(MIGRATION_COMPLETE_KEY);
-        if (alreadyDone === "true") return;
-
-        logger.info("E2EE: Auto-migration starting (silent until items found)");
-        await startMigration();
-      } catch (err) {
-        logger.error("E2EE: Auto-migration check failed", err);
-        setPhase("failed");
-      }
-    })();
-  }, [isReady, dekCryptoKey, planId, startMigration]);
-
-  // Show the modal once we know there are items to migrate
-  useEffect(() => {
-    if (phase !== "hidden") return; // Already showing
-    if (!progress.isRunning) return;
-
-    const totalItems =
-      progress.totalEntries + progress.totalWishes + progress.totalMessages;
-    if (totalItems > 0) {
-      setPhase("encrypting");
+    if (!attemptedRef.current && readyToMigrate && !migrationAlreadyComplete) {
+      attemptedRef.current = true;
+      logger.info("E2EE: Auto-migration starting (silent until items found)");
+      runMigration();
     }
-  }, [phase, progress.isRunning, progress.totalEntries, progress.totalWishes, progress.totalMessages]);
+  }, [runMigration, readyToMigrate, migrationAlreadyComplete]);
 
-  // React to progress changes
-  useEffect(() => {
-    if (!progress.isComplete && !progress.error) return;
+  const totalItems =
+    progress.totalEntries + progress.totalWishes + progress.totalMessages;
+
+  const phase = ((): MigrationModalPhase => {
+    if (dismissed) {
+      return "hidden";
+    }
 
     if (progress.error) {
-      setPhase("failed");
-      return;
+      return "failed";
     }
 
     if (progress.isComplete) {
@@ -107,51 +109,32 @@ export function useAutoMigration(): UseAutoMigrationReturn {
         progress.failedEntries.length > 0 ||
         progress.failedWishes.length > 0 ||
         progress.failedMessages.length > 0;
-      const totalItems =
-        progress.totalEntries +
-        progress.totalWishes +
-        progress.totalMessages;
-
       if (hasFailures) {
-        setPhase("failed");
-      } else if (totalItems === 0) {
-        // Nothing needed migrating (e.g. new device after recovery, or
-        // data was already encrypted). Skip the modal entirely.
-        AsyncStorage.setItem(MIGRATION_COMPLETE_KEY, "true").catch((err) =>
-          logger.error("E2EE: Failed to save migration flag", err),
-        );
-        logger.info("E2EE: No items needed migration, skipping modal");
-        setPhase("hidden");
-      } else {
-        AsyncStorage.setItem(MIGRATION_COMPLETE_KEY, "true").catch((err) =>
-          logger.error("E2EE: Failed to save migration flag", err),
-        );
-        // The migration "complete" phase already shows a "Back up key" prompt.
-        // Suppress the separate KeyBackupNudge modal so users don't see two
-        // nearly identical backup prompts stacked on top of each other.
-        if (planId) {
-          suppressBackupNudgeModal(planId);
-        }
-        logger.info("E2EE: Auto-migration complete, flag saved");
-        setPhase("complete");
+        return "failed";
       }
+
+      if (totalItems === 0) {
+        return "hidden";
+      }
+
+      return "complete";
     }
-  }, [progress.isComplete, progress.error, progress.failedEntries, progress.failedWishes, progress.failedMessages, progress.totalEntries, progress.totalWishes, progress.totalMessages, planId]);
+
+    // Show the modal once we know there are items to migrate
+    if (progress.isRunning && totalItems > 0) {
+      return "encrypting";
+    }
+
+    return "hidden";
+  })();
 
   const retry = useCallback(() => {
-    setPhase("encrypting");
-    attemptedRef.current = false;
-    // Allow the effect to re-trigger by resetting the ref
-    // but we need to call startMigration directly since deps haven't changed
-    startMigration().catch((err) => {
-      logger.error("E2EE: Migration retry failed", err);
-      setPhase("failed");
-    });
-  }, [startMigration]);
+    runMigration();
+  }, [runMigration]);
 
-  const dismiss = useCallback(() => {
-    setPhase("hidden");
-  }, []);
+  const dismiss = () => {
+    setDismissed(true);
+  };
 
   return { phase, progress, retry, dismiss };
 }

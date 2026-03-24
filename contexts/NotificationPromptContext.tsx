@@ -6,15 +6,15 @@
  * because that's when push notifications become valuable.
  */
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
+import { useKeyValue } from "./KeyValueContext";
 
 const PROMPTED_STORAGE_KEY = "legacy_made_push_permission_prompted";
 
@@ -39,14 +39,18 @@ export function NotificationPromptProvider({
 }) {
   const [shouldShowPrompt, setShouldShowPrompt] = useState(false);
   const [contactFirstName, setContactFirstName] = useState<string | null>(null);
-  const [hasBeenPrompted, setHasBeenPrompted] = useState<boolean | null>(null);
+  const { userStorage } = useKeyValue();
 
-  // Load persisted flag on mount
-  useEffect(() => {
-    AsyncStorage.getItem(PROMPTED_STORAGE_KEY).then((val) => {
-      setHasBeenPrompted(val === "true");
-    });
-  }, []);
+  const hasBeenPrompted = useSyncExternalStore(
+    (cb) => {
+      const listener = userStorage.addOnValueChangedListener(
+        (key) => key === PROMPTED_STORAGE_KEY && cb(),
+      );
+      return () => listener.remove();
+    },
+    // For backwards compatibility, use getString instead of getBoolean.
+    () => !!userStorage.getBoolean(PROMPTED_STORAGE_KEY),
+  );
 
   const triggerPrompt = useCallback(
     (firstName: string) => {
@@ -60,9 +64,9 @@ export function NotificationPromptProvider({
 
   const dismissPrompt = useCallback(() => {
     setShouldShowPrompt(false);
-    setHasBeenPrompted(true);
-    AsyncStorage.setItem(PROMPTED_STORAGE_KEY, "true");
-  }, []);
+    // Use string "true" instead of boolean true for backwards compatibility.
+    userStorage.set(PROMPTED_STORAGE_KEY, "true");
+  }, [userStorage]);
 
   const value = useMemo(
     () => ({

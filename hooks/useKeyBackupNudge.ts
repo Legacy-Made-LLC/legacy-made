@@ -8,12 +8,13 @@
  */
 
 import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
-import { hasEncryptionKeys } from "@/lib/crypto/keys";
 import { useAuth } from "@clerk/expo";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
+import { useKeyValue } from "@/contexts/KeyValueContext";
 import { usePlan } from "@/data/PlanProvider";
+import { useQuery } from "@tanstack/react-query";
+import { getHasEncryptionKeysQueryOptions } from "./queries/useCryptoQueries";
 import { useEntryCountsQuery } from "./queries/useEntriesQuery";
 
 /** Number of entries required before showing the backup nudge */
@@ -50,12 +51,47 @@ export interface UseKeyBackupNudgeReturn {
 export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
   const crypto = useOptionalCrypto();
   const { userId } = useAuth();
+  const { userStorage } = useKeyValue();
   const { planId, isViewingSharedPlan } = usePlan();
   const { data: entryCounts } = useEntryCountsQuery();
 
-  const [nudgeState, setNudgeState] = useState<NudgeState>("not_dismissed");
-  const [preconditionsMet, setPreconditionsMet] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const hasEncryptionKeysQueryOptions =
+    getHasEncryptionKeysQueryOptions(userId);
+  const { data: hasEncryptionKeys, isLoading: hasEncryptionKeysLoading } =
+    useQuery({
+      ...hasEncryptionKeysQueryOptions,
+      enabled: hasEncryptionKeysQueryOptions.enabled && crypto?.isReady,
+    });
+
+  const resolvedNudgeStateKey = nudgeStateKey(planId ?? "unknown_plan_id");
+  const resolveSilencedAtCountKey = silencedAtCountKey(
+    planId ?? "unknown_plan_id",
+  );
+
+  const nudgeState = useSyncExternalStore(
+    (cb) => {
+      const listener = userStorage.addOnValueChangedListener(
+        (key) => key === resolvedNudgeStateKey && cb(),
+      );
+      return () => listener.remove();
+    },
+    () =>
+      (userStorage.getString(resolvedNudgeStateKey) as
+        | NudgeState
+        | undefined) ?? "not_dismissed",
+  );
+  const setNudgeState = useCallback(
+    (state: NudgeState) => {
+      userStorage.set(resolvedNudgeStateKey, state);
+    },
+    [resolvedNudgeStateKey, userStorage],
+  );
+
+  const silencedAtCount = (() => {
+    if (!planId) return null;
+    const silencedAtStr = userStorage.getString(resolveSilencedAtCountKey);
+    return silencedAtStr ? parseInt(silencedAtStr) : null;
+  })();
 
   // Calculate total entry count
   const totalEntries = entryCounts
@@ -66,132 +102,47 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
   // If backup status hasn't loaded yet (e.g. network error), treat as unknown
   // so we don't falsely nudge the user.
   const backupStatusLoaded = crypto?.backupStatusLoaded ?? false;
-  const hasBackup =
-    crypto?.isReady &&
+  const hasBackup: boolean =
+    !!crypto?.isReady &&
     backupStatusLoaded &&
     (crypto.backupStatus.escrow.configured ||
       crypto.backupStatus.recoveryPhrase.configured);
 
-  useEffect(() => {
-    let mounted = true;
+  const nudgeThresholdMet = totalEntries >= NUDGE_THRESHOLD;
 
-    async function checkNudge() {
-      try {
-        // Don't show if crypto isn't available
-        if (!crypto?.isReady || !userId || !planId) {
-          if (mounted) {
-            setPreconditionsMet(false);
-            setIsLoading(false);
-          }
-          return;
-        }
+  const showNudge = (() => {
+    if (isViewingSharedPlan || !hasEncryptionKeys || hasBackup) return false;
 
-        // Don't show if no encryption keys
-        const keysExist = await hasEncryptionKeys(userId);
-        if (!keysExist) {
-          if (mounted) {
-            setPreconditionsMet(false);
-            setIsLoading(false);
-          }
-          return;
-        }
+    if (nudgeState !== "silenced" && nudgeThresholdMet) return true;
 
-        // Don't show if backup status hasn't loaded yet (network error, etc.)
-        // — we can't know whether a backup exists, so don't nudge.
-        if (!backupStatusLoaded) {
-          if (mounted) {
-            setPreconditionsMet(false);
-            setIsLoading(false);
-          }
-          return;
-        }
+    if (
+      nudgeState === "silenced" &&
+      silencedAtCount &&
+      totalEntries > silencedAtCount + RE_NUDGE_DELTA
+    )
+      return true;
 
-        // Don't show if user already has a backup
-        if (hasBackup) {
-          if (mounted) {
-            setPreconditionsMet(false);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // Check entry threshold
-        if (totalEntries < NUDGE_THRESHOLD) {
-          if (mounted) {
-            setPreconditionsMet(false);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // Preconditions met — now load persisted state
-        const [savedState, silencedAtStr] = await Promise.all([
-          AsyncStorage.getItem(nudgeStateKey(planId)),
-          AsyncStorage.getItem(silencedAtCountKey(planId)),
-        ]);
-
-        if (mounted) {
-          if (savedState === "silenced" && silencedAtStr) {
-            const silencedAt = parseInt(silencedAtStr, 10);
-            // Re-nudge if user has added RE_NUDGE_DELTA more entries since silence
-            if (totalEntries >= silencedAt + RE_NUDGE_DELTA) {
-              // Reset to not_dismissed for re-nudge
-              setNudgeState("not_dismissed");
-              await AsyncStorage.removeItem(nudgeStateKey(planId));
-              await AsyncStorage.removeItem(silencedAtCountKey(planId));
-            } else {
-              setNudgeState("silenced");
-            }
-          } else if (savedState === "modal_shown") {
-            setNudgeState("modal_shown");
-          } else {
-            setNudgeState("not_dismissed");
-          }
-
-          setPreconditionsMet(true);
-          setIsLoading(false);
-        }
-      } catch {
-        if (mounted) {
-          setPreconditionsMet(false);
-          setIsLoading(false);
-        }
-      }
-    }
-
-    checkNudge();
-
-    return () => {
-      mounted = false;
-    };
-  }, [crypto, userId, planId, totalEntries, hasBackup, backupStatusLoaded]);
+    return false;
+  })();
 
   const onModalDismissed = useCallback(() => {
     setNudgeState("modal_shown");
-    if (planId) {
-      AsyncStorage.setItem(nudgeStateKey(planId), "modal_shown");
-    }
-  }, [planId]);
+  }, [setNudgeState]);
 
   const onSilence = useCallback(() => {
     setNudgeState("silenced");
-    if (planId) {
-      AsyncStorage.setItem(nudgeStateKey(planId), "silenced");
-      AsyncStorage.setItem(silencedAtCountKey(planId), String(totalEntries));
-    }
-  }, [planId, totalEntries]);
+    userStorage.set(resolveSilencedAtCountKey, String(totalEntries));
+  }, [userStorage, setNudgeState, resolveSilencedAtCountKey, totalEntries]);
 
   // Never show on shared plans — backup keys are only relevant to the plan owner
-  const showModal =
-    !isViewingSharedPlan &&
-    !hasBackup &&
-    preconditionsMet &&
-    nudgeState === "not_dismissed";
-  const showGuidanceCard =
-    !isViewingSharedPlan &&
-    !hasBackup &&
-    preconditionsMet &&
-    nudgeState === "modal_shown";
+  const showModal = showNudge && nudgeState === "not_dismissed";
+  const showGuidanceCard = showNudge && nudgeState === "modal_shown";
 
-  return { showModal, showGuidanceCard, onModalDismissed, onSilence, isLoading };
+  return {
+    showModal,
+    showGuidanceCard,
+    onModalDismissed,
+    onSilence,
+    isLoading: hasEncryptionKeysLoading,
+  };
 }

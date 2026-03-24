@@ -43,6 +43,7 @@ import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
+import { randomUUID } from "expo-crypto";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, {
   useCallback,
@@ -559,7 +560,8 @@ export default function LegacyTaskScreen() {
   };
 
   const handleAddPress = () => {
-    router.push(`/legacy/${sectionId}/${taskId}/new`);
+    const id = randomUUID();
+    router.push(`/legacy/${sectionId}/${taskId}/${id}?isNew=1`);
   };
 
   // ============================================================================

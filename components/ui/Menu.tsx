@@ -2,13 +2,13 @@ import { useApi } from "@/api/useApi";
 import { QuotaIndicator, TierBadge } from "@/components/entitlements";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
+import { useKeyValue } from "@/contexts/KeyValueContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
 import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system";
@@ -549,6 +549,7 @@ function AccountView({
 export function Menu({ visible, onClose }: MenuProps) {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
+  const { userStorage } = useKeyValue();
   const queryClient = useQueryClient();
   const router = useRouter();
   const { pushTokens } = useApi();
@@ -621,10 +622,10 @@ export function Menu({ visible, onClose }: MenuProps) {
     try {
       // Best-effort: unregister push token before clearing auth
       try {
-        const token = await AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+        const token = userStorage.getString(PUSH_TOKEN_STORAGE_KEY);
         if (token) {
           await pushTokens.unregister(token);
-          await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
+          userStorage.remove(PUSH_TOKEN_STORAGE_KEY);
         }
       } catch (tokenErr) {
         logger.error("Push token cleanup failed", tokenErr);

@@ -46,6 +46,8 @@ export class QuotaExceededError extends Error {
 }
 
 interface CreateEntryData<T = Record<string, unknown>> {
+  /** Optional client-generated UUID */
+  id?: string;
   title?: string;
   notes?: string | null;
   metadata: T;
@@ -111,6 +113,7 @@ export function useCreateEntry<T = Record<string, unknown>>(
       }
 
       const baseRequest: CreateEntryRequest<T> = {
+        ...(data.id ? { id: data.id } : {}),
         planId,
         taskKey,
         title: data.title,
@@ -153,9 +156,9 @@ export function useCreateEntry<T = Record<string, unknown>>(
         queryKeys.entitlements.current(),
       );
 
-      // Create optimistic entry with temporary ID
+      // Create optimistic entry — use client-generated ID if provided
       const optimisticEntry: Entry<T> = {
-        id: `temp-${Date.now()}`,
+        id: data.id ?? `temp-${Date.now()}`,
         planId,
         taskKey,
         title: data.title ?? null,

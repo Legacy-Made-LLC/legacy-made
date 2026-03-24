@@ -5,8 +5,8 @@
  * Follows the same fire-and-forget pattern as useSortedEntries.
  */
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useState } from "react";
+import { useKeyValue } from "@/contexts/KeyValueContext";
+import { useCallback, useSyncExternalStore } from "react";
 
 export const GUIDANCE_DISMISSED_KEY_PREFIX =
   "legacy_made_guidance_contact_dismissed_";
@@ -17,43 +17,29 @@ export const GUIDANCE_DISMISSED_KEY_PREFIX =
  * carry over the state.
  */
 export function useContactGuidanceDismissed(planId: string | undefined) {
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { userStorage } = useKeyValue();
 
-  useEffect(() => {
-    if (!planId) {
-      setIsLoading(false);
-      return;
-    }
-    let ignore = false;
-    setIsDismissed(false);
-    setIsLoading(true);
-    AsyncStorage.getItem(`${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`)
-      .then((value) => {
-        if (!ignore && value === "true") {
-          setIsDismissed(true);
-        }
-      })
-      .catch(() => {
-        // Default to not-dismissed on storage error so guidance still shows
-      })
-      .finally(() => {
-        if (!ignore) setIsLoading(false);
-      });
-    return () => {
-      ignore = true;
-    };
-  }, [planId]);
+  const resolvedGuidanceDismissedKey = `${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`;
+  const isDismissed = useSyncExternalStore(
+    (cb) => {
+      const listener = userStorage.addOnValueChangedListener(
+        (key) => key === resolvedGuidanceDismissedKey && cb(),
+      );
+      return () => listener.remove();
+    },
+    // For backwards compatibility, use getString instead of getBoolean.
+    () => !!userStorage.getBoolean(resolvedGuidanceDismissedKey),
+  );
+  const setIsDismissed = useCallback(
+    (value: boolean) => {
+      userStorage.set(resolvedGuidanceDismissedKey, value ? "true" : "false");
+    },
+    [resolvedGuidanceDismissedKey, userStorage],
+  );
 
   const dismiss = useCallback(() => {
     setIsDismissed(true);
-    if (planId) {
-      AsyncStorage.setItem(
-        `${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`,
-        "true",
-      );
-    }
-  }, [planId]);
+  }, [setIsDismissed]);
 
-  return { isDismissed, dismiss, isLoading };
+  return { isDismissed, dismiss, isLoading: false };
 }

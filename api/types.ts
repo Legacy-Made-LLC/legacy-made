@@ -350,6 +350,8 @@ export interface Entry<T = Record<string, unknown>> {
  * Request type for creating entries
  */
 export interface CreateEntryRequest<T = Record<string, unknown>> {
+  /** Optional client-generated UUID. When provided, the server uses this as the entry ID. */
+  id?: string;
   planId: string;
   taskKey: string;
   /** Optional title - may be omitted since each entry type presents data differently */
@@ -960,6 +962,8 @@ export interface Message<T = Record<string, unknown>> {
  * Request type for creating messages
  */
 export interface CreateMessageRequest<T = Record<string, unknown>> {
+  /** Optional client-generated UUID. When provided, the server uses this as the message ID. */
+  id?: string;
   planId: string;
   taskKey: string;
   title?: string | null;
