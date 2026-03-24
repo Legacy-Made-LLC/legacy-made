@@ -1,12 +1,12 @@
 import React, {
   createContext,
+  ReactNode,
   useContext,
   useState,
-  useEffect,
-  ReactNode,
+  useSyncExternalStore,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { useKeyValue } from "@/contexts/KeyValueContext";
 import { logger } from "@/lib/logger";
 
 const ONBOARDING_COMPLETE_KEY = "legacy_made_onboarding_complete";
@@ -59,7 +59,7 @@ interface OnboardingContextType {
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(
-  undefined
+  undefined,
 );
 
 interface OnboardingProviderProps {
@@ -67,44 +67,29 @@ interface OnboardingProviderProps {
 }
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
-  // Onboarding completion state (persisted to AsyncStorage)
-  const [hasCompletedInitialOnboarding, setHasCompletedInitialOnboardingState] =
-    useState(false);
-  const [isOnboardingStateLoaded, setIsOnboardingStateLoaded] = useState(false);
   const [pendingContact, setPendingContact] = useState<PendingContact | null>(
-    null
+    null,
+  );
+  const { globalStorage } = useKeyValue();
+
+  const hasCompletedInitialOnboarding = useSyncExternalStore(
+    (cb) => {
+      const listener = globalStorage.addOnValueChangedListener(
+        (key) => key === ONBOARDING_COMPLETE_KEY && cb(),
+      );
+      return () => listener.remove();
+    },
+    // For backwards compatibility, use getString instead of getBoolean.
+    () => !!globalStorage.getBoolean(ONBOARDING_COMPLETE_KEY),
   );
 
-  // Load persisted onboarding state on mount
-  useEffect(() => {
-    const loadOnboardingState = async () => {
-      try {
-        const storedValue = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
-        if (storedValue === "true") {
-          setHasCompletedInitialOnboardingState(true);
-        }
-      } catch (error) {
-        logger.error("Failed to load onboarding state", error);
-      } finally {
-        setIsOnboardingStateLoaded(true);
-      }
-    };
-
-    loadOnboardingState();
-  }, []);
-
-  // Wrapper function that persists to AsyncStorage
-  const setHasCompletedInitialOnboarding = async (value: boolean) => {
+  // Wrapper function that persists to key-value storage
+  const setHasCompletedInitialOnboarding = (value: boolean) => {
     try {
-      await AsyncStorage.setItem(
-        ONBOARDING_COMPLETE_KEY,
-        value ? "true" : "false"
-      );
-      setHasCompletedInitialOnboardingState(value);
+      // Use string "true" instead of boolean true for backwards compatibility.
+      globalStorage.set(ONBOARDING_COMPLETE_KEY, value ? "true" : "false");
     } catch (error) {
       logger.error("Failed to save onboarding state", error);
-      // Still update state even if persistence fails
-      setHasCompletedInitialOnboardingState(value);
     }
   };
 
@@ -144,7 +129,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       value={{
         hasCompletedInitialOnboarding,
         setHasCompletedInitialOnboarding,
-        isOnboardingStateLoaded,
+        isOnboardingStateLoaded: true,
         pendingContact,
         setPendingContact,
         clearPendingContact,
@@ -178,7 +163,7 @@ export function useOnboardingContext() {
   const context = useContext(OnboardingContext);
   if (context === undefined) {
     throw new Error(
-      "useOnboardingContext must be used within an OnboardingProvider"
+      "useOnboardingContext must be used within an OnboardingProvider",
     );
   }
   return context;

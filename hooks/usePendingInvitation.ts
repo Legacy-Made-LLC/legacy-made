@@ -7,13 +7,13 @@
  * in the authenticated app and completes the accept.
  */
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect } from "react";
 
-import { useApi } from "@/api/useApi";
 import { ApiClientError } from "@/api/client";
-import { logger } from "@/lib/logger";
+import { useApi } from "@/api/useApi";
 import { toast } from "@/hooks/useToast";
+import { globalStorage } from "@/lib/kv";
+import { logger } from "@/lib/logger";
 
 export const PENDING_INVITATION_TOKEN_KEY =
   "legacy_made_pending_invitation_token";
@@ -34,13 +34,13 @@ async function processInvitationToken(
   }
 
   const run = async () => {
-    const pendingToken = await AsyncStorage.getItem(
-      PENDING_INVITATION_TOKEN_KEY,
-    );
+    // Use globalStorage outside of React context. This globalStorage object is
+    // identical to the one conveniently provided by useKeyValue.
+    const pendingToken = globalStorage.getString(PENDING_INVITATION_TOKEN_KEY);
     if (!pendingToken) return;
 
     // Remove immediately — first caller to reach this point wins.
-    await AsyncStorage.removeItem(PENDING_INVITATION_TOKEN_KEY);
+    globalStorage.remove(PENDING_INVITATION_TOKEN_KEY);
 
     await acceptFn(pendingToken);
   };

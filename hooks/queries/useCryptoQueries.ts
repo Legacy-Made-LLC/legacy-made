@@ -5,7 +5,12 @@
  * These replace the manual state/refs/effects in CryptoProvider with reactive queries.
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { useApi } from "@/api";
 import { getDeviceLabel } from "@/lib/crypto/deviceLabel";
@@ -33,17 +38,23 @@ import { queryKeys } from "@/lib/queryKeys";
 // Queries
 // ============================================================================
 
-/**
- * Query whether local encryption keys exist in SecureStore.
- * staleTime: Infinity — only changes when we explicitly mutate.
- */
-export function useHasEncryptionKeysQuery(userId: string | null | undefined) {
-  return useQuery({
+export function getHasEncryptionKeysQueryOptions(
+  userId: string | null | undefined,
+) {
+  return queryOptions({
     queryKey: queryKeys.crypto.hasKeys(userId!),
     queryFn: () => hasEncryptionKeys(userId!),
     enabled: !!userId,
     staleTime: Infinity,
   });
+}
+
+/**
+ * Query whether local encryption keys exist in SecureStore.
+ * staleTime: Infinity — only changes when we explicitly mutate.
+ */
+export function useHasEncryptionKeysQuery(userId: string | null | undefined) {
+  return useQuery(getHasEncryptionKeysQueryOptions(userId));
 }
 
 /**

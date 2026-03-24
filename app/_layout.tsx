@@ -27,6 +27,7 @@ import { GlobalUpgradePrompt } from "@/components/entitlements";
 import Loader from "@/components/ui/Loader";
 import { PausedMutationBanner } from "@/components/ui/PausedMutationBanner";
 import { Toast } from "@/components/ui/Toast";
+import { KeyValueProvider } from "@/contexts/KeyValueContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { NotificationPromptProvider } from "@/contexts/NotificationPromptContext";
 import { PlanTransitionProvider } from "@/contexts/PlanTransitionContext";
@@ -114,54 +115,56 @@ export default Sentry.wrap(function RootLayout() {
         <BottomSheetModalProvider>
           <LocaleProvider>
             <UpgradePromptProvider>
-              <OnboardingProvider>
-                <ClerkProvider
-                  tokenCache={tokenCache}
-                  publishableKey={CLERK_PUBLISHABLE_KEY}
-                >
-                  <QueryProvider>
-                    <PlanProvider>
-                      <NotificationPromptProvider>
-                        <CryptoProvider>
-                          <EntitlementsProvider>
-                            <PlanTransitionProvider>
-                              <Stack
-                                screenOptions={{
-                                  headerShown: false,
-                                  animation: "fade",
-                                }}
-                                initialRouteName="index"
-                              >
-                                <Stack.Screen name="index" />
-                                <Stack.Screen name="(app)" />
-                                <Stack.Screen name="(auth)" />
-                                <Stack.Screen
-                                  name="(onboarding)"
-                                  options={{ animation: "fade" }}
-                                />
-                                <Stack.Screen
-                                  name="invitations/[token]"
-                                  options={{
+              <ClerkProvider
+                tokenCache={tokenCache}
+                publishableKey={CLERK_PUBLISHABLE_KEY}
+              >
+                <QueryProvider>
+                  <KeyValueProvider>
+                    <OnboardingProvider>
+                      <PlanProvider>
+                        <NotificationPromptProvider>
+                          <CryptoProvider>
+                            <EntitlementsProvider>
+                              <PlanTransitionProvider>
+                                <Stack
+                                  screenOptions={{
                                     headerShown: false,
+                                    animation: "fade",
                                   }}
-                                />
-                                <Stack.Screen
-                                  name="settings"
-                                  options={{ headerShown: false }}
-                                />
-                              </Stack>
-                              <StatusBar style="dark" />
-                              <Toast />
-                              <PausedMutationBanner />
-                              <DevMenu />
-                            </PlanTransitionProvider>
-                          </EntitlementsProvider>
-                        </CryptoProvider>
-                      </NotificationPromptProvider>
-                    </PlanProvider>
-                  </QueryProvider>
-                </ClerkProvider>
-              </OnboardingProvider>
+                                  initialRouteName="index"
+                                >
+                                  <Stack.Screen name="index" />
+                                  <Stack.Screen name="(app)" />
+                                  <Stack.Screen name="(auth)" />
+                                  <Stack.Screen
+                                    name="(onboarding)"
+                                    options={{ animation: "fade" }}
+                                  />
+                                  <Stack.Screen
+                                    name="invitations/[token]"
+                                    options={{
+                                      headerShown: false,
+                                    }}
+                                  />
+                                  <Stack.Screen
+                                    name="settings"
+                                    options={{ headerShown: false }}
+                                  />
+                                </Stack>
+                                <StatusBar style="dark" />
+                                <Toast />
+                                <PausedMutationBanner />
+                                <DevMenu />
+                              </PlanTransitionProvider>
+                            </EntitlementsProvider>
+                          </CryptoProvider>
+                        </NotificationPromptProvider>
+                      </PlanProvider>
+                    </OnboardingProvider>
+                  </KeyValueProvider>
+                </QueryProvider>
+              </ClerkProvider>
               <GlobalUpgradePrompt />
             </UpgradePromptProvider>
           </LocaleProvider>
