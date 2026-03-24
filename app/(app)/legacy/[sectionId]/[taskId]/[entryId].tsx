@@ -70,11 +70,13 @@ function isFormNonEmpty(data: LegacyEntrySaveData): boolean {
 }
 
 export default function LegacyEntryScreen() {
-  const { sectionId, taskId, entryId } = useLocalSearchParams<{
-    sectionId: string;
-    taskId: string;
-    entryId: string;
-  }>();
+  const { sectionId, taskId, entryId, isNew: isNewParam } =
+    useLocalSearchParams<{
+      sectionId: string;
+      taskId: string;
+      entryId: string;
+      isNew?: string;
+    }>();
   const router = useRouter();
   const navigation = useNavigation();
   const queryClient = useQueryClient();
@@ -84,7 +86,7 @@ export default function LegacyEntryScreen() {
     useState(false);
 
   const task = useLegacyTask(sectionId, taskId);
-  const isNew = entryId === "new";
+  const isNew = isNewParam === "1";
 
   // Form and save data refs
   const formRef = useRef<AnyFormApi | null>(null);
@@ -211,6 +213,7 @@ export default function LegacyEntryScreen() {
       isSavingRef.current = true;
       try {
         const created = await createMutation.mutateAsync({
+          id: entryId,
           ...data,
           completionStatus:
             data.completionStatus ?? completionStatusRef.current,
@@ -237,13 +240,6 @@ export default function LegacyEntryScreen() {
       }
     },
     onSaveComplete: async (savedMessageId) => {
-      // After first create for a "new" entry, replace the route
-      if (isNew && hasCreatedRef.current && entryId === "new") {
-        router.replace(
-          `/(app)/legacy/${sectionId}/${taskId}/${savedMessageId}`,
-        );
-      }
-
       // Upload any pending files
       if (isUploadingRef.current) return;
       const pendingFiles = attachmentsRef.current.filter(
