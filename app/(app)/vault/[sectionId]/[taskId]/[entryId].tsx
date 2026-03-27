@@ -352,7 +352,7 @@ export default function EntryScreen() {
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe.unsubscribe();
   }, [autoSave, isReadOnly]);
 
   // Handle auto-save errors (quota exceeded)

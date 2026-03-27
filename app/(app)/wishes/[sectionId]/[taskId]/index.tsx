@@ -253,7 +253,7 @@ export default function WishesTaskScreen() {
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe.unsubscribe();
   }, [autoSave, isReadOnly]);
 
   // Seed the undo stack with initial form values as baseline
