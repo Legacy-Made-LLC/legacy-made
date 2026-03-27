@@ -14,8 +14,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@clerk/expo": "3.1.2",
-    "@clerk/shared": "4.3.2",
+    "@clerk/expo": "^3.1.5",
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/libre-baskerville": "^0.4.3",
     "@expo/vector-icons": "^15.0.3",
