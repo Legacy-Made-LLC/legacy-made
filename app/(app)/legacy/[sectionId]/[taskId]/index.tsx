@@ -259,7 +259,7 @@ export default function LegacyTaskScreen() {
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe.unsubscribe();
   }, [autoSave, isReadOnly, isSingleton]);
 
   // Seed the undo stack with initial form values as baseline (singleton only)

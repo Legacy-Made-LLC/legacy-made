@@ -101,17 +101,21 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
   // Check if backup is already configured.
   // If backup status hasn't loaded yet (e.g. network error), treat as unknown
   // so we don't falsely nudge the user.
-  const backupStatusLoaded = crypto?.backupStatusLoaded ?? false;
-  const hasBackup: boolean =
-    !!crypto?.isReady &&
-    backupStatusLoaded &&
-    (crypto.backupStatus.escrow.configured ||
-      crypto.backupStatus.recoveryPhrase.configured);
+  const backupStatusLoaded = !!crypto?.isReady && !!crypto?.backupStatusLoaded;
+  const hasBackup: boolean | undefined =
+    crypto?.backupStatus.escrow.configured ||
+    crypto?.backupStatus.recoveryPhrase.configured;
 
   const nudgeThresholdMet = totalEntries >= NUDGE_THRESHOLD;
 
   const showNudge = (() => {
-    if (isViewingSharedPlan || !hasEncryptionKeys || hasBackup) return false;
+    if (
+      isViewingSharedPlan ||
+      !hasEncryptionKeys ||
+      !backupStatusLoaded ||
+      hasBackup
+    )
+      return false;
 
     if (nudgeState !== "silenced" && nudgeThresholdMet) return true;
 
