@@ -12,6 +12,7 @@ import { createFilesService } from "./files";
 import { createKeysService } from "./keys";
 import { createMessagesService } from "./messages";
 import { createPlansService } from "./plans";
+import { createPreferencesService } from "./preferences";
 import { createProgressService } from "./progress";
 import { createPushTokensService } from "./pushTokens";
 import { createSharedPlansService } from "./sharedPlans";
@@ -93,6 +94,10 @@ export function useApi() {
     return createAccessInvitationsService(client);
   }, [client]);
 
+  const preferences = useMemo(() => {
+    return createPreferencesService(client);
+  }, [client]);
+
   const pushTokens = useMemo(() => {
     return createPushTokensService(client);
   }, [client]);
@@ -122,6 +127,8 @@ export function useApi() {
     keys,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
+    /** User preferences (reminders, timezone) service */
+    preferences,
     /** Push token registration service */
     pushTokens,
     /** Whether the user is signed in */

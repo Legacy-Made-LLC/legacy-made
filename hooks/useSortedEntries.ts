@@ -4,8 +4,8 @@
  */
 
 import type { Entry } from "@/api/types";
-import { useKeyValue } from "@/contexts/KeyValueContext";
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useKeyValue, useUserStorageValue } from "@/contexts/KeyValueContext";
+import { useCallback, useMemo, useState } from "react";
 
 export type SortMode = "alphabetical" | "recent";
 
@@ -26,18 +26,12 @@ export function useSortedEntries<T = Record<string, unknown>>(
   const [searchQuery, setSearchQuery] = useState("");
 
   const resolvedStorageSortKey = `${SORT_KEY_PREFIX}${storageKey}`;
-  const sortMode = useSyncExternalStore(
-    (cb) => {
-      const listener = userStorage.addOnValueChangedListener(
-        (key) => key === resolvedStorageSortKey && cb(),
-      );
-      return () => listener.remove();
-    },
-    // For backwards compatibility, use getString instead of getBoolean.
-    () =>
-      (userStorage.getString(resolvedStorageSortKey) as SortMode | undefined) ??
+  const sortMode = useUserStorageValue({
+    key: resolvedStorageSortKey,
+    get: (s) =>
+      (s.getString(resolvedStorageSortKey) as SortMode | undefined) ??
       "alphabetical",
-  );
+  });
   const setSortMode = useCallback(
     (sortMode: SortMode) => {
       userStorage.set(resolvedStorageSortKey, sortMode);

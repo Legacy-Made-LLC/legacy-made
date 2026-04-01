@@ -125,6 +125,10 @@ export default function SettingsLayout() {
         name="devices"
         options={{ title: "My Devices" }}
       />
+      <Stack.Screen
+        name="reminders"
+        options={{ title: "Reminders" }}
+      />
     </Stack>
   );
 }

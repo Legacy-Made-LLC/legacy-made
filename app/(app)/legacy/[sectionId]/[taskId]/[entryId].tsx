@@ -45,6 +45,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { useFileAttachments } from "@/hooks/useFileAttachments";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useFormUndo } from "@/hooks/useFormUndo";
+import { useTrackSectionActivity } from "@/hooks/useReminderPrompt";
 import { toast, UNDO_TOAST_DURATION } from "@/hooks/useToast";
 import { isStorageQuotaError } from "@/lib/entitlementHelpers";
 import { queryKeys } from "@/lib/queryKeys";
@@ -70,6 +71,8 @@ function isFormNonEmpty(data: LegacyEntrySaveData): boolean {
 }
 
 export default function LegacyEntryScreen() {
+  useTrackSectionActivity();
+
   const { sectionId, taskId, entryId, isNew: isNewParam } =
     useLocalSearchParams<{
       sectionId: string;

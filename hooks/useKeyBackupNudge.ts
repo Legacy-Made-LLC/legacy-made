@@ -9,9 +9,9 @@
 
 import { useOptionalCrypto } from "@/lib/crypto/CryptoProvider";
 import { useAuth } from "@clerk/expo";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback } from "react";
 
-import { useKeyValue } from "@/contexts/KeyValueContext";
+import { useKeyValue, useUserStorageValue } from "@/contexts/KeyValueContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useQuery } from "@tanstack/react-query";
 import { getHasEncryptionKeysQueryOptions } from "./queries/useCryptoQueries";
@@ -68,18 +68,12 @@ export function useKeyBackupNudge(): UseKeyBackupNudgeReturn {
     planId ?? "unknown_plan_id",
   );
 
-  const nudgeState = useSyncExternalStore(
-    (cb) => {
-      const listener = userStorage.addOnValueChangedListener(
-        (key) => key === resolvedNudgeStateKey && cb(),
-      );
-      return () => listener.remove();
-    },
-    () =>
-      (userStorage.getString(resolvedNudgeStateKey) as
-        | NudgeState
-        | undefined) ?? "not_dismissed",
-  );
+  const nudgeState = useUserStorageValue({
+    key: resolvedNudgeStateKey,
+    get: (s) =>
+      (s.getString(resolvedNudgeStateKey) as NudgeState | undefined) ??
+      "not_dismissed",
+  });
   const setNudgeState = useCallback(
     (state: NudgeState) => {
       userStorage.set(resolvedNudgeStateKey, state);

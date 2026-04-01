@@ -5,8 +5,8 @@
  * Follows the same fire-and-forget pattern as useSortedEntries.
  */
 
-import { useKeyValue } from "@/contexts/KeyValueContext";
-import { useCallback, useSyncExternalStore } from "react";
+import { useKeyValue, useUserStorageValue } from "@/contexts/KeyValueContext";
+import { useCallback } from "react";
 
 export const GUIDANCE_DISMISSED_KEY_PREFIX =
   "legacy_made_guidance_contact_dismissed_";
@@ -20,16 +20,10 @@ export function useContactGuidanceDismissed(planId: string | undefined) {
   const { userStorage } = useKeyValue();
 
   const resolvedGuidanceDismissedKey = `${GUIDANCE_DISMISSED_KEY_PREFIX}${planId}`;
-  const isDismissed = useSyncExternalStore(
-    (cb) => {
-      const listener = userStorage.addOnValueChangedListener(
-        (key) => key === resolvedGuidanceDismissedKey && cb(),
-      );
-      return () => listener.remove();
-    },
-    // For backwards compatibility, use getString instead of getBoolean.
-    () => !!userStorage.getBoolean(resolvedGuidanceDismissedKey),
-  );
+  const isDismissed = useUserStorageValue({
+    key: resolvedGuidanceDismissedKey,
+    get: (s) => s.getBoolean(resolvedGuidanceDismissedKey),
+  });
   const setIsDismissed = useCallback(
     (value: boolean) => {
       userStorage.set(resolvedGuidanceDismissedKey, value ? "true" : "false");

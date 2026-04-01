@@ -100,6 +100,12 @@ export {
   useResendInvitation,
 } from './useTrustedContactsMutations';
 
+// Preferences
+export {
+  usePreferences,
+  useUpdatePreferences,
+} from './usePreferencesQuery';
+
 // Key Backup
 export {
   useGenerateRecoveryDocumentMutation,

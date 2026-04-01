@@ -80,6 +80,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-document-picker",
+    "expo-localization",
+    "@react-native-community/datetimepicker",
     [
       "expo-notifications",
       {
