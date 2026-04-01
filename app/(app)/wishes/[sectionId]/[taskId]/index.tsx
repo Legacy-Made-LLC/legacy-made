@@ -52,12 +52,14 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useTrackSectionActivity } from "@/hooks/useReminderPrompt";
 import { toast, UNDO_TOAST_DURATION } from "@/hooks/useToast";
 import { useFormUndo } from "@/hooks/useFormUndo";
 import { UndoButton } from "@/components/ui/UndoButton";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
 export default function WishesTaskScreen() {
+  useTrackSectionActivity();
   const { sectionId, taskId } = useLocalSearchParams<{
     sectionId: string;
     taskId: string;

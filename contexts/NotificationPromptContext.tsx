@@ -12,9 +12,8 @@ import React, {
   useContext,
   useMemo,
   useState,
-  useSyncExternalStore,
 } from "react";
-import { useKeyValue } from "./KeyValueContext";
+import { useKeyValue, useUserStorageValue } from "./KeyValueContext";
 
 const PROMPTED_STORAGE_KEY = "legacy_made_push_permission_prompted";
 
@@ -41,21 +40,15 @@ export function NotificationPromptProvider({
   const [contactFirstName, setContactFirstName] = useState<string | null>(null);
   const { userStorage } = useKeyValue();
 
-  const hasBeenPrompted = useSyncExternalStore(
-    (cb) => {
-      const listener = userStorage.addOnValueChangedListener(
-        (key) => key === PROMPTED_STORAGE_KEY && cb(),
-      );
-      return () => listener.remove();
-    },
-    // For backwards compatibility, use getString instead of getBoolean.
-    () => !!userStorage.getBoolean(PROMPTED_STORAGE_KEY),
-  );
+  const hasBeenPrompted = useUserStorageValue({
+    key: PROMPTED_STORAGE_KEY,
+    get: (s) => s.getBoolean(PROMPTED_STORAGE_KEY),
+  });
 
   const triggerPrompt = useCallback(
     (firstName: string) => {
       // Don't re-prompt if already prompted or still loading
-      if (hasBeenPrompted || hasBeenPrompted === null) return;
+      if (hasBeenPrompted || hasBeenPrompted === undefined) return;
       setContactFirstName(firstName);
       setShouldShowPrompt(true);
     },
@@ -64,8 +57,7 @@ export function NotificationPromptProvider({
 
   const dismissPrompt = useCallback(() => {
     setShouldShowPrompt(false);
-    // Use string "true" instead of boolean true for backwards compatibility.
-    userStorage.set(PROMPTED_STORAGE_KEY, "true");
+    userStorage.set(PROMPTED_STORAGE_KEY, true);
   }, [userStorage]);
 
   const value = useMemo(

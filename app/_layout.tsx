@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import {
   DMSans_400Regular,
+  DMSans_400Regular_Italic,
   DMSans_500Medium,
   DMSans_600SemiBold,
   DMSans_700Bold,
@@ -84,6 +85,7 @@ export default Sentry.wrap(function RootLayout() {
 
   const [fontsLoaded] = useFonts({
     DMSans_400Regular,
+    DMSans_400Regular_Italic,
     DMSans_500Medium,
     DMSans_600SemiBold,
     DMSans_700Bold,

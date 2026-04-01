@@ -6,7 +6,12 @@ import {
 } from "@/lib/kv";
 import { useAuth } from "@clerk/expo";
 import { useQuery } from "@tanstack/react-query";
-import { createContext, PropsWithChildren, useContext } from "react";
+import {
+  createContext,
+  PropsWithChildren,
+  useContext,
+  useSyncExternalStore,
+} from "react";
 import type { MMKV } from "react-native-mmkv";
 
 interface KeyValueContextValue {
@@ -50,4 +55,23 @@ export function useKeyValue() {
     throw new Error("useKeyValue must be used within a KeyValueProvider");
   }
   return context;
+}
+
+interface UseUserStorageValueOptions<T> {
+  key: string;
+  get: (storage: MMKV) => T;
+}
+
+export function useUserStorageValue<T>(options: UseUserStorageValueOptions<T>) {
+  const { userStorage } = useKeyValue();
+  return useSyncExternalStore<T>(
+    (cb) => {
+      const listener = userStorage.addOnValueChangedListener(
+        (key) => key === options.key && cb(),
+      );
+      return () => listener.remove();
+    },
+    // For backwards compatibility, use getString instead of getBoolean.
+    () => options.get(userStorage),
+  );
 }

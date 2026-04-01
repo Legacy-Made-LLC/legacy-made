@@ -11,11 +11,11 @@
  */
 
 import { useAuth } from "@clerk/expo";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 import Constants from "expo-constants";
@@ -48,11 +48,16 @@ type DekSharedData = {
   planId: string;
 };
 
+type ReminderData = {
+  type: "reminder";
+};
+
 type NotificationData =
   | InvitationAcceptedData
   | InvitationDeclinedData
   | InvitationReceivedData
-  | DekSharedData;
+  | DekSharedData
+  | ReminderData;
 
 const EAS_PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId;
 
@@ -69,20 +74,30 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Track whether we've already registered this session to avoid duplicates.
+// Maps User ID to whether we've already registered this session.
+const hasRegisteredMap = new Map<string, boolean>();
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function usePushNotifications() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   const { userStorage } = useKeyValue();
   const { pushTokens } = useApi();
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [permissionStatus, setPermissionStatus] =
-    useState<Notifications.PermissionStatus | null>(null);
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
+  const { data: permissionStatus, refetch: refetchPermissionStatus } = useQuery(
+    {
+      queryKey: ["notifications.permissionStatus"],
+      queryFn: async () => {
+        const { status } = await Notifications.getPermissionsAsync();
+        return status;
+      },
+      staleTime: 0,
+    },
+  );
 
-  // Track whether we've already registered this session to avoid duplicates
-  const hasRegistered = useRef(false);
+  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   // ── Register token with backend + persist locally ────────────────────────
   const registerToken = useCallback(async () => {
@@ -125,9 +140,8 @@ export function usePushNotifications() {
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
+        refetchPermissionStatus();
       }
-
-      setPermissionStatus(finalStatus);
 
       if (finalStatus === "granted") {
         await registerToken();
@@ -139,7 +153,7 @@ export function usePushNotifications() {
       logger.error("Failed to request notification permission", error);
       return false;
     }
-  }, [registerToken]);
+  }, [registerToken, refetchPermissionStatus]);
 
   // ── Unregister token from backend + clear local storage ──────────────────
   const unregisterToken = useCallback(async () => {
@@ -157,25 +171,21 @@ export function usePushNotifications() {
 
   // ── On mount: check permission, auto-register if already granted ─────────
   useEffect(() => {
-    if (!isSignedIn || hasRegistered.current) return;
-
-    (async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-      setPermissionStatus(status);
-
-      if (status === "granted") {
-        hasRegistered.current = true;
-        await registerToken();
-      }
-    })();
-  }, [isSignedIn, registerToken]);
+    if (
+      !isSignedIn ||
+      hasRegisteredMap.get(userId) ||
+      permissionStatus !== "granted"
+    )
+      return;
+    hasRegisteredMap.set(userId, true);
+    registerToken();
+  }, [isSignedIn, userId, registerToken, permissionStatus]);
 
   // ── Invalidate query caches based on notification type ──────────────────
   const invalidateCachesForNotification = useCallback(
     (data: NotificationData) => {
       logger.debug("Invalidating caches for push notification", {
         type: data.type,
-        planId: data.planId,
       });
 
       switch (data.type) {
@@ -203,6 +213,10 @@ export function usePushNotifications() {
           queryClient.invalidateQueries({
             queryKey: queryKeys.crypto.all(),
           });
+          break;
+
+        case "reminder":
+          // Reminders are generic nudges — no cache invalidation needed
           break;
       }
     },
@@ -238,8 +252,13 @@ export function usePushNotifications() {
           invalidateCachesForNotification(data as NotificationData);
         }
 
-        // All current notification types relate to the Family tab
-        router.push("/(app)/(tabs)/family");
+        // Route based on notification type
+        const notifData = data as NotificationData | undefined;
+        if (notifData?.type === "reminder") {
+          router.push("/(app)/(tabs)/home");
+        } else {
+          router.push("/(app)/(tabs)/family");
+        }
       },
     );
 
@@ -248,6 +267,8 @@ export function usePushNotifications() {
 
   return {
     permissionStatus,
+    permissionDenied: permissionStatus === "denied",
+    permissionGranted: permissionStatus === "granted",
     expoPushToken,
     requestPermission,
     unregisterToken,

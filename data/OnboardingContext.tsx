@@ -1,12 +1,6 @@
-import React, {
-  createContext,
-  ReactNode,
-  useContext,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import React, { createContext, ReactNode, useContext, useState } from "react";
 
-import { useKeyValue } from "@/contexts/KeyValueContext";
+import { useKeyValue, useUserStorageValue } from "@/contexts/KeyValueContext";
 import { logger } from "@/lib/logger";
 
 const ONBOARDING_COMPLETE_KEY = "legacy_made_onboarding_complete";
@@ -72,16 +66,10 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   );
   const { globalStorage } = useKeyValue();
 
-  const hasCompletedInitialOnboarding = useSyncExternalStore(
-    (cb) => {
-      const listener = globalStorage.addOnValueChangedListener(
-        (key) => key === ONBOARDING_COMPLETE_KEY && cb(),
-      );
-      return () => listener.remove();
-    },
-    // For backwards compatibility, use getString instead of getBoolean.
-    () => !!globalStorage.getBoolean(ONBOARDING_COMPLETE_KEY),
-  );
+  const hasCompletedInitialOnboarding = useUserStorageValue({
+    key: ONBOARDING_COMPLETE_KEY,
+    get: (s) => !!s.getBoolean(ONBOARDING_COMPLETE_KEY),
+  });
 
   // Wrapper function that persists to key-value storage
   const setHasCompletedInitialOnboarding = (value: boolean) => {

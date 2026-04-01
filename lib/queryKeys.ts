@@ -75,6 +75,10 @@ export const queryKeys = {
     // All plans shared with the current user
     all: () => ['sharedPlans'] as const,
   },
+  preferences: {
+    // Current user's notification preferences
+    current: () => ['preferences'] as const,
+  },
   crypto: {
     all: () => ['crypto'] as const,
     hasKeys: (userId: string) => ['crypto', 'hasKeys', userId] as const,

@@ -62,7 +62,7 @@ export function useAutoMigration(): UseAutoMigrationReturn {
   );
 
   const onSuccessfulMigration = useEffectEvent((attemptedCount: number) => {
-    userStorage.set(MIGRATION_COMPLETE_KEY, "true");
+    userStorage.set(MIGRATION_COMPLETE_KEY, true);
 
     if (attemptedCount === 0) {
       logger.info("E2EE: No items needed migration, skipping modal");

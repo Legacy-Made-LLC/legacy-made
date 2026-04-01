@@ -57,6 +57,7 @@ export const colors = {
 export const typography = {
   fontFamily: {
     regular: "DMSans_400Regular",
+    regularItalic: "DMSans_400Regular_Italic",
     medium: "DMSans_500Medium",
     semibold: "DMSans_600SemiBold",
     bold: "DMSans_700Bold",

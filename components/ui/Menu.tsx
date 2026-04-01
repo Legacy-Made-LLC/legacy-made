@@ -782,6 +782,15 @@ export function Menu({ visible, onClose }: MenuProps) {
                   ))}
                 </MenuSection>
 
+                {/* Reminders Section */}
+                <MenuSection title="REMINDERS">
+                  <MenuItem
+                    label="Reminder Settings"
+                    icon="notifications-outline"
+                    onPress={() => handleNavigation("/settings/reminders")}
+                  />
+                </MenuSection>
+
                 {/* Support Section */}
                 <MenuSection title="SUPPORT">
                   {supportItems.map((item) => (

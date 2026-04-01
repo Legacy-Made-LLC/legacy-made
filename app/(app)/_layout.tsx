@@ -2,6 +2,7 @@ import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackHeaderProps } from "@react-navigation/native-stack";
 import { onlineManager } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
 import { Redirect, Stack } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -11,6 +12,7 @@ import {
   EncryptionMigrationModalRef,
 } from "@/components/home/EncryptionMigrationModal";
 
+import { useApi } from "@/api/useApi";
 import { ApiClientError } from "@/api/errors";
 import { ErrorScreen } from "@/components/ui/ErrorScreen";
 import { Header } from "@/components/ui/Header";
@@ -23,9 +25,12 @@ import { useOnboardingContext } from "@/data/OnboardingContext";
 import { usePlan } from "@/data/PlanProvider";
 import { useCreateEntry } from "@/hooks/queries";
 import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
+import { ReminderEnablePrompt } from "@/components/notifications/ReminderEnablePrompt";
 import { useAutoMigration } from "@/hooks/useAutoMigration";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
+import { usePreferences } from "@/hooks/queries/usePreferencesQuery";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useReminderPrompt } from "@/hooks/useReminderPrompt";
 import { useSharedPlanStatusPolling } from "@/hooks/useSharedPlanStatusPolling";
 import { useCrypto } from "@/lib/crypto/CryptoProvider";
 import { logger } from "@/lib/logger";
@@ -143,6 +148,18 @@ const AppContent = React.memo(function AppContent() {
   // Initialize push notification listeners and auto-register token
   usePushNotifications();
 
+  // Sync device timezone with backend once per app launch (fire-and-forget)
+  const { preferences: preferencesService } = useApi();
+  const timezoneSynced = useRef(false);
+  useEffect(() => {
+    if (timezoneSynced.current) return;
+    timezoneSynced.current = true;
+    const tz = Localization.getCalendars()[0]?.timeZone ?? "UTC";
+    preferencesService.updateTimezone(tz).catch((err) => {
+      logger.info("Timezone sync failed (non-critical)", err);
+    });
+  }, [preferencesService]);
+
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();
 
@@ -154,6 +171,14 @@ const AppContent = React.memo(function AppContent() {
     dismiss: dismissMigration,
   } = useAutoMigration();
   const migrationModalRef = useRef<EncryptionMigrationModalRef>(null);
+
+  // Soft reminder prompt — show after user starts a section and returns
+  const { data: userPrefs } = usePreferences();
+  const {
+    shouldShowPrompt: showReminderPrompt,
+    acceptPrompt: acceptReminderPrompt,
+    dismissPrompt: dismissReminderPrompt,
+  } = useReminderPrompt(userPrefs?.notifications?.reminders?.enabled);
 
   const [menuVisible, setMenuVisible] = useState(false);
   const hasSavedPendingContact = useRef(false);
@@ -230,6 +255,11 @@ const AppContent = React.memo(function AppContent() {
     <View style={styles.container}>
       <Header onMenuPress={() => setMenuVisible(true)} />
       <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
+      <ReminderEnablePrompt
+        shouldShowPrompt={showReminderPrompt}
+        onAccept={acceptReminderPrompt}
+        onDismiss={dismissReminderPrompt}
+      />
       <EncryptionMigrationModal
         ref={migrationModalRef}
         phase={migrationPhase}
