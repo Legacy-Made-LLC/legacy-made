@@ -1,0 +1,173 @@
+LEGACY MADE — APP STORE SCREENSHOT DESIGN BRIEF
+================================================
+Use this to create professional App Store and Google Play screenshots for Legacy Made.
+
+
+ABOUT THE APP
+-------------
+Legacy Made is a guided digital platform that helps people organize critical end-of-life
+information and provide clear direction to their loved ones — in a way that feels calm,
+human, and manageable.
+
+Tagline options:
+- "Organize what matters most so those closest are never left guessing."
+- "Everything your loved ones would need. All in one place."
+- "Give your family clarity. Give yourself peace of mind."
+
+Tone: Calm · Human · Respectful · Clear · Unhurried
+
+What it is NOT: Not a legal service, not a will generator, not a memorial platform,
+not fear-based.
+
+
+REQUIRED SCREENSHOT SIZES
+--------------------------
+Apple App Store (iPhone):
+  - 6.5" Display: 1284 × 2778px (required)
+  - 5.5" Display: 1242 × 2208px (optional)
+
+Google Play Store:
+  - Phone: 1080 × 1920px (portrait)
+
+
+BRAND COLORS
+------------
+App background:       #F9F8F8  (warm off-white)
+Card / surface:       #FFFFFF  (pure white)
+Secondary surface:    #F5F4F2  (soft gray)
+Primary heading text: #1A1A1A  (near-black)
+Body text:            #6B6B6B  (warm gray)
+Placeholder text:     #9B9B9B  (light gray)
+PRIMARY ACCENT:       #8a9785  (muted sage green) ← main brand color
+Sage tint (card bg):  #EEF2EC
+Border / divider:     #E8E6E3
+
+Four Feature Pillar Colors:
+  Information Vault  → #8a9785 (sage green),    background tint: #EEF2EC
+  Wishes & Guidance  → #B8A9C9 (soft lavender), background tint: #F2EDF6
+  Legacy Messages    → #A3C4D8 (soft blue),     background tint: #ECF2F6
+  Family Access      → #E0B8A8 (warm blush),    background tint: #F8F0ED
+
+
+TYPOGRAPHY
+----------
+Main headings / app name: Libre Baskerville (serif) — 32px display, 24px section headers
+All other text:           DM Sans (sans-serif) — 16px body, 14px secondary
+Card titles:              DM Sans SemiBold, 20px
+List item titles:         DM Sans Medium, 17px
+Uppercase labels:         DM Sans, 11px, letter-spacing 1px
+
+KEY RULE: Use Libre Baskerville for the app name and primary headline on each screenshot.
+Use DM Sans for all supporting copy.
+
+
+APP STRUCTURE — FOUR FEATURE PILLARS
+-------------------------------------
+
+1. INFORMATION VAULT (Sage Green — #8a9785)
+   "The people who need to reach the right people and find the right things."
+   Sections:
+   - Key Contacts — Who to call first (primary and backup)
+   - People — Important people in your life
+   - Finances — Bank accounts, investments, credit cards
+   - Insurance — Life, health, home, auto policies
+   - Documents — Will, trust, power of attorney
+   - Property — Home, vehicles, storage units
+   - Pets — Pet care instructions and contacts
+   - Digital Access — Email, passwords, devices, social media guidance
+
+2. WISHES & GUIDANCE (Soft Lavender — #B8A9C9)
+   "How you want to be cared for — and what matters most to you."
+   Sections:
+   - Care Preferences — What matters most, quality of life, advance directive
+   - End of Life — Setting, after death, service, organ donation
+   - Personal Values — Faith, things loved ones should know
+
+3. LEGACY MESSAGES (Soft Blue — #A3C4D8) — Coming soon
+   "Personal messages and your story, preserved for those you love."
+   Sections: Messages to people · Your story · Future moments
+
+4. FAMILY ACCESS (Warm Blush — #E0B8A8) — Coming soon
+   "Share access with the people who need it most."
+
+
+UI COMPONENT REFERENCE
+-----------------------
+Cards:           White bg (#FFFFFF), border-radius 16px, padding 20px, no shadow
+Primary Button:  bg #8a9785, white text, height 52px, pill shape (border-radius 25px)
+Input Fields:    height 52px, border 1px solid #E8E6E3, border-radius 12px
+Feature Cards:   tinted background (pillar tint), icon in pillar color, chevron on right
+
+
+SUGGESTED SCREENSHOT STORY (7 screens)
+---------------------------------------
+1. Hero
+   Headline: "Give your family clarity."
+   Sub-copy: "Legacy Made organizes everything they'd need — so they're never left guessing."
+
+2. Dashboard (all four pillars visible)
+   Headline: "Everything in one place."
+   Sub-copy: "Four pillars. Guided prompts. Nothing missed."
+
+3. Information Vault — section list
+   Headline: "Your most important information, organized."
+   Sub-copy: "From finances to digital access — find it in seconds."
+
+4. Contacts detail screen
+   Headline: "Who to call first."
+   Sub-copy: "Add key contacts with context, so your family knows exactly who to reach."
+
+5. Wishes & Guidance screen
+   Headline: "Share what matters most to you."
+   Sub-copy: "Your care preferences, values, and guidance — in your own words."
+
+6. Legacy Messages screen
+   Headline: "Leave messages that last."
+   Sub-copy: "Words for the people you love, ready when they need them most."
+
+7. Progress / completion state
+   Headline: "Feel good about being prepared."
+   Sub-copy: "Track what's done and what's left at a glance."
+
+
+VISUAL STYLE FOR SCREENSHOTS
+------------------------------
+- Device frame: iPhone 15 Pro (black or natural titanium) or clean frameless mockup
+- Background: soft gradient from #EEF2EC (sage tint) to #F9F8F8 (off-white)
+- Text placement: Libre Baskerville headline above or below device, DM Sans sub-copy under it
+- Accent: use sage green #8a9785 for highlight shapes, underlines, or background blobs
+- NO fear-based language — avoid words like "death," "dying," "tragedy"
+- PREFERRED words: "loved ones," "family," "prepared," "clarity," "peace of mind"
+
+
+SAMPLE IN-APP DATA (use to populate screens so they look real)
+---------------------------------------------------------------
+Contacts:
+  Margaret Chen · Sister · Primary contact
+  David Park, Esq. · Attorney
+  Rachel Thompson · Financial Advisor
+
+Finances:
+  Primary Checking · Chase Bank
+  Emergency Savings · Ally Bank
+  Retirement 401(k) · Fidelity
+
+Insurance:
+  Life Insurance · Northwestern Mutual · $500,000 · Beneficiary: Margaret Chen
+  Health Insurance · Blue Cross Blue Shield
+  Homeowners Insurance · State Farm
+
+Documents:
+  Last Will and Testament · Safe deposit box, Chase Bank
+  Revocable Living Trust · Safe deposit box, Chase Bank
+  Healthcare Power of Attorney · Home office filing cabinet
+
+Property:
+  Primary Residence · 742 Evergreen Terrace, San Francisco, CA
+  Honda CR-V (2021) · License plate: 8ABC123
+  Storage Unit #247 · CubeSmart, 1800 Market St
+
+Digital Access:
+  Primary Email · Gmail · Critical
+  Password Manager · 1Password · Critical
+  Apple ID · Apple · High
