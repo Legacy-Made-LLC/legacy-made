@@ -540,6 +540,25 @@ function AccountView({
           <Ionicons name="log-out-outline" size={20} color={colors.error} />
           <Text style={styles.signOutText}>Log Out</Text>
         </Pressable>
+        <Pressable
+          onPress={() =>
+            WebBrowser.openBrowserAsync(
+              "https://app.mylegacymade.com/delete-account",
+            )
+          }
+          style={({ pressed }) => [
+            styles.deleteAccountLink,
+            pressed && styles.deleteAccountLinkPressed,
+          ]}
+        >
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
+          <Ionicons
+            name="open-outline"
+            size={14}
+            color={colors.textTertiary}
+            style={{ marginLeft: spacing.xs }}
+          />
+        </Pressable>
       </View>
     </View>
   );
@@ -1329,6 +1348,21 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     color: colors.error,
     marginLeft: spacing.sm,
+  },
+  deleteAccountLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  deleteAccountLinkPressed: {
+    opacity: 0.5,
+  },
+  deleteAccountText: {
+    fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.textTertiary,
   },
 
   // Account View - Scrollable Content
