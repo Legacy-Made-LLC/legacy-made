@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useContext, useState } from "react";
 
-import { useKeyValue, useUserStorageValue } from "@/contexts/KeyValueContext";
+import { useGlobalStorageValue, useKeyValue } from "@/contexts/KeyValueContext";
 import { logger } from "@/lib/logger";
 
 const ONBOARDING_COMPLETE_KEY = "legacy_made_onboarding_complete";
@@ -66,16 +66,18 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   );
   const { globalStorage } = useKeyValue();
 
-  const hasCompletedInitialOnboarding = useUserStorageValue({
+  // Read from globalStorage — this is a device-level flag, not per-user.
+  // Using user-scoped storage breaks because the flag is set before
+  // signIn.finalize() (when userId is still null), then userId changes
+  // after auth completes, pointing to a different storage instance.
+  const hasCompletedInitialOnboarding = useGlobalStorageValue({
     key: ONBOARDING_COMPLETE_KEY,
-    get: (s) => !!s.getBoolean(ONBOARDING_COMPLETE_KEY),
+    get: (s) => s.getBoolean(ONBOARDING_COMPLETE_KEY) || s.getString(ONBOARDING_COMPLETE_KEY) === "true",
   });
 
-  // Wrapper function that persists to key-value storage
   const setHasCompletedInitialOnboarding = (value: boolean) => {
     try {
-      // Use string "true" instead of boolean true for backwards compatibility.
-      globalStorage.set(ONBOARDING_COMPLETE_KEY, value ? "true" : "false");
+      globalStorage.set(ONBOARDING_COMPLETE_KEY, value);
     } catch (error) {
       logger.error("Failed to save onboarding state", error);
     }
