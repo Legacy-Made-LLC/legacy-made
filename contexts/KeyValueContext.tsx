@@ -75,3 +75,18 @@ export function useUserStorageValue<T>(options: UseUserStorageValueOptions<T>) {
     () => options.get(userStorage),
   );
 }
+
+export function useGlobalStorageValue<T>(
+  options: UseUserStorageValueOptions<T>,
+) {
+  const { globalStorage: storage } = useKeyValue();
+  return useSyncExternalStore<T>(
+    (cb) => {
+      const listener = storage.addOnValueChangedListener(
+        (key) => key === options.key && cb(),
+      );
+      return () => listener.remove();
+    },
+    () => options.get(storage),
+  );
+}
