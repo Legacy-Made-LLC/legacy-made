@@ -126,7 +126,7 @@ export function UpgradePrompt({
         {/* Portal error */}
         {portalMutation.isError && (
           <Text style={styles.errorText}>
-            Something went wrong. Please try again.
+            We couldn’t open billing right now. Please try again in a moment.
           </Text>
         )}
 

@@ -7,6 +7,7 @@ import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { useOpenPortal } from "@/hooks/queries";
 import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
+import { toast } from "@/hooks/useToast";
 import { logger } from "@/lib/logger";
 import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -525,7 +526,16 @@ function AccountView({
               <>
                 <View style={styles.accountFieldDivider} />
                 <Pressable
-                  onPress={() => portalMutation.mutate()}
+                  onPress={() =>
+                    portalMutation.mutate(undefined, {
+                      onError: () => {
+                        toast.error({
+                          message:
+                            "We couldn’t open billing right now. Please try again in a moment.",
+                        });
+                      },
+                    })
+                  }
                   disabled={portalMutation.isPending}
                   style={({ pressed }) => [
                     styles.accountField,
