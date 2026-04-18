@@ -139,6 +139,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.EXPO_PUBLIC_CLERK_GOOGLE_ANDROID_CLIENT_ID,
     EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME:
       process.env.EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME,
+    // RevenueCat public API keys (per-platform). Configure in the RC
+    // dashboard under Project settings → API keys. Safe to expose in the
+    // app bundle — RC's server-side writes are protected separately.
+    rcIosApiKey: process.env.EXPO_PUBLIC_RC_IOS_API_KEY,
+    rcAndroidApiKey: process.env.EXPO_PUBLIC_RC_ANDROID_API_KEY,
   },
   runtimeVersion: {
     policy: "appVersion",
