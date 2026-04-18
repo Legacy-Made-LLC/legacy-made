@@ -21,6 +21,7 @@ import { FullWindowOverlay } from "react-native-screens";
 
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { useRevenueCat } from "@/providers/RevenueCatProvider";
 
 interface UpgradePromptProps {
   visible: boolean;
@@ -43,6 +44,7 @@ export function UpgradePrompt({
 }: UpgradePromptProps) {
   const insets = useSafeAreaInsets();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const { presentPaywall, isDisabled: rcDisabled } = useRevenueCat();
 
   useEffect(() => {
     if (visible) {
@@ -73,10 +75,16 @@ export function UpgradePrompt({
     [],
   );
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     onUpgrade?.();
     bottomSheetModalRef.current?.dismiss();
-    WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+    if (rcDisabled) {
+      // RC isn't configured for this build (e.g. missing API key). Fall back
+      // to the legacy web upgrade page so the CTA still does something.
+      await WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+      return;
+    }
+    await presentPaywall();
   };
 
   const handleDismiss = () => {

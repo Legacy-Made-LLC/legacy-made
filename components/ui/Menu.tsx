@@ -7,6 +7,7 @@ import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
+import { useRevenueCat } from "@/providers/RevenueCatProvider";
 import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -156,6 +157,7 @@ function AccountView({
   const { user } = useUser();
   const { tier, tierName, isFree, getQuotaInfo } = useEntitlements();
   const { showUpgradePrompt } = useUpgradePrompt();
+  const { presentCustomerCenter, isDisabled: rcDisabled } = useRevenueCat();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -496,6 +498,29 @@ function AccountView({
                   <Text style={styles.fieldLabel}>Entries</Text>
                   <QuotaIndicator quota={entriesQuota} />
                 </View>
+              </>
+            )}
+            {!isFree && !rcDisabled && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <Pressable
+                  onPress={() => {
+                    void presentCustomerCenter();
+                  }}
+                  style={({ pressed }) => [
+                    styles.accountField,
+                    pressed && styles.upgradeFieldPressed,
+                  ]}
+                >
+                  <Text style={styles.upgradeFieldLabel}>
+                    Manage subscription
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
               </>
             )}
             {isFree && (
