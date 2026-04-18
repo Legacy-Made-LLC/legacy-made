@@ -1,28 +1,27 @@
 /**
- * RevenueCat Provider — DEFERRED ACTIVATION
+ * RevenueCat Provider
  *
- * This module imports `react-native-purchases`, which is a native module.
- * It requires a dev-client rebuild (`expo prebuild --clean && expo run:ios`
- * or `expo run:android`) after the package is installed before this file
- * can be imported anywhere in the app tree.
+ * Wraps the RC SDK lifecycle (configure → fetch CustomerInfo → listen for
+ * updates) and exposes the prebuilt RC UI surfaces (Paywall, Customer
+ * Center) via callable methods.
  *
- * Activation steps (after the RC dashboard is configured):
- *   1. Set EXPO_PUBLIC_RC_IOS_API_KEY and EXPO_PUBLIC_RC_ANDROID_API_KEY
- *      in your .env (values from the RC dashboard → Project settings → API keys).
- *   2. Rebuild the dev client so the native module is linked.
- *   3. Import { RevenueCatProvider } in app/_layout.tsx and wrap the tree
- *      somewhere inside ClerkProvider (Clerk user ID is the RC app_user_id).
- *   4. Consume via useRevenueCat() in components that need customerInfo or
- *      to trigger a purchase.
+ * IMPORTANT: react-native-purchases is a native module. After installing or
+ * upgrading the package, run `expo prebuild --clean && expo run:ios` (or
+ * run:android) so the native code is linked into the dev client. Importing
+ * this file before that rebuild crashes the app at startup.
  *
- * Until wired in, this file is dead code; the import of react-native-purchases
- * will not be evaluated and cannot crash the app.
+ * Source-of-truth for entitlements is the backend (driven by RC webhooks).
+ * The customerInfo exposed here is a defense-in-depth signal, useful for:
+ *   - Optimistic UI right after a purchase (before our webhook lands)
+ *   - Restore-purchases flows
+ *   - Triggering a backend refresh after CustomerInfo changes
  */
 
 import { useUser } from "@clerk/expo";
 import Constants from "expo-constants";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -35,18 +34,53 @@ import Purchases, {
   LOG_LEVEL,
   type CustomerInfo,
 } from "react-native-purchases";
+import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 
 import { logger } from "@/lib/logger";
 
 interface RevenueCatContextValue {
   // True once Purchases.configure has resolved and the first CustomerInfo
-  // payload has been received. Consumers can block tier-dependent UI on this.
+  // payload has been received (or once we've decided RC is disabled).
   isReady: boolean;
+  // Latest CustomerInfo from RC. Null while loading or when RC is disabled.
   customerInfo: CustomerInfo | null;
   // True if no RC API key is configured for the current platform. The
-  // provider still mounts cleanly; consumers should treat the user as
-  // unentitled (free tier) and defer purchase UI.
+  // provider still mounts cleanly so consumers don't need to special-case
+  // its presence — they just won't get entitlement signals.
   isDisabled: boolean;
+
+  /**
+   * True if the user currently has the entitlement active in RC. Falls back
+   * to false when RC is disabled or hasn't loaded yet — backend tier
+   * remains authoritative for actual access decisions.
+   */
+  hasEntitlement: (entitlementId: string) => boolean;
+
+  /**
+   * Present the RC Paywall unconditionally. Returns the user's interaction
+   * outcome. Use this for "Upgrade" CTAs where you want to always show the
+   * paywall regardless of current entitlement state.
+   */
+  presentPaywall: () => Promise<PAYWALL_RESULT>;
+
+  /**
+   * Present the RC Paywall only if the user lacks the given entitlement.
+   * Returns NOT_PRESENTED if they already have it. Useful for gating a
+   * paid feature: call this on tap and proceed only on PURCHASED/RESTORED.
+   */
+  presentPaywallIfNeeded: (
+    requiredEntitlementIdentifier: string,
+  ) => Promise<PAYWALL_RESULT>;
+
+  /**
+   * Present the RC Customer Center (manage subscription, refund requests,
+   * promo offers, exit surveys). This is the in-app counterpart to the
+   * native App Store / Play Store deep link.
+   */
+  presentCustomerCenter: () => Promise<void>;
+
+  /** Re-fetch entitlements from the store. Use for a "Restore Purchases" button. */
+  restorePurchases: () => Promise<CustomerInfo | null>;
 }
 
 const RevenueCatContext = createContext<RevenueCatContextValue | null>(null);
@@ -78,18 +112,17 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   useEffect(() => {
     if (!isLoaded) return;
     if (isDisabled) {
-      // Platform has no API key configured. Mark ready with no customer info
-      // so the app can proceed as if the user is on the free tier.
+      // Platform has no API key configured. Mark ready so consumers don't
+      // hang waiting; treat the user as unentitled.
       setIsReady(true);
       return;
     }
 
     const userId = user?.id ?? null;
 
-    // Re-configure whenever the signed-in user changes. RC handles the
-    // anonymous → signed-in transition internally; passing appUserID on
-    // configure or calling logIn is the way to associate a purchase with
-    // our Clerk user.
+    // Re-configure whenever the signed-in user changes. Passing appUserID
+    // on configure (or calling Purchases.logIn afterwards) is what binds
+    // a purchase to our Clerk user instead of an anonymous RC ID.
     if (userId === configuredUserIdRef.current) return;
 
     let cancelled = false;
@@ -114,7 +147,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
         }
       } catch (err) {
         // Don't take the app down — RC is not load-bearing for core flows.
-        // Entitlement decisions still fall back to our backend.
+        // Backend entitlement state still drives access.
         logger.error("RevenueCat configure failed", { err });
         if (!cancelled) setIsReady(true);
       }
@@ -134,9 +167,81 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     };
   }, [isDisabled]);
 
+  const hasEntitlement = useCallback(
+    (entitlementId: string) => {
+      if (!customerInfo) return false;
+      return customerInfo.entitlements.active[entitlementId]?.isActive === true;
+    },
+    [customerInfo],
+  );
+
+  const presentPaywall = useCallback(async () => {
+    if (isDisabled) return PAYWALL_RESULT.NOT_PRESENTED;
+    try {
+      return await RevenueCatUI.presentPaywall();
+    } catch (err) {
+      logger.error("RevenueCat presentPaywall failed", { err });
+      return PAYWALL_RESULT.ERROR;
+    }
+  }, [isDisabled]);
+
+  const presentPaywallIfNeeded = useCallback(
+    async (requiredEntitlementIdentifier: string) => {
+      if (isDisabled) return PAYWALL_RESULT.NOT_PRESENTED;
+      try {
+        return await RevenueCatUI.presentPaywallIfNeeded({
+          requiredEntitlementIdentifier,
+        });
+      } catch (err) {
+        logger.error("RevenueCat presentPaywallIfNeeded failed", { err });
+        return PAYWALL_RESULT.ERROR;
+      }
+    },
+    [isDisabled],
+  );
+
+  const presentCustomerCenter = useCallback(async () => {
+    if (isDisabled) return;
+    try {
+      await RevenueCatUI.presentCustomerCenter();
+    } catch (err) {
+      logger.error("RevenueCat presentCustomerCenter failed", { err });
+    }
+  }, [isDisabled]);
+
+  const restorePurchases = useCallback(async () => {
+    if (isDisabled) return null;
+    try {
+      const info = await Purchases.restorePurchases();
+      setCustomerInfo(info);
+      return info;
+    } catch (err) {
+      logger.error("RevenueCat restorePurchases failed", { err });
+      return null;
+    }
+  }, [isDisabled]);
+
   const value = useMemo<RevenueCatContextValue>(
-    () => ({ isReady, customerInfo, isDisabled }),
-    [isReady, customerInfo, isDisabled],
+    () => ({
+      isReady,
+      customerInfo,
+      isDisabled,
+      hasEntitlement,
+      presentPaywall,
+      presentPaywallIfNeeded,
+      presentCustomerCenter,
+      restorePurchases,
+    }),
+    [
+      isReady,
+      customerInfo,
+      isDisabled,
+      hasEntitlement,
+      presentPaywall,
+      presentPaywallIfNeeded,
+      presentCustomerCenter,
+      restorePurchases,
+    ],
   );
 
   return (
@@ -155,21 +260,28 @@ export function useRevenueCat(): RevenueCatContextValue {
 }
 
 /**
+ * The configured RC entitlement identifier for our paid (Individual) tier.
+ * Sourced from `EXPO_PUBLIC_RC_ENTITLEMENT_INDIVIDUAL` (defaulted to
+ * `individual` in app.config.ts). Must match the identifier configured in
+ * the RC dashboard — case-sensitive.
+ */
+export const RC_ENTITLEMENT_INDIVIDUAL: string =
+  (Constants.expoConfig?.extra?.rcEntitlementIndividual as string | undefined) ??
+  "individual";
+
+/**
  * Deep link to the platform's native subscription management screen.
  *
  * iOS → the Apple ID subscriptions page (in-app purchases including ours).
  * Android → the Play Store subscriptions page, filtered to our package.
  *
- * This is what we show for "Manage Subscription" in place of a Stripe
- * Customer Portal. Apple requires external IAP management to go through
- * the App Store, not a custom in-app flow.
+ * Prefer `presentCustomerCenter()` for in-app management; this is a
+ * fallback for cases where Customer Center isn't available or appropriate.
  */
 export function getManageSubscriptionUrl(packageName?: string): string {
   if (Platform.OS === "ios") {
     return "https://apps.apple.com/account/subscriptions";
   }
-  // Play Store deep link. Package name can be supplied to filter to a
-  // specific app's subscriptions; fall back to the generic subscriptions list.
   const base = "https://play.google.com/store/account/subscriptions";
   return packageName ? `${base}?package=${packageName}` : base;
 }

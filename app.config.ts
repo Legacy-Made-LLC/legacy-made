@@ -144,6 +144,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // app bundle — RC's server-side writes are protected separately.
     rcIosApiKey: process.env.EXPO_PUBLIC_RC_IOS_API_KEY,
     rcAndroidApiKey: process.env.EXPO_PUBLIC_RC_ANDROID_API_KEY,
+    // RC entitlement identifier for the paid tier. Must match the
+    // identifier configured in the RC dashboard exactly (case-sensitive).
+    // Defaults to 'individual'; override if your RC entitlement uses a
+    // different slug (e.g. 'legacy_made_individual' or 'Legacy Made Individual').
+    rcEntitlementIndividual:
+      process.env.EXPO_PUBLIC_RC_ENTITLEMENT_INDIVIDUAL ?? "individual",
   },
   runtimeVersion: {
     policy: "appVersion",
