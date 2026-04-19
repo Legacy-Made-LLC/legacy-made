@@ -168,9 +168,12 @@ export default Sentry.wrap(function RootLayout() {
                       </OnboardingProvider>
                     </KeyValueProvider>
                   </QueryProvider>
+                  {/* Rendered inside RevenueCatProvider so the upgrade
+                      prompt's useRevenueCat() call resolves; rendered
+                      after QueryProvider so it overlays everything. */}
+                  <GlobalUpgradePrompt />
                 </RevenueCatProvider>
               </ClerkProvider>
-              <GlobalUpgradePrompt />
             </UpgradePromptProvider>
           </LocaleProvider>
         </BottomSheetModalProvider>
