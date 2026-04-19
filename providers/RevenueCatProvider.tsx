@@ -19,6 +19,7 @@
 
 import { useUser } from "@clerk/expo";
 import Constants from "expo-constants";
+import { router } from "expo-router";
 import {
   createContext,
   useCallback,
@@ -34,7 +35,7 @@ import Purchases, {
   LOG_LEVEL,
   type CustomerInfo,
 } from "react-native-purchases";
-import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
+import RevenueCatUI from "react-native-purchases-ui";
 
 import { logger } from "@/lib/logger";
 
@@ -57,20 +58,17 @@ interface RevenueCatContextValue {
   hasEntitlement: (entitlementId: string) => boolean;
 
   /**
-   * Present the RC Paywall unconditionally. Returns the user's interaction
-   * outcome. Use this for "Upgrade" CTAs where you want to always show the
-   * paywall regardless of current entitlement state.
+   * Navigate to our custom paywall screen at /paywall (renders the
+   * `default` offering's monthly package). No-op if RC is disabled.
    */
-  presentPaywall: () => Promise<PAYWALL_RESULT>;
+  presentPaywall: () => void;
 
   /**
-   * Present the RC Paywall only if the user lacks the given entitlement.
-   * Returns NOT_PRESENTED if they already have it. Useful for gating a
-   * paid feature: call this on tap and proceed only on PURCHASED/RESTORED.
+   * Navigate to the paywall only if the user lacks the given entitlement.
+   * Useful for gating a paid feature: call this on tap and proceed only
+   * if they already have the entitlement.
    */
-  presentPaywallIfNeeded: (
-    requiredEntitlementIdentifier: string,
-  ) => Promise<PAYWALL_RESULT>;
+  presentPaywallIfNeeded: (requiredEntitlementIdentifier: string) => void;
 
   /**
    * Present the RC Customer Center (manage subscription, refund requests,
@@ -175,29 +173,20 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     [customerInfo],
   );
 
-  const presentPaywall = useCallback(async () => {
-    if (isDisabled) return PAYWALL_RESULT.NOT_PRESENTED;
-    try {
-      return await RevenueCatUI.presentPaywall();
-    } catch (err) {
-      logger.error("RevenueCat presentPaywall failed", { err });
-      return PAYWALL_RESULT.ERROR;
-    }
+  const presentPaywall = useCallback(() => {
+    if (isDisabled) return;
+    router.push("/paywall");
   }, [isDisabled]);
 
   const presentPaywallIfNeeded = useCallback(
-    async (requiredEntitlementIdentifier: string) => {
-      if (isDisabled) return PAYWALL_RESULT.NOT_PRESENTED;
-      try {
-        return await RevenueCatUI.presentPaywallIfNeeded({
-          requiredEntitlementIdentifier,
-        });
-      } catch (err) {
-        logger.error("RevenueCat presentPaywallIfNeeded failed", { err });
-        return PAYWALL_RESULT.ERROR;
-      }
+    (requiredEntitlementIdentifier: string) => {
+      if (isDisabled) return;
+      const active =
+        customerInfo?.entitlements.active[requiredEntitlementIdentifier];
+      if (active?.isActive) return;
+      router.push("/paywall");
     },
-    [isDisabled],
+    [isDisabled, customerInfo],
   );
 
   const presentCustomerCenter = useCallback(async () => {

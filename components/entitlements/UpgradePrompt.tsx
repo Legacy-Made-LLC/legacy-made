@@ -84,7 +84,7 @@ export function UpgradePrompt({
       await WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
       return;
     }
-    await presentPaywall();
+    presentPaywall();
   };
 
   const handleDismiss = () => {
