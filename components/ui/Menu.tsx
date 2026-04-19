@@ -505,7 +505,13 @@ function AccountView({
                 <View style={styles.accountFieldDivider} />
                 <Pressable
                   onPress={() => {
-                    void presentCustomerCenter();
+                    // Close the menu Modal first so RC's Customer Center isn't
+                    // hidden underneath it. Wait for the slide-out animation
+                    // before presenting.
+                    onClose();
+                    setTimeout(() => {
+                      void presentCustomerCenter();
+                    }, 250);
                   }}
                   style={({ pressed }) => [
                     styles.accountField,

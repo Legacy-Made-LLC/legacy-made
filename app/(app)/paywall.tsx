@@ -9,6 +9,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
@@ -26,6 +27,7 @@ import Purchases, { type PurchasesPackage } from "react-native-purchases";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { typography } from "@/constants/theme";
 import { logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/queryKeys";
 import { RC_ENTITLEMENT_INDIVIDUAL } from "@/providers/RevenueCatProvider";
 
 const PAYWALL_COLORS = {
@@ -58,11 +60,22 @@ const MANAGE_INSTRUCTION =
 
 export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+
+  // Backend is the source of truth for tier (driven by RC webhooks).
+  // After a successful purchase/restore, refetch plan + entitlements so the
+  // app reflects the new tier without requiring a manual refresh. The webhook
+  // typically lands within a few seconds; if it hasn't yet, the next focus
+  // refetch (or app return) will catch it.
+  const refreshTier = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.entitlements.all() });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +121,7 @@ export default function PaywallScreen() {
       if (
         customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
+        refreshTier();
         dismiss();
       }
     } catch (err) {
@@ -130,6 +144,7 @@ export default function PaywallScreen() {
       if (
         customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
+        refreshTier();
         dismiss();
       } else {
         setError("No active subscription found to restore.");
