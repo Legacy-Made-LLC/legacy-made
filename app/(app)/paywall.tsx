@@ -67,14 +67,23 @@ export default function PaywallScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
-  // Backend is the source of truth for tier (driven by RC webhooks).
-  // After a successful purchase/restore, refetch plan + entitlements so the
-  // app reflects the new tier without requiring a manual refresh. The webhook
-  // typically lands within a few seconds; if it hasn't yet, the next focus
-  // refetch (or app return) will catch it.
+  // Backend is the source of truth for tier (driven by RC webhooks). After a
+  // successful purchase/restore, invalidate plan + entitlements so the app
+  // reflects the new tier without requiring a manual refresh.
+  //
+  // Race: the user-scoped entitlements endpoint and the plan-scoped one are
+  // separate queries, and the RC webhook → DB write typically lands a beat
+  // after the purchase callback resolves. An immediate refetch can catch the
+  // pre-webhook state on one query while the other lands fresh, leaving the
+  // account menu showing "Free" while gating shows the new tier. So we
+  // invalidate twice — once now, again after ~3s to catch the webhook.
   const refreshTier = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.entitlements.all() });
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.entitlements.all() });
+    };
+    invalidate();
+    setTimeout(invalidate, 3000);
   };
 
   useEffect(() => {
