@@ -19,7 +19,6 @@ import Purchases, { type PurchasesPackage } from "react-native-purchases";
 import {
   PaywallComparison,
   PaywallEditorial,
-  PaywallLetter,
   PaywallPillars,
   type PaywallVariant,
   type PaywallVariantProps,
@@ -36,7 +35,6 @@ const VARIANTS: Record<
   editorial: PaywallEditorial,
   comparison: PaywallComparison,
   pillars: PaywallPillars,
-  letter: PaywallLetter,
 };
 
 const DEFAULT_VARIANT: PaywallVariant = "editorial";

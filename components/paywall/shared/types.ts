@@ -1,8 +1,4 @@
-export type PaywallVariant =
-  | "editorial"
-  | "comparison"
-  | "pillars"
-  | "letter";
+export type PaywallVariant = "editorial" | "comparison" | "pillars";
 
 export interface PaywallVariantProps {
   priceString: string;
