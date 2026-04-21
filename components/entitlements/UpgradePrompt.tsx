@@ -53,12 +53,35 @@ export function UpgradePrompt({
   const { presentPaywall, isDisabled: rcDisabled } = useRevenueCat();
 
   useEffect(() => {
-    if (visible) {
-      bottomSheetModalRef.current?.present();
-    } else {
+    if (!visible) {
       bottomSheetModalRef.current?.dismiss();
+      return;
     }
-  }, [visible]);
+
+    // For the standard upgrade path (non-shared-plan), skip the intermediary
+    // sheet and go straight to the paywall. Only shared-plan viewers —
+    // who can't purchase this plan themselves — still see the info sheet.
+    if (!hideUpgradeAction) {
+      onUpgrade?.();
+      if (rcDisabled) {
+        WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+      } else {
+        presentPaywall(placement);
+      }
+      onClose();
+      return;
+    }
+
+    bottomSheetModalRef.current?.present();
+  }, [
+    visible,
+    hideUpgradeAction,
+    onUpgrade,
+    rcDisabled,
+    presentPaywall,
+    placement,
+    onClose,
+  ]);
 
   const handleSheetChanges = useCallback(
     (index: number) => {
@@ -151,10 +174,19 @@ export function UpgradePrompt({
           onPress={handleDismiss}
           style={({ pressed }) => [
             hideUpgradeAction ? styles.upgradeButton : styles.dismissButton,
-            pressed && (hideUpgradeAction ? styles.upgradeButtonPressed : styles.dismissButtonPressed),
+            pressed &&
+              (hideUpgradeAction
+                ? styles.upgradeButtonPressed
+                : styles.dismissButtonPressed),
           ]}
         >
-          <Text style={hideUpgradeAction ? styles.upgradeButtonText : styles.dismissButtonText}>
+          <Text
+            style={
+              hideUpgradeAction
+                ? styles.upgradeButtonText
+                : styles.dismissButtonText
+            }
+          >
             {hideUpgradeAction ? "OK" : "Maybe Later"}
           </Text>
         </Pressable>
