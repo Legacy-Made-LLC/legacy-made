@@ -348,7 +348,7 @@ const AppContent = React.memo(function AppContent() {
           <Stack.Screen
             name="paywall"
             options={{
-              presentation: "fullScreenModal",
+              presentation: "modal",
               headerShown: false,
               animation: "slide_from_bottom",
             }}
