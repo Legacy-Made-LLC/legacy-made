@@ -67,11 +67,12 @@ function StackHeader({ navigation, options, back }: NativeStackHeaderProps) {
           </Text>
         )}
       </View>
-      {back && (
-        options.headerRight
-          ? options.headerRight({ canGoBack: !!back })
-          : <View style={headerStyles.spacer} />
-      )}
+      {back &&
+        (options.headerRight ? (
+          options.headerRight({ canGoBack: !!back })
+        ) : (
+          <View style={headerStyles.spacer} />
+        ))}
     </View>
   );
 }
@@ -348,7 +349,7 @@ const AppContent = React.memo(function AppContent() {
           <Stack.Screen
             name="paywall"
             options={{
-              presentation: "modal",
+              presentation: "fullScreenModal",
               headerShown: false,
               animation: "slide_from_bottom",
             }}

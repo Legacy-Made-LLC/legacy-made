@@ -10,7 +10,6 @@ interface PaywallChromeProps {
 export function PaywallChrome({ onDismiss }: PaywallChromeProps) {
   return (
     <View style={styles.chrome}>
-      <View style={styles.grabber} />
       <Pressable
         onPress={onDismiss}
         style={({ pressed }) => [
@@ -30,17 +29,9 @@ export function PaywallChrome({ onDismiss }: PaywallChromeProps) {
 const styles = StyleSheet.create({
   chrome: {
     paddingHorizontal: 24,
-    paddingTop: 10,
     minHeight: 48,
-    alignItems: "center",
     position: "relative",
     zIndex: 10,
-  },
-  grabber: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: PAYWALL_COLORS.grabber,
   },
   closeButton: {
     position: "absolute",
