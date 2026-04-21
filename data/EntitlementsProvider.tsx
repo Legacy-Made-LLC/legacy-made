@@ -98,6 +98,10 @@ interface EntitlementsContextType {
   tierDescription: string;
   /** Whether the viewer is on free tier */
   isFree: boolean;
+  /** Whether the viewer has cancelled but retains access until currentPeriodEnd */
+  cancellationPending: boolean;
+  /** ISO date when the current paid period ends (null for free/lifetime/never-paid) */
+  currentPeriodEnd: string | null;
 
   // Access check methods (use plan entitlements)
   /** Check if a pillar can be edited (full access) */
@@ -178,6 +182,10 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
     const tierName = ownEntitlements.tierName;
     const tierDescription = ownEntitlements.tierDescription;
     const isFree = tier === "free";
+    const cancellationPending =
+      ownEntitlements.subscription?.cancellationPending ?? false;
+    const currentPeriodEnd =
+      ownEntitlements.subscription?.currentPeriodEnd ?? null;
 
     // Access check methods — operate on the plan's entitlements
     const canEditPillar = (pillar: Pillar): boolean => {
@@ -305,6 +313,8 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
       tierName,
       tierDescription,
       isFree,
+      cancellationPending,
+      currentPeriodEnd,
       canEditPillar,
       canViewPillar,
       isViewOnlyPillar,
