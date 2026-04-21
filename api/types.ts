@@ -523,6 +523,12 @@ export interface QuotaInfo {
 /**
  * User's current entitlement information
  */
+/**
+ * Webhook-derived lifecycle state for a paid subscription. null when the
+ * user has never had a paid subscription.
+ */
+export type SubscriptionStatus = "active" | "in_grace_period" | "expired";
+
 export interface EntitlementInfo {
   /** Current subscription tier */
   tier: SubscriptionTier;
@@ -536,6 +542,18 @@ export interface EntitlementInfo {
   viewOnlyPillars: Pillar[];
   /** Quota information for limited features */
   quotas: QuotaInfo[];
+  /**
+   * Lifecycle metadata surfaced from the RC webhook. Optional at runtime to
+   * tolerate pre-consume-fields API deployments; when absent, treat all
+   * fields as null/false.
+   */
+  subscription?: {
+    status: SubscriptionStatus | null;
+    /** ISO date string; null when no paid period is in force. */
+    currentPeriodEnd: string | null;
+    /** True when the user cancelled but retains access through currentPeriodEnd. */
+    cancellationPending: boolean;
+  };
 }
 
 /**

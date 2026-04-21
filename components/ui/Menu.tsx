@@ -155,7 +155,14 @@ function AccountView({
   bottomInset: number;
 }) {
   const { user } = useUser();
-  const { tier, tierName, isFree, getQuotaInfo } = useEntitlements();
+  const {
+    tier,
+    tierName,
+    isFree,
+    cancellationPending,
+    currentPeriodEnd,
+    getQuotaInfo,
+  } = useEntitlements();
   const { showUpgradePrompt } = useUpgradePrompt();
   const { presentCustomerCenter, isDisabled: rcDisabled } = useRevenueCat();
   const [isEditing, setIsEditing] = useState(false);
@@ -491,6 +498,21 @@ function AccountView({
               <Text style={styles.fieldLabel}>Plan</Text>
               <TierBadge tier={tier} tierName={tierName} />
             </View>
+            {cancellationPending && currentPeriodEnd && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <View style={styles.accountField}>
+                  <Text style={styles.fieldLabel}>Access ends</Text>
+                  <Text style={styles.fieldValue}>
+                    {new Date(currentPeriodEnd).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Text>
+                </View>
+              </>
+            )}
             {!isFree && entriesQuota && !entriesQuota.unlimited && (
               <>
                 <View style={styles.accountFieldDivider} />
