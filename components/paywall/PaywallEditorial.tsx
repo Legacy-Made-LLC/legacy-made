@@ -8,11 +8,28 @@ import { PaywallFooter } from "./shared/PaywallFooter";
 import { PAYWALL_COLORS } from "./shared/tokens";
 import type { PaywallVariantProps } from "./shared/types";
 
-const VALUE_PROPS = [
-  "Unlimited contacts, accounts, and documents",
-  "500 MB storage — for deeds, scans, and photos",
-  "Wishes & Legacy Messages, fully unlocked",
-  "1 trusted contact included",
+interface Feature {
+  title: string;
+  note: string;
+}
+
+const FEATURES: Feature[] = [
+  {
+    title: "Unlimited important information items",
+    note: "Accounts, documents, contacts — no cap.",
+  },
+  {
+    title: "Wishes & Guidance, unlocked",
+    note: "Preferences, directives, and decisions — previously locked.",
+  },
+  {
+    title: "Unlimited legacy messages",
+    note: "Letters, audio, and video for the people who matter.",
+  },
+  {
+    title: "500 MB of secure storage",
+    note: "For deeds, scans, and family photos. 1 trusted contact included.",
+  },
 ];
 
 export function PaywallEditorial(props: PaywallVariantProps) {
@@ -23,17 +40,26 @@ export function PaywallEditorial(props: PaywallVariantProps) {
       <PaywallChrome onDismiss={props.onDismiss} />
 
       <View style={styles.hero}>
-        <Text style={styles.headline}>Clarity for the people you love.</Text>
+        <Text style={styles.eyebrow}>Legacy Made · Individual</Text>
+        <Text style={styles.headline}>
+          A quiet gift for
+          {"\n"}
+          <Text style={styles.headlineItalic}>the people you love.</Text>
+        </Text>
         <Text style={styles.subhead}>
-          Unlock everything, so nothing&rsquo;s left to guess.
+          You&rsquo;ve been organizing what matters. This removes the limits —
+          so your people find everything exactly where you left it.
         </Text>
       </View>
 
-      <View style={styles.valueProps}>
-        {VALUE_PROPS.map((label) => (
-          <View key={label} style={styles.valuePropRow}>
-            <View style={styles.valuePropDot} />
-            <Text style={styles.valuePropLabel}>{label}</Text>
+      <View style={styles.features}>
+        {FEATURES.map((feature) => (
+          <View key={feature.title} style={styles.featureRow}>
+            <View style={styles.featureDot} />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>{feature.title}</Text>
+              <Text style={styles.featureNote}>{feature.note}</Text>
+            </View>
           </View>
         ))}
       </View>
@@ -66,47 +92,70 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   hero: {
-    paddingHorizontal: 28,
-    paddingTop: 44,
-    gap: 16,
+    paddingHorizontal: 32,
+    paddingTop: 32,
+  },
+  eyebrow: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: PAYWALL_COLORS.sagePressed,
+    marginBottom: 18,
   },
   headline: {
     fontFamily: typography.fontFamily.serif,
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.6,
     color: PAYWALL_COLORS.textPrimary,
-    letterSpacing: -0.32,
-    maxWidth: 320,
+  },
+  headlineItalic: {
+    fontFamily: typography.fontFamily.serifItalic,
+    color: PAYWALL_COLORS.sageInk,
   },
   subhead: {
+    marginTop: 18,
     fontFamily: typography.fontFamily.regular,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     color: PAYWALL_COLORS.textSecondary,
     maxWidth: 320,
   },
-  valueProps: {
-    paddingHorizontal: 28,
-    paddingTop: 36,
-    gap: 18,
-  },
-  valuePropRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  features: {
+    paddingHorizontal: 32,
+    paddingTop: 28,
     gap: 14,
   },
-  valuePropDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: PAYWALL_COLORS.sage,
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
   },
-  valuePropLabel: {
+  featureDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: PAYWALL_COLORS.sagePressed,
+    marginTop: 8,
+  },
+  featureText: {
     flex: 1,
+  },
+  featureTitle: {
     fontFamily: typography.fontFamily.medium,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14.5,
+    lineHeight: 19,
+    letterSpacing: -0.1,
     color: PAYWALL_COLORS.textPrimary,
+  },
+  featureNote: {
+    marginTop: 2,
+    fontFamily: typography.fontFamily.regular,
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: PAYWALL_COLORS.textTertiary,
   },
   spacer: {
     flex: 1,
