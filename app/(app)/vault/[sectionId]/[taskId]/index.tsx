@@ -12,7 +12,9 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { useVaultSection, useVaultTask } from "@/constants/vault";
 import { isSectionSkippable } from "@/constants/vault-structure";
 import { useTranslations } from "@/contexts/LocaleContext";
+import { useEntitlements } from "@/data/EntitlementsProvider";
 import { usePlan } from "@/data/PlanProvider";
+import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import {
   useDeleteTaskProgress,
   useEntriesQuery,
@@ -35,6 +37,8 @@ export default function TaskScreen() {
   const t = useTranslations();
 
   const { isReadOnly } = usePlan();
+  const { canCreate } = useEntitlements();
+  const { showUpgradePrompt } = useUpgradePrompt();
   const section = useVaultSection(sectionId);
   const task = useVaultTask(sectionId, taskId);
   const markNotApplicable = useMarkTaskNotApplicable(task?.taskKey);
@@ -87,6 +91,10 @@ export default function TaskScreen() {
   };
 
   const handleAddPress = () => {
+    if (!canCreate("entries")) {
+      showUpgradePrompt({ placement: "info_limit_reached" });
+      return;
+    }
     const id = randomUUID();
     router.push(`/vault/${sectionId}/${taskId}/${id}?isNew=1`);
   };
@@ -137,9 +145,7 @@ export default function TaskScreen() {
           onAddPress={handleAddPress}
           readOnly={isReadOnly}
           emptySecondaryLabel={
-            showSkipInEmptyState
-              ? t.common.notApplicable.button
-              : undefined
+            showSkipInEmptyState ? t.common.notApplicable.button : undefined
           }
           onEmptySecondaryAction={
             showSkipInEmptyState ? handleSkipTask : undefined

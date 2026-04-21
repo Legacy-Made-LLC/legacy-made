@@ -21,11 +21,7 @@ export function PaywallChrome({ onDismiss }: PaywallChromeProps) {
         accessibilityLabel="Close"
         accessibilityRole="button"
       >
-        <Ionicons
-          name="close"
-          size={16}
-          color={PAYWALL_COLORS.textSecondary}
-        />
+        <Ionicons name="close" size={16} color={PAYWALL_COLORS.textSecondary} />
       </Pressable>
     </View>
   );
@@ -35,8 +31,10 @@ const styles = StyleSheet.create({
   chrome: {
     paddingHorizontal: 24,
     paddingTop: 10,
+    minHeight: 48,
     alignItems: "center",
     position: "relative",
+    zIndex: 10,
   },
   grabber: {
     width: 36,
