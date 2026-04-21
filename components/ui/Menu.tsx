@@ -500,7 +500,7 @@ function AccountView({
                 </View>
               </>
             )}
-            {!isFree && !rcDisabled && (
+            {!isFree && tier !== "lifetime" && !rcDisabled && (
               <>
                 <View style={styles.accountFieldDivider} />
                 <Pressable

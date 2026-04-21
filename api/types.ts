@@ -176,7 +176,10 @@ export function apiFileToAttachment(file: ApiFile): FileAttachment {
     fileSize: file.sizeBytes,
     mimeType: file.mimeType,
     type,
-    role: file.role === "primary-video" || file.role === "attachment" ? file.role : undefined,
+    role:
+      file.role === "primary-video" || file.role === "attachment"
+        ? file.role
+        : undefined,
     thumbnailUri: file.thumbnailUrl || undefined,
     uploadStatus: file.uploadStatus === "complete" ? "complete" : "pending",
     isRemote: true,
@@ -484,7 +487,7 @@ export interface SharedPlan {
 /**
  * Subscription tier levels
  */
-export type SubscriptionTier = "free" | "individual" | "family";
+export type SubscriptionTier = "free" | "individual" | "family" | "lifetime";
 
 /**
  * Feature pillars in the app
