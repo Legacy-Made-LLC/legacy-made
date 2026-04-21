@@ -533,7 +533,9 @@ function AccountView({
               <>
                 <View style={styles.accountFieldDivider} />
                 <Pressable
-                  onPress={() => showUpgradePrompt()}
+                  onPress={() =>
+                    showUpgradePrompt({ placement: "settings_upgrade" })
+                  }
                   style={({ pressed }) => [
                     styles.accountField,
                     pressed && styles.upgradeFieldPressed,

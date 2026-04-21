@@ -27,6 +27,13 @@ const PILLAR_COLORS: Record<Pillar, { accent: string; tint: string }> = {
   family_access: { accent: colors.featureFamily, tint: colors.featureFamilyTint },
 };
 
+const PILLAR_PLACEMENTS: Record<Pillar, string> = {
+  important_info: "info_limit_reached",
+  wishes: "pillar_locked_wishes",
+  messages: "pillar_locked_messages",
+  family_access: "pillar_locked_trusted",
+};
+
 interface UsePillarGuardOptions {
   pillar: Pillar;
   featureName: string;
@@ -66,6 +73,7 @@ export function usePillarGuard({
         featureName={featureName}
         description={lockedDescription}
         isSharedPlan={isViewingSharedPlan}
+        placement={PILLAR_PLACEMENTS[pillar]}
       />
     );
   } else if (isViewingSharedPlan && !canAccessPillar(pillar)) {

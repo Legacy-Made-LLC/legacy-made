@@ -32,6 +32,11 @@ interface UpgradePromptProps {
   onUpgrade?: () => void;
   /** When true, hides the upgrade button (e.g., for shared plan limits) */
   hideUpgradeAction?: boolean;
+  /**
+   * RC Targeting placement identifier passed through to the paywall screen.
+   * Drives which offering (and therefore which paywall variant) is fetched.
+   */
+  placement?: string;
 }
 
 export function UpgradePrompt({
@@ -41,6 +46,7 @@ export function UpgradePrompt({
   message = "You've made great progress organizing your legacy. Upgrade to continue adding more and unlock additional features.",
   onUpgrade,
   hideUpgradeAction = false,
+  placement,
 }: UpgradePromptProps) {
   const insets = useSafeAreaInsets();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -84,7 +90,7 @@ export function UpgradePrompt({
       await WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
       return;
     }
-    presentPaywall();
+    presentPaywall(placement);
   };
 
   const handleDismiss = () => {

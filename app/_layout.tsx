@@ -10,6 +10,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import {
   LibreBaskerville_400Regular,
+  LibreBaskerville_400Regular_Italic,
   LibreBaskerville_500Medium,
   LibreBaskerville_600SemiBold,
   LibreBaskerville_700Bold,
@@ -91,6 +92,7 @@ export default Sentry.wrap(function RootLayout() {
     DMSans_600SemiBold,
     DMSans_700Bold,
     LibreBaskerville_400Regular,
+    LibreBaskerville_400Regular_Italic,
     LibreBaskerville_500Medium,
     LibreBaskerville_600SemiBold,
     LibreBaskerville_700Bold,

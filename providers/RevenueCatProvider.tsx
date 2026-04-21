@@ -58,17 +58,22 @@ interface RevenueCatContextValue {
   hasEntitlement: (entitlementId: string) => boolean;
 
   /**
-   * Navigate to our custom paywall screen at /paywall (renders the
-   * `default` offering's monthly package). No-op if RC is disabled.
+   * Navigate to our custom paywall screen at /paywall. The optional
+   * `placement` identifier is passed through to RC Targeting so the
+   * right offering (and therefore the right variant) is fetched.
+   * No-op if RC is disabled.
    */
-  presentPaywall: () => void;
+  presentPaywall: (placement?: string) => void;
 
   /**
    * Navigate to the paywall only if the user lacks the given entitlement.
    * Useful for gating a paid feature: call this on tap and proceed only
    * if they already have the entitlement.
    */
-  presentPaywallIfNeeded: (requiredEntitlementIdentifier: string) => void;
+  presentPaywallIfNeeded: (
+    requiredEntitlementIdentifier: string,
+    placement?: string,
+  ) => void;
 
   /**
    * Present the RC Customer Center (manage subscription, refund requests,
@@ -173,18 +178,29 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     [customerInfo],
   );
 
-  const presentPaywall = useCallback(() => {
-    if (isDisabled) return;
-    router.push("/paywall");
-  }, [isDisabled]);
+  const presentPaywall = useCallback(
+    (placement?: string) => {
+      if (isDisabled) return;
+      if (placement) {
+        router.push({ pathname: "/paywall", params: { placement } });
+      } else {
+        router.push("/paywall");
+      }
+    },
+    [isDisabled],
+  );
 
   const presentPaywallIfNeeded = useCallback(
-    (requiredEntitlementIdentifier: string) => {
+    (requiredEntitlementIdentifier: string, placement?: string) => {
       if (isDisabled) return;
       const active =
         customerInfo?.entitlements.active[requiredEntitlementIdentifier];
       if (active?.isActive) return;
-      router.push("/paywall");
+      if (placement) {
+        router.push({ pathname: "/paywall", params: { placement } });
+      } else {
+        router.push("/paywall");
+      }
     },
     [isDisabled, customerInfo],
   );

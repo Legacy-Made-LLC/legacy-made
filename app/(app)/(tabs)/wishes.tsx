@@ -37,6 +37,7 @@ export default function WishesScreen() {
         featureName="Wishes & Guidance"
         description="Share your personal wishes, values, and guidance for your loved ones."
         isSharedPlan={isViewingSharedPlan}
+        placement="pillar_locked_wishes"
       />
     );
   }

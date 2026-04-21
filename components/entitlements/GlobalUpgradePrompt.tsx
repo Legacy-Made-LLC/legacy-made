@@ -20,6 +20,7 @@ export function GlobalUpgradePrompt() {
       title={options.title}
       message={options.message}
       onUpgrade={options.onUpgrade}
+      placement={options.placement}
     />
   );
 }

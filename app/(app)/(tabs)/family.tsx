@@ -118,6 +118,7 @@ export default function FamilyScreen() {
       <LockedFeatureOverlay
         featureName="Family Access"
         description="Manage who can access your legacy information and when they can see it."
+        placement="pillar_locked_trusted"
       />
     );
   }
@@ -282,6 +283,7 @@ export default function FamilyScreen() {
           onClose={() => setShowUpgradePrompt(false)}
           title="Unlock Trusted Contacts"
           message="Upgrade your plan to invite trusted contacts and share access to your legacy information."
+          placement="pillar_locked_trusted"
         />
       )}
 
