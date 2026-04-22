@@ -11,7 +11,7 @@
  * Rendered once inside QueryProvider. No UI.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import { queryKeys } from "@/lib/queryKeys";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
@@ -19,16 +19,14 @@ import { useRevenueCat } from "@/providers/RevenueCatProvider";
 export function RCEntitlementSync() {
   const { customerInfo } = useRevenueCat();
   const queryClient = useQueryClient();
-  // Skip the very first CustomerInfo emission — that's the initial load, not
-  // a state change, and the queries already fetch themselves on mount.
-  const seenFirstRef = useRef(false);
 
+  // Invalidate on every CustomerInfo, including the first. The initial
+  // emission is one extra invalidation on mount — TanStack dedupes
+  // in-flight refetches, so the cost is negligible — and it removes the
+  // race where a Customer Center restore that lands before our initial
+  // getCustomerInfo() would otherwise be swallowed by a skip-first guard.
   useEffect(() => {
     if (!customerInfo) return;
-    if (!seenFirstRef.current) {
-      seenFirstRef.current = true;
-      return;
-    }
     queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
     queryClient.invalidateQueries({ queryKey: queryKeys.entitlements.all() });
   }, [customerInfo, queryClient]);

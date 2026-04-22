@@ -12,7 +12,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import Purchases, { type PurchasesPackage } from "react-native-purchases";
 
@@ -66,6 +66,8 @@ export default function PaywallScreen() {
   // showing "Free". Invalidate on a bounded schedule covering ~10s; the
   // first hit that lands post-webhook sets the correct tier, and
   // subsequent invalidations against stale state are cheap no-ops.
+  const pendingRefreshTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   const refreshTier = () => {
     const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
@@ -74,9 +76,20 @@ export default function PaywallScreen() {
       });
     };
     invalidate();
-    const schedule = [1500, 3500, 6500, 10000];
-    for (const delay of schedule) setTimeout(invalidate, delay);
+    for (const delay of [1500, 3500, 6500, 10000]) {
+      pendingRefreshTimers.current.push(setTimeout(invalidate, delay));
+    }
   };
+
+  // Cancel any in-flight refresh timers if the screen unmounts mid-window
+  // (user dismisses the paywall before the schedule completes).
+  useEffect(() => {
+    const timers = pendingRefreshTimers.current;
+    return () => {
+      for (const id of timers) clearTimeout(id);
+      timers.length = 0;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
