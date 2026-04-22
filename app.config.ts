@@ -7,7 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: IS_PROD ? "Legacy Made" : "Legacy Made (Dev)",
   slug: "legacy-made",
-  version: "1.3.0",
+  version: "1.3.1",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "legacymade",
