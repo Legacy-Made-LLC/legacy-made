@@ -121,6 +121,17 @@ export default function PaywallScreen() {
       if (
         !customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
+        // RC said the purchase succeeded but the entitlement isn't visible
+        // yet — can happen if the store receipt lands before RC's backend
+        // fully processes it, or if entitlement attachment is misconfigured.
+        // Never bail silently: the user was charged. Route to the activating
+        // screen which polls the backend (fed by the webhook) and surfaces
+        // a "contact support" escape hatch if the tier never flips.
+        logger.error(
+          "Paywall: purchase returned without active entitlement — routing to activating",
+          { appUserId: customerInfo.originalAppUserId },
+        );
+        handleActivating();
         return;
       }
 
