@@ -119,8 +119,29 @@ export default function PaywallScreen() {
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       if (
-        customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
+        !customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
+        return;
+      }
+
+      // Force a server-side reconcile against RC's REST view rather than
+      // waiting for the webhook. The webhook usually lands in ~1-2s but
+      // can lag, and the read-only path was racing it. Sync makes the
+      // backend authoritative immediately, so when we invalidate, the
+      // plan-entitlements query (which gates feature access) refetches
+      // fresh data — no jarring activating-screen swap on the happy path.
+      try {
+        const fresh = await entitlements.syncEntitlements();
+        queryClient.setQueryData(queryKeys.entitlements.current(), fresh);
+        queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entitlements.all(),
+        });
+        dismiss();
+      } catch (syncErr) {
+        logger.error("Paywall: entitlements.syncEntitlements failed", {
+          err: syncErr,
+        });
         handleActivating();
       }
     } catch (err) {
