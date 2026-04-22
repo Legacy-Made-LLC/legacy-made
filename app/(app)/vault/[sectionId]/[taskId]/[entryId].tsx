@@ -781,6 +781,7 @@ export default function EntryScreen() {
             : "You've made great progress organizing your legacy. Upgrade your plan to add more entries and unlock additional features."
         }
         hideUpgradeAction={isViewingSharedPlan}
+        placement="info_limit_reached"
       />
       <UpgradePrompt
         visible={showStorageUpgradePrompt}
@@ -792,6 +793,7 @@ export default function EntryScreen() {
             : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important files safe."
         }
         hideUpgradeAction={isViewingSharedPlan}
+        placement="storage_limit"
       />
     </>
   );

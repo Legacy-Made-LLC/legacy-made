@@ -5,29 +5,36 @@
  * with a soft colored background that matches the app's calm aesthetic.
  */
 
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import type { SubscriptionTier } from '@/api/types';
-import { colors, spacing, typography } from '@/constants/theme';
+import type { SubscriptionTier } from "@/api/types";
+import { colors, spacing, typography } from "@/constants/theme";
 
 interface TierBadgeProps {
   tier: SubscriptionTier;
   tierName: string;
 }
 
-const TIER_COLORS: Record<SubscriptionTier, { background: string; text: string }> = {
+const TIER_COLORS: Record<
+  SubscriptionTier,
+  { background: string; text: string }
+> = {
   free: {
     background: colors.surfaceSecondary,
     text: colors.textSecondary,
   },
   individual: {
-    background: '#E8F0E6', // Soft sage
+    background: "#E8F0E6", // Soft sage
     text: colors.primary,
   },
   family: {
-    background: '#E6EAF0', // Soft blue
-    text: '#5A6A8A',
+    background: "#E6EAF0", // Soft blue
+    text: "#5A6A8A",
+  },
+  lifetime: {
+    background: "#F3ECDC", // Soft parchment
+    text: "#8A6A2E",
   },
 };
 
@@ -50,7 +57,7 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: typography.fontFamily.medium,
     fontSize: typography.sizes.caption,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
 });

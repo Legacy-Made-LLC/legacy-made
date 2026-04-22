@@ -25,6 +25,16 @@ export function createEntitlementsService(client: ApiClient) {
     getPlanEntitlements: async (planId: string): Promise<EntitlementInfo> => {
       return client.get<EntitlementInfo>(`/plans/${planId}/entitlements`);
     },
+
+    /**
+     * Force a server-side reconcile against RC's REST API view of the
+     * subscriber, then return the freshly recomputed EntitlementInfo.
+     * Self-healing path for when our DB has drifted (missed webhook).
+     * Idempotent.
+     */
+    syncEntitlements: async (): Promise<EntitlementInfo> => {
+      return client.post<EntitlementInfo>("/entitlements/sync", {});
+    },
   };
 }
 

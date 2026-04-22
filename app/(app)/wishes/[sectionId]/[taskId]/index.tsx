@@ -648,6 +648,7 @@ export default function WishesTaskScreen() {
             : "You've made great progress sharing your wishes. Upgrade your plan to add more and unlock additional features."
         }
         hideUpgradeAction={isViewingSharedPlan}
+        placement="pillar_locked_wishes"
       />
       <UpgradePrompt
         visible={showStorageUpgradePrompt}
@@ -659,6 +660,7 @@ export default function WishesTaskScreen() {
             : "This file would exceed your storage limit. Upgrade your plan for more storage space to keep all your important documents safe."
         }
         hideUpgradeAction={isViewingSharedPlan}
+        placement="storage_limit"
       />
     </>
   );

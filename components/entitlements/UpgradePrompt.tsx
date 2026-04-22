@@ -21,6 +21,8 @@ import { FullWindowOverlay } from "react-native-screens";
 
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { logger } from "@/lib/logger";
+import { useRevenueCat } from "@/providers/RevenueCatProvider";
 
 interface UpgradePromptProps {
   visible: boolean;
@@ -31,6 +33,11 @@ interface UpgradePromptProps {
   onUpgrade?: () => void;
   /** When true, hides the upgrade button (e.g., for shared plan limits) */
   hideUpgradeAction?: boolean;
+  /**
+   * RC Targeting placement identifier passed through to the paywall screen.
+   * Drives which offering (and therefore which paywall variant) is fetched.
+   */
+  placement?: string;
 }
 
 export function UpgradePrompt({
@@ -40,17 +47,53 @@ export function UpgradePrompt({
   message = "You've made great progress organizing your legacy. Upgrade to continue adding more and unlock additional features.",
   onUpgrade,
   hideUpgradeAction = false,
+  placement,
 }: UpgradePromptProps) {
   const insets = useSafeAreaInsets();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const { presentPaywall, isDisabled: rcDisabled } = useRevenueCat();
+
+  // Latch the visibility transition so the effect only fires once per
+  // false → true cycle. Without this, parents that pass inline-arrow
+  // callbacks re-render and change callback identities, which would
+  // otherwise re-fire the effect and re-push /paywall.
+  const handledVisibleRef = useRef(false);
 
   useEffect(() => {
-    if (visible) {
-      bottomSheetModalRef.current?.present();
-    } else {
+    if (!visible) {
+      handledVisibleRef.current = false;
       bottomSheetModalRef.current?.dismiss();
+      return;
     }
-  }, [visible]);
+    if (handledVisibleRef.current) return;
+    handledVisibleRef.current = true;
+
+    // For the standard upgrade path (non-shared-plan), skip the intermediary
+    // sheet and go straight to the paywall. Only shared-plan viewers —
+    // who can't purchase this plan themselves — still see the info sheet.
+    if (!hideUpgradeAction) {
+      onUpgrade?.();
+      if (rcDisabled) {
+        WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade).catch((err) => {
+          logger.error("UpgradePrompt: openBrowserAsync failed", { err });
+        });
+      } else {
+        presentPaywall(placement);
+      }
+      onClose();
+      return;
+    }
+
+    bottomSheetModalRef.current?.present();
+  }, [
+    visible,
+    hideUpgradeAction,
+    onUpgrade,
+    rcDisabled,
+    presentPaywall,
+    placement,
+    onClose,
+  ]);
 
   const handleSheetChanges = useCallback(
     (index: number) => {
@@ -73,10 +116,16 @@ export function UpgradePrompt({
     [],
   );
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     onUpgrade?.();
     bottomSheetModalRef.current?.dismiss();
-    WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+    if (rcDisabled) {
+      // RC isn't configured for this build (e.g. missing API key). Fall back
+      // to the legacy web upgrade page so the CTA still does something.
+      await WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+      return;
+    }
+    presentPaywall(placement);
   };
 
   const handleDismiss = () => {
@@ -137,10 +186,19 @@ export function UpgradePrompt({
           onPress={handleDismiss}
           style={({ pressed }) => [
             hideUpgradeAction ? styles.upgradeButton : styles.dismissButton,
-            pressed && (hideUpgradeAction ? styles.upgradeButtonPressed : styles.dismissButtonPressed),
+            pressed &&
+              (hideUpgradeAction
+                ? styles.upgradeButtonPressed
+                : styles.dismissButtonPressed),
           ]}
         >
-          <Text style={hideUpgradeAction ? styles.upgradeButtonText : styles.dismissButtonText}>
+          <Text
+            style={
+              hideUpgradeAction
+                ? styles.upgradeButtonText
+                : styles.dismissButtonText
+            }
+          >
             {hideUpgradeAction ? "OK" : "Maybe Later"}
           </Text>
         </Pressable>

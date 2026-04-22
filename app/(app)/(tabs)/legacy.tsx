@@ -37,6 +37,7 @@ export default function LegacyScreen() {
         featureName="Legacy Messages"
         description="Record video messages and memories to share with your loved ones when the time is right."
         isSharedPlan={isViewingSharedPlan}
+        placement="pillar_locked_messages"
       />
     );
   }

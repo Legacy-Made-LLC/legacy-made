@@ -639,6 +639,7 @@ export default function LegacyTaskScreen() {
               : "You've made great progress with your legacy messages. Upgrade your plan to add more."
           }
           hideUpgradeAction={isViewingSharedPlan}
+          placement="pillar_locked_messages"
         />
         <UpgradePrompt
           visible={showStorageUpgradePrompt}
@@ -650,6 +651,7 @@ export default function LegacyTaskScreen() {
               : "This file would exceed your storage limit. Upgrade your plan for more storage space."
           }
           hideUpgradeAction={isViewingSharedPlan}
+          placement="storage_limit"
         />
       </>
     );

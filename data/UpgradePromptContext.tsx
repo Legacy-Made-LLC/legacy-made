@@ -11,6 +11,12 @@ interface UpgradePromptOptions {
   title?: string;
   message?: string;
   onUpgrade?: () => void;
+  /**
+   * RC Targeting placement identifier (e.g. "info_limit_reached",
+   * "pillar_locked_wishes"). Passed through to the paywall route so the
+   * right offering + variant is fetched.
+   */
+  placement?: string;
 }
 
 interface UpgradePromptContextType {

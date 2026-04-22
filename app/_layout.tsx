@@ -10,6 +10,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import {
   LibreBaskerville_400Regular,
+  LibreBaskerville_400Regular_Italic,
   LibreBaskerville_500Medium,
   LibreBaskerville_600SemiBold,
   LibreBaskerville_700Bold,
@@ -38,6 +39,8 @@ import { PlanProvider } from "@/data/PlanProvider";
 import { UpgradePromptProvider } from "@/data/UpgradePromptContext";
 import { CryptoProvider } from "@/lib/crypto/CryptoProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { RCEntitlementSync } from "@/providers/RCEntitlementSync";
+import { RevenueCatProvider } from "@/providers/RevenueCatProvider";
 import * as Sentry from "@sentry/react-native";
 import Constants from "expo-constants";
 
@@ -90,6 +93,7 @@ export default Sentry.wrap(function RootLayout() {
     DMSans_600SemiBold,
     DMSans_700Bold,
     LibreBaskerville_400Regular,
+    LibreBaskerville_400Regular_Italic,
     LibreBaskerville_500Medium,
     LibreBaskerville_600SemiBold,
     LibreBaskerville_700Bold,
@@ -121,53 +125,59 @@ export default Sentry.wrap(function RootLayout() {
                 tokenCache={tokenCache}
                 publishableKey={CLERK_PUBLISHABLE_KEY}
               >
-                <QueryProvider>
-                  <KeyValueProvider>
-                    <OnboardingProvider>
-                      <PlanProvider>
-                        <NotificationPromptProvider>
-                          <CryptoProvider>
-                            <EntitlementsProvider>
-                              <PlanTransitionProvider>
-                                <Stack
-                                  screenOptions={{
-                                    headerShown: false,
-                                    animation: "fade",
-                                  }}
-                                  initialRouteName="index"
-                                >
-                                  <Stack.Screen name="index" />
-                                  <Stack.Screen name="(app)" />
-                                  <Stack.Screen name="(auth)" />
-                                  <Stack.Screen
-                                    name="(onboarding)"
-                                    options={{ animation: "fade" }}
-                                  />
-                                  <Stack.Screen
-                                    name="invitations/[token]"
-                                    options={{
+                <RevenueCatProvider>
+                  <QueryProvider>
+                    <RCEntitlementSync />
+                    <KeyValueProvider>
+                      <OnboardingProvider>
+                        <PlanProvider>
+                          <NotificationPromptProvider>
+                            <CryptoProvider>
+                              <EntitlementsProvider>
+                                <PlanTransitionProvider>
+                                  <Stack
+                                    screenOptions={{
                                       headerShown: false,
+                                      animation: "fade",
                                     }}
-                                  />
-                                  <Stack.Screen
-                                    name="settings"
-                                    options={{ headerShown: false }}
-                                  />
-                                </Stack>
-                                <StatusBar style="dark" />
-                                <Toast />
-                                <PausedMutationBanner />
-                                <DevMenu />
-                              </PlanTransitionProvider>
-                            </EntitlementsProvider>
-                          </CryptoProvider>
-                        </NotificationPromptProvider>
-                      </PlanProvider>
-                    </OnboardingProvider>
-                  </KeyValueProvider>
-                </QueryProvider>
+                                    initialRouteName="index"
+                                  >
+                                    <Stack.Screen name="index" />
+                                    <Stack.Screen name="(app)" />
+                                    <Stack.Screen name="(auth)" />
+                                    <Stack.Screen
+                                      name="(onboarding)"
+                                      options={{ animation: "fade" }}
+                                    />
+                                    <Stack.Screen
+                                      name="invitations/[token]"
+                                      options={{
+                                        headerShown: false,
+                                      }}
+                                    />
+                                    <Stack.Screen
+                                      name="settings"
+                                      options={{ headerShown: false }}
+                                    />
+                                  </Stack>
+                                  <StatusBar style="dark" />
+                                  <Toast />
+                                  <PausedMutationBanner />
+                                  <DevMenu />
+                                </PlanTransitionProvider>
+                              </EntitlementsProvider>
+                            </CryptoProvider>
+                          </NotificationPromptProvider>
+                        </PlanProvider>
+                      </OnboardingProvider>
+                    </KeyValueProvider>
+                  </QueryProvider>
+                  {/* Rendered inside RevenueCatProvider so the upgrade
+                      prompt's useRevenueCat() call resolves; rendered
+                      after QueryProvider so it overlays everything. */}
+                  <GlobalUpgradePrompt />
+                </RevenueCatProvider>
               </ClerkProvider>
-              <GlobalUpgradePrompt />
             </UpgradePromptProvider>
           </LocaleProvider>
         </BottomSheetModalProvider>

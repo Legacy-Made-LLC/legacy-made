@@ -18,12 +18,15 @@ interface LockedFeatureOverlayProps {
   description?: string;
   /** When true, shows "not available" messaging instead of an upgrade prompt */
   isSharedPlan?: boolean;
+  /** RC Targeting placement passed through to the paywall route. */
+  placement?: string;
 }
 
 export function LockedFeatureOverlay({
   featureName,
   description,
   isSharedPlan = false,
+  placement,
 }: LockedFeatureOverlayProps) {
   const insets = useSafeAreaInsets();
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -67,6 +70,7 @@ export function LockedFeatureOverlay({
         onClose={() => setShowUpgrade(false)}
         title={`Unlock ${featureName}`}
         message={`Upgrade your plan to access ${featureName} and other premium features.`}
+        placement={placement}
       />
     </View>
   );

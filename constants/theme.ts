@@ -62,6 +62,7 @@ export const typography = {
     semibold: "DMSans_600SemiBold",
     bold: "DMSans_700Bold",
     serif: "LibreBaskerville_400Regular",
+    serifItalic: "LibreBaskerville_400Regular_Italic",
     serifMedium: "LibreBaskerville_500Medium",
     serifSemiBold: "LibreBaskerville_600SemiBold",
     serifBold: "LibreBaskerville_700Bold",

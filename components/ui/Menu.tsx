@@ -7,6 +7,7 @@ import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
+import { useRevenueCat } from "@/providers/RevenueCatProvider";
 import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -154,8 +155,16 @@ function AccountView({
   bottomInset: number;
 }) {
   const { user } = useUser();
-  const { tier, tierName, isFree, getQuotaInfo } = useEntitlements();
+  const {
+    tier,
+    tierName,
+    isFree,
+    cancellationPending,
+    currentPeriodEnd,
+    getQuotaInfo,
+  } = useEntitlements();
   const { showUpgradePrompt } = useUpgradePrompt();
+  const { presentCustomerCenter, isDisabled: rcDisabled } = useRevenueCat();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -489,6 +498,21 @@ function AccountView({
               <Text style={styles.fieldLabel}>Plan</Text>
               <TierBadge tier={tier} tierName={tierName} />
             </View>
+            {cancellationPending && currentPeriodEnd && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <View style={styles.accountField}>
+                  <Text style={styles.fieldLabel}>Access ends</Text>
+                  <Text style={styles.fieldValue}>
+                    {new Date(currentPeriodEnd).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Text>
+                </View>
+              </>
+            )}
             {!isFree && entriesQuota && !entriesQuota.unlimited && (
               <>
                 <View style={styles.accountFieldDivider} />
@@ -498,11 +522,45 @@ function AccountView({
                 </View>
               </>
             )}
+            {!isFree && tier !== "lifetime" && !rcDisabled && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <Pressable
+                  onPress={() => {
+                    // Close the menu Modal first so RC's Customer Center
+                    // isn't hidden underneath it, then present after a
+                    // short delay. RN Modal's dismiss animation doesn't
+                    // reliably register with InteractionManager, so a
+                    // timeout is the pragmatic wait here — without it,
+                    // presentCustomerCenter silently no-ops.
+                    onClose();
+                    setTimeout(() => {
+                      void presentCustomerCenter();
+                    }, 300);
+                  }}
+                  style={({ pressed }) => [
+                    styles.accountField,
+                    pressed && styles.upgradeFieldPressed,
+                  ]}
+                >
+                  <Text style={styles.upgradeFieldLabel}>
+                    Manage subscription
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </>
+            )}
             {isFree && (
               <>
                 <View style={styles.accountFieldDivider} />
                 <Pressable
-                  onPress={() => showUpgradePrompt()}
+                  onPress={() =>
+                    showUpgradePrompt({ placement: "settings_upgrade" })
+                  }
                   style={({ pressed }) => [
                     styles.accountField,
                     pressed && styles.upgradeFieldPressed,
