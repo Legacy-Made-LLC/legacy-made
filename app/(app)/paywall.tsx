@@ -9,10 +9,9 @@
  * surface still uses RC's hosted UI.
  */
 
-import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import Purchases, { type PurchasesPackage } from "react-native-purchases";
 
@@ -26,7 +25,6 @@ import {
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { logger } from "@/lib/logger";
 import { DEFAULT_PAYWALL_VARIANT, parseVariant } from "@/lib/paywall";
-import { queryKeys } from "@/lib/queryKeys";
 import { RC_ENTITLEMENT_INDIVIDUAL } from "@/providers/RevenueCatProvider";
 
 const VARIANTS: Record<
@@ -45,7 +43,6 @@ const MANAGE_INSTRUCTION =
 
 export default function PaywallScreen() {
   const { placement } = useLocalSearchParams<{ placement?: string }>();
-  const queryClient = useQueryClient();
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [variant, setVariant] = useState<PaywallVariant>(
@@ -55,41 +52,6 @@ export default function PaywallScreen() {
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
-
-  // Backend is the source of truth for tier (driven by RC webhooks). After a
-  // successful purchase/restore, invalidate plan + entitlements so the app
-  // reflects the new tier without requiring a manual refresh.
-  //
-  // Race: the RC webhook → DB write typically lands a beat after the RC
-  // purchase callback resolves, and may take longer under load. A single
-  // immediate refetch catches the pre-webhook state and leaves the UI
-  // showing "Free". Invalidate on a bounded schedule covering ~10s; the
-  // first hit that lands post-webhook sets the correct tier, and
-  // subsequent invalidations against stale state are cheap no-ops.
-  const pendingRefreshTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  const refreshTier = () => {
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.all(),
-      });
-    };
-    invalidate();
-    for (const delay of [1500, 3500, 6500, 10000]) {
-      pendingRefreshTimers.current.push(setTimeout(invalidate, delay));
-    }
-  };
-
-  // Cancel any in-flight refresh timers if the screen unmounts mid-window
-  // (user dismisses the paywall before the schedule completes).
-  useEffect(() => {
-    const timers = pendingRefreshTimers.current;
-    return () => {
-      for (const id of timers) clearTimeout(id);
-      timers.length = 0;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +98,15 @@ export default function PaywallScreen() {
     else router.replace("/(app)");
   };
 
+  // RC confirms the purchase synchronously, but the tier the app reads
+  // comes from the backend (driven by the RC webhook). Hand off to the
+  // Activating screen, which polls entitlements until the tier flips
+  // and then routes home. Replace (not push) so Back can't return to
+  // the paywall after the purchase is live.
+  const handleActivating = () => {
+    router.replace("/paywall-activating");
+  };
+
   const handlePurchase = async () => {
     if (!pkg || purchasing) return;
     setError(null);
@@ -145,8 +116,7 @@ export default function PaywallScreen() {
       if (
         customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
-        refreshTier();
-        dismiss();
+        handleActivating();
       }
     } catch (err) {
       // RC throws { userCancelled: true } when the user dismisses the
@@ -168,8 +138,7 @@ export default function PaywallScreen() {
       if (
         customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
-        refreshTier();
-        dismiss();
+        handleActivating();
       } else {
         setError("No active subscription found to restore.");
       }
