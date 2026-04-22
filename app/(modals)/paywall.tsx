@@ -9,7 +9,6 @@
  * surface still uses RC's hosted UI.
  */
 
-import { useUser } from "@clerk/expo";
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -49,7 +48,6 @@ export default function PaywallScreen() {
   const { placement } = useLocalSearchParams<{ placement?: string }>();
   const { entitlements } = useApi();
   const queryClient = useQueryClient();
-  const { user } = useUser();
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [variant, setVariant] = useState<PaywallVariant>(
@@ -178,26 +176,6 @@ export default function PaywallScreen() {
         !customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
         setError("No active subscription found to restore.");
-        return;
-      }
-
-      // Guard against restoring a subscription tied to a different Legacy
-      // Made account. `originalAppUserId` is the first app user ID ever
-      // associated with the receipt — if it's a real Clerk user ID that
-      // doesn't match the signed-in user, the store account (Apple ID /
-      // Google account) belongs to someone else's LM account. Anonymous
-      // IDs ($RCAnonymousID:…) are safe: they get aliased into the
-      // current user on next logIn.
-      const originalId = customerInfo.originalAppUserId;
-      const isAnonymous = originalId?.startsWith("$RCAnonymousID:");
-      if (user?.id && originalId && !isAnonymous && originalId !== user.id) {
-        logger.warn("Paywall: restore blocked — cross-user receipt", {
-          originalAppUserId: originalId,
-          currentUserId: user.id,
-        });
-        setError(
-          "This subscription belongs to a different Legacy Made account. Sign in with that account to restore it.",
-        );
         return;
       }
 

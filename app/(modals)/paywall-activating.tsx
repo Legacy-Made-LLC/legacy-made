@@ -17,7 +17,6 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -29,7 +28,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApi } from "@/api";
-import { EXTERNAL_LINKS } from "@/constants/links";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { logger } from "@/lib/logger";
@@ -152,7 +150,9 @@ export default function PaywallActivatingScreen() {
               we&rsquo;ll update your plan automatically as soon as it&rsquo;s
               ready.
             </Text>
-            {forceError && <Text style={styles.errorText}>{forceError}</Text>}
+            {forceError && (
+              <Text style={styles.errorText}>{forceError}</Text>
+            )}
             <Pressable
               onPress={handleForceSync}
               disabled={forcing}
@@ -176,17 +176,6 @@ export default function PaywallActivatingScreen() {
               ]}
             >
               <Text style={styles.secondaryButtonText}>Continue</Text>
-            </Pressable>
-            <Pressable
-              onPress={() =>
-                WebBrowser.openBrowserAsync(EXTERNAL_LINKS.contactSupport)
-              }
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.secondaryButtonPressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>Contact support</Text>
             </Pressable>
           </View>
         )}
