@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import Purchases, { type PurchasesPackage } from "react-native-purchases";
 
+import { useApi } from "@/api";
 import {
   PaywallComparison,
   PaywallEditorial,
@@ -25,6 +26,7 @@ import {
 } from "@/components/paywall";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { logger } from "@/lib/logger";
+import { DEFAULT_PAYWALL_VARIANT, parseVariant } from "@/lib/paywall";
 import { queryKeys } from "@/lib/queryKeys";
 import { RC_ENTITLEMENT_INDIVIDUAL } from "@/providers/RevenueCatProvider";
 
@@ -37,49 +39,24 @@ const VARIANTS: Record<
   pillars: PaywallPillars,
 };
 
-const DEFAULT_VARIANT: PaywallVariant = "editorial";
-
 const MANAGE_INSTRUCTION =
   Platform.OS === "ios"
     ? "Manage anytime in your Apple ID settings."
     : "Manage anytime in your Google Play account settings.";
 
-function parseVariant(raw: unknown): PaywallVariant {
-  if (typeof raw !== "string") return DEFAULT_VARIANT;
-  return raw in VARIANTS ? (raw as PaywallVariant) : DEFAULT_VARIANT;
-}
-
 export default function PaywallScreen() {
   const { placement } = useLocalSearchParams<{ placement?: string }>();
+  const { entitlements } = useApi();
   const queryClient = useQueryClient();
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
-  const [variant, setVariant] = useState<PaywallVariant>(DEFAULT_VARIANT);
+  const [variant, setVariant] = useState<PaywallVariant>(
+    DEFAULT_PAYWALL_VARIANT,
+  );
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
-
-  // Backend is the source of truth for tier (driven by RC webhooks). After a
-  // successful purchase/restore, invalidate plan + entitlements so the app
-  // reflects the new tier without requiring a manual refresh.
-  //
-  // Race: the user-scoped entitlements endpoint and the plan-scoped one are
-  // separate queries, and the RC webhook → DB write typically lands a beat
-  // after the purchase callback resolves. An immediate refetch can catch the
-  // pre-webhook state on one query while the other lands fresh, leaving the
-  // account menu showing "Free" while gating shows the new tier. So we
-  // invalidate twice — once now, again after ~3s to catch the webhook.
-  const refreshTier = () => {
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.all(),
-      });
-    };
-    invalidate();
-    setTimeout(invalidate, 3000);
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +103,15 @@ export default function PaywallScreen() {
     else router.replace("/(app)");
   };
 
+  // RC confirms the purchase synchronously, but the tier the app reads
+  // comes from the backend (driven by the RC webhook). Hand off to the
+  // Activating screen, which polls entitlements until the tier flips
+  // and then routes home. Replace (not push) so Back can't return to
+  // the paywall after the purchase is live.
+  const handleActivating = () => {
+    router.replace("/paywall-activating");
+  };
+
   const handlePurchase = async () => {
     if (!pkg || purchasing) return;
     setError(null);
@@ -133,10 +119,30 @@ export default function PaywallScreen() {
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       if (
-        customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
+        !customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
-        refreshTier();
+        return;
+      }
+
+      // Force a server-side reconcile against RC's REST view rather than
+      // waiting for the webhook. The webhook usually lands in ~1-2s but
+      // can lag, and the read-only path was racing it. Sync makes the
+      // backend authoritative immediately, so when we invalidate, the
+      // plan-entitlements query (which gates feature access) refetches
+      // fresh data — no jarring activating-screen swap on the happy path.
+      try {
+        const fresh = await entitlements.syncEntitlements();
+        queryClient.setQueryData(queryKeys.entitlements.current(), fresh);
+        queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entitlements.all(),
+        });
         dismiss();
+      } catch (syncErr) {
+        logger.error("Paywall: entitlements.syncEntitlements failed", {
+          err: syncErr,
+        });
+        handleActivating();
       }
     } catch (err) {
       // RC throws { userCancelled: true } when the user dismisses the
@@ -156,12 +162,32 @@ export default function PaywallScreen() {
     try {
       const customerInfo = await Purchases.restorePurchases();
       if (
-        customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
+        !customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
-        refreshTier();
-        dismiss();
-      } else {
         setError("No active subscription found to restore.");
+        return;
+      }
+
+      // RC says the entitlement is active, but our backend might not
+      // know yet — restore doesn't always trigger a webhook (e.g. when
+      // RC was already in sync with the store). Reconcile against RC's
+      // REST view directly so the backend tier reflects reality before
+      // we navigate away.
+      try {
+        const fresh = await entitlements.syncEntitlements();
+        queryClient.setQueryData(queryKeys.entitlements.current(), fresh);
+        queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entitlements.all(),
+        });
+        dismiss();
+      } catch (syncErr) {
+        // Reconcile failed; fall back to the activating screen which
+        // will keep polling and offers a manual retry.
+        logger.error("Paywall: entitlements.syncEntitlements failed", {
+          err: syncErr,
+        });
+        handleActivating();
       }
     } catch (err) {
       logger.error("Paywall: restore failed", { err });
@@ -171,11 +197,16 @@ export default function PaywallScreen() {
     }
   };
 
-  // Price comes from RC's package (store-driven); fall back to the spec's
-  // anchor price if loading hasn't finished yet so the CTA isn't blank.
-  const priceString = pkg?.product?.priceString ?? "$4.99";
-  const ctaCopy = `Subscribe for ${priceString} / month`;
-  const disclosure = `Your subscription renews automatically at ${priceString} / month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`;
+  // Price comes from RC's package (store-driven). While offerings are still
+  // loading, show a price-free CTA so we never render the wrong currency
+  // or an outdated anchor price before the store responds.
+  const priceString = pkg?.product?.priceString ?? null;
+  const ctaCopy = priceString
+    ? `Subscribe for ${priceString} / month`
+    : "Subscribe";
+  const disclosure = priceString
+    ? `Your subscription renews automatically at ${priceString} / month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`
+    : `Your subscription renews automatically each month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`;
 
   const VariantComponent = VARIANTS[variant];
 
@@ -184,7 +215,6 @@ export default function PaywallScreen() {
   return (
     <View style={{ flex: 1 }}>
       <VariantComponent
-        priceString={priceString}
         ctaCopy={ctaCopy}
         disclosure={disclosure}
         loading={loadingOfferings}

@@ -21,6 +21,7 @@ import { FullWindowOverlay } from "react-native-screens";
 
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { logger } from "@/lib/logger";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
 
 interface UpgradePromptProps {
@@ -52,11 +53,20 @@ export function UpgradePrompt({
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const { presentPaywall, isDisabled: rcDisabled } = useRevenueCat();
 
+  // Latch the visibility transition so the effect only fires once per
+  // false → true cycle. Without this, parents that pass inline-arrow
+  // callbacks re-render and change callback identities, which would
+  // otherwise re-fire the effect and re-push /paywall.
+  const handledVisibleRef = useRef(false);
+
   useEffect(() => {
     if (!visible) {
+      handledVisibleRef.current = false;
       bottomSheetModalRef.current?.dismiss();
       return;
     }
+    if (handledVisibleRef.current) return;
+    handledVisibleRef.current = true;
 
     // For the standard upgrade path (non-shared-plan), skip the intermediary
     // sheet and go straight to the paywall. Only shared-plan viewers —
@@ -64,7 +74,9 @@ export function UpgradePrompt({
     if (!hideUpgradeAction) {
       onUpgrade?.();
       if (rcDisabled) {
-        WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+        WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade).catch((err) => {
+          logger.error("UpgradePrompt: openBrowserAsync failed", { err });
+        });
       } else {
         presentPaywall(placement);
       }

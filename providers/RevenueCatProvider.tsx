@@ -38,6 +38,7 @@ import Purchases, {
 import RevenueCatUI from "react-native-purchases-ui";
 
 import { logger } from "@/lib/logger";
+import { hasActiveEntitlement } from "@/lib/revenuecat";
 
 interface RevenueCatContextValue {
   // True once Purchases.configure has resolved and the first CustomerInfo
@@ -64,16 +65,6 @@ interface RevenueCatContextValue {
    * No-op if RC is disabled.
    */
   presentPaywall: (placement?: string) => void;
-
-  /**
-   * Navigate to the paywall only if the user lacks the given entitlement.
-   * Useful for gating a paid feature: call this on tap and proceed only
-   * if they already have the entitlement.
-   */
-  presentPaywallIfNeeded: (
-    requiredEntitlementIdentifier: string,
-    placement?: string,
-  ) => void;
 
   /**
    * Present the RC Customer Center (manage subscription, refund requests,
@@ -108,6 +99,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [isReady, setIsReady] = useState(false);
   const configuredUserIdRef = useRef<string | null>(null);
+  const isConfiguredRef = useRef(false);
 
   const apiKey = getApiKey();
   const isDisabled = !apiKey;
@@ -123,10 +115,10 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
 
     const userId = user?.id ?? null;
 
-    // Re-configure whenever the signed-in user changes. Passing appUserID
-    // on configure (or calling Purchases.logIn afterwards) is what binds
-    // a purchase to our Clerk user instead of an anonymous RC ID.
-    if (userId === configuredUserIdRef.current) return;
+    // Skip if we've already aligned RC with the current Clerk user.
+    if (isConfiguredRef.current && userId === configuredUserIdRef.current) {
+      return;
+    }
 
     let cancelled = false;
 
@@ -136,12 +128,27 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
           Purchases.setLogLevel(LOG_LEVEL.DEBUG);
         }
 
-        await Purchases.configure({
-          apiKey: apiKey!,
-          appUserID: userId ?? undefined,
-        });
-
-        configuredUserIdRef.current = userId;
+        // First mount: configure once. SDK requires configure before any
+        // logIn/logOut calls. Pass appUserID upfront when known so the
+        // initial CustomerInfo is already bound to the Clerk user.
+        if (!isConfiguredRef.current) {
+          await Purchases.configure({
+            apiKey: apiKey!,
+            appUserID: userId ?? undefined,
+          });
+          isConfiguredRef.current = true;
+          configuredUserIdRef.current = userId;
+        } else if (userId !== configuredUserIdRef.current) {
+          // Subsequent user switches: prefer logIn/logOut over reconfigure
+          // so RC can alias previous anonymous purchases and so we don't
+          // leave the prior user's appUserID attached on sign-out.
+          if (userId) {
+            await Purchases.logIn(userId);
+          } else {
+            await Purchases.logOut();
+          }
+          configuredUserIdRef.current = userId;
+        }
 
         const info = await Purchases.getCustomerInfo();
         if (!cancelled) {
@@ -151,7 +158,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       } catch (err) {
         // Don't take the app down — RC is not load-bearing for core flows.
         // Backend entitlement state still drives access.
-        logger.error("RevenueCat configure failed", { err });
+        logger.error("RevenueCat configure/login failed", { err });
         if (!cancelled) setIsReady(true);
       }
     })();
@@ -171,10 +178,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   }, [isDisabled]);
 
   const hasEntitlement = useCallback(
-    (entitlementId: string) => {
-      if (!customerInfo) return false;
-      return customerInfo.entitlements.active[entitlementId]?.isActive === true;
-    },
+    (entitlementId: string) => hasActiveEntitlement(customerInfo, entitlementId),
     [customerInfo],
   );
 
@@ -188,21 +192,6 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       }
     },
     [isDisabled],
-  );
-
-  const presentPaywallIfNeeded = useCallback(
-    (requiredEntitlementIdentifier: string, placement?: string) => {
-      if (isDisabled) return;
-      const active =
-        customerInfo?.entitlements.active[requiredEntitlementIdentifier];
-      if (active?.isActive) return;
-      if (placement) {
-        router.push({ pathname: "/paywall", params: { placement } });
-      } else {
-        router.push("/paywall");
-      }
-    },
-    [isDisabled, customerInfo],
   );
 
   const presentCustomerCenter = useCallback(async () => {
@@ -233,7 +222,6 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       isDisabled,
       hasEntitlement,
       presentPaywall,
-      presentPaywallIfNeeded,
       presentCustomerCenter,
       restorePurchases,
     }),
@@ -243,7 +231,6 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       isDisabled,
       hasEntitlement,
       presentPaywall,
-      presentPaywallIfNeeded,
       presentCustomerCenter,
       restorePurchases,
     ],

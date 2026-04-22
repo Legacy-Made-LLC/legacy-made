@@ -39,6 +39,7 @@ import { PlanProvider } from "@/data/PlanProvider";
 import { UpgradePromptProvider } from "@/data/UpgradePromptContext";
 import { CryptoProvider } from "@/lib/crypto/CryptoProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { RCEntitlementSync } from "@/providers/RCEntitlementSync";
 import { RevenueCatProvider } from "@/providers/RevenueCatProvider";
 import * as Sentry from "@sentry/react-native";
 import Constants from "expo-constants";
@@ -126,6 +127,7 @@ export default Sentry.wrap(function RootLayout() {
               >
                 <RevenueCatProvider>
                   <QueryProvider>
+                    <RCEntitlementSync />
                     <KeyValueProvider>
                       <OnboardingProvider>
                         <PlanProvider>

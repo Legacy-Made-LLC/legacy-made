@@ -355,6 +355,15 @@ const AppContent = React.memo(function AppContent() {
             }}
           />
           <Stack.Screen
+            name="paywall-activating"
+            options={{
+              presentation: "fullScreenModal",
+              headerShown: false,
+              gestureEnabled: false,
+              animation: "fade",
+            }}
+          />
+          <Stack.Screen
             name="family/contacts/new"
             options={{
               title: "Add Trusted Contact",
