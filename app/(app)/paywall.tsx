@@ -9,12 +9,14 @@
  * surface still uses RC's hosted UI.
  */
 
+import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import Purchases, { type PurchasesPackage } from "react-native-purchases";
 
+import { useApi } from "@/api";
 import {
   PaywallComparison,
   PaywallEditorial,
@@ -25,6 +27,7 @@ import {
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { logger } from "@/lib/logger";
 import { DEFAULT_PAYWALL_VARIANT, parseVariant } from "@/lib/paywall";
+import { queryKeys } from "@/lib/queryKeys";
 import { RC_ENTITLEMENT_INDIVIDUAL } from "@/providers/RevenueCatProvider";
 
 const VARIANTS: Record<
@@ -43,6 +46,8 @@ const MANAGE_INSTRUCTION =
 
 export default function PaywallScreen() {
   const { placement } = useLocalSearchParams<{ placement?: string }>();
+  const { entitlements } = useApi();
+  const queryClient = useQueryClient();
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [variant, setVariant] = useState<PaywallVariant>(
@@ -136,11 +141,32 @@ export default function PaywallScreen() {
     try {
       const customerInfo = await Purchases.restorePurchases();
       if (
-        customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
+        !customerInfo.entitlements.active[RC_ENTITLEMENT_INDIVIDUAL]?.isActive
       ) {
-        handleActivating();
-      } else {
         setError("No active subscription found to restore.");
+        return;
+      }
+
+      // RC says the entitlement is active, but our backend might not
+      // know yet — restore doesn't always trigger a webhook (e.g. when
+      // RC was already in sync with the store). Reconcile against RC's
+      // REST view directly so the backend tier reflects reality before
+      // we navigate away.
+      try {
+        const fresh = await entitlements.syncEntitlements();
+        queryClient.setQueryData(queryKeys.entitlements.current(), fresh);
+        queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entitlements.all(),
+        });
+        dismiss();
+      } catch (syncErr) {
+        // Reconcile failed; fall back to the activating screen which
+        // will keep polling and offers a manual retry.
+        logger.error("Paywall: entitlements.syncEntitlements failed", {
+          err: syncErr,
+        });
+        handleActivating();
       }
     } catch (err) {
       logger.error("Paywall: restore failed", { err });
