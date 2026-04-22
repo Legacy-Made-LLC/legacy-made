@@ -1,7 +1,6 @@
 export type PaywallVariant = "editorial" | "comparison" | "pillars";
 
 export interface PaywallVariantProps {
-  priceString: string;
   ctaCopy: string;
   disclosure: string;
   loading: boolean;

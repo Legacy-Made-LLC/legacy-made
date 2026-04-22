@@ -23,6 +23,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  InteractionManager,
   Modal,
   Platform,
   Pressable,
@@ -505,13 +506,14 @@ function AccountView({
                 <View style={styles.accountFieldDivider} />
                 <Pressable
                   onPress={() => {
-                    // Close the menu Modal first so RC's Customer Center isn't
-                    // hidden underneath it. Wait for the slide-out animation
-                    // before presenting.
+                    // Close the menu Modal first so RC's Customer Center
+                    // isn't hidden underneath it. Defer presenting until
+                    // after in-flight interactions/animations settle so we
+                    // don't race the Modal dismiss animation.
                     onClose();
-                    setTimeout(() => {
+                    InteractionManager.runAfterInteractions(() => {
                       void presentCustomerCenter();
-                    }, 250);
+                    });
                   }}
                   style={({ pressed }) => [
                     styles.accountField,

@@ -21,6 +21,7 @@ import { FullWindowOverlay } from "react-native-screens";
 
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import { logger } from "@/lib/logger";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
 
 interface UpgradePromptProps {
@@ -52,7 +53,30 @@ export function UpgradePrompt({
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const { presentPaywall, isDisabled: rcDisabled } = useRevenueCat();
 
+  // Latest non-visibility props captured in refs so the visibility-driven
+  // effect doesn't re-fire when callers pass inline arrow callbacks.
+  const onUpgradeRef = useRef(onUpgrade);
+  const onCloseRef = useRef(onClose);
+  const placementRef = useRef(placement);
+  const hideUpgradeActionRef = useRef(hideUpgradeAction);
+  const rcDisabledRef = useRef(rcDisabled);
+  const presentPaywallRef = useRef(presentPaywall);
+
+  onUpgradeRef.current = onUpgrade;
+  onCloseRef.current = onClose;
+  placementRef.current = placement;
+  hideUpgradeActionRef.current = hideUpgradeAction;
+  rcDisabledRef.current = rcDisabled;
+  presentPaywallRef.current = presentPaywall;
+
+  // Track the last `visible` value we acted on so we only fire side effects
+  // on a real false→true transition, not on every parent re-render.
+  const lastVisibleRef = useRef(false);
+
   useEffect(() => {
+    if (visible === lastVisibleRef.current) return;
+    lastVisibleRef.current = visible;
+
     if (!visible) {
       bottomSheetModalRef.current?.dismiss();
       return;
@@ -61,27 +85,21 @@ export function UpgradePrompt({
     // For the standard upgrade path (non-shared-plan), skip the intermediary
     // sheet and go straight to the paywall. Only shared-plan viewers —
     // who can't purchase this plan themselves — still see the info sheet.
-    if (!hideUpgradeAction) {
-      onUpgrade?.();
-      if (rcDisabled) {
-        WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade);
+    if (!hideUpgradeActionRef.current) {
+      onUpgradeRef.current?.();
+      if (rcDisabledRef.current) {
+        WebBrowser.openBrowserAsync(EXTERNAL_LINKS.upgrade).catch((err) => {
+          logger.error("UpgradePrompt: openBrowserAsync failed", { err });
+        });
       } else {
-        presentPaywall(placement);
+        presentPaywallRef.current(placementRef.current);
       }
-      onClose();
+      onCloseRef.current();
       return;
     }
 
     bottomSheetModalRef.current?.present();
-  }, [
-    visible,
-    hideUpgradeAction,
-    onUpgrade,
-    rcDisabled,
-    presentPaywall,
-    placement,
-    onClose,
-  ]);
+  }, [visible]);
 
   const handleSheetChanges = useCallback(
     (index: number) => {

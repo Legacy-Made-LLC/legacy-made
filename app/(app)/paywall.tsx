@@ -25,6 +25,7 @@ import {
 } from "@/components/paywall";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { logger } from "@/lib/logger";
+import { DEFAULT_PAYWALL_VARIANT, parseVariant } from "@/lib/paywall";
 import { queryKeys } from "@/lib/queryKeys";
 import { RC_ENTITLEMENT_INDIVIDUAL } from "@/providers/RevenueCatProvider";
 
@@ -37,24 +38,19 @@ const VARIANTS: Record<
   pillars: PaywallPillars,
 };
 
-const DEFAULT_VARIANT: PaywallVariant = "editorial";
-
 const MANAGE_INSTRUCTION =
   Platform.OS === "ios"
     ? "Manage anytime in your Apple ID settings."
     : "Manage anytime in your Google Play account settings.";
-
-function parseVariant(raw: unknown): PaywallVariant {
-  if (typeof raw !== "string") return DEFAULT_VARIANT;
-  return raw in VARIANTS ? (raw as PaywallVariant) : DEFAULT_VARIANT;
-}
 
 export default function PaywallScreen() {
   const { placement } = useLocalSearchParams<{ placement?: string }>();
   const queryClient = useQueryClient();
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
-  const [variant, setVariant] = useState<PaywallVariant>(DEFAULT_VARIANT);
+  const [variant, setVariant] = useState<PaywallVariant>(
+    DEFAULT_PAYWALL_VARIANT,
+  );
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
@@ -64,12 +60,12 @@ export default function PaywallScreen() {
   // successful purchase/restore, invalidate plan + entitlements so the app
   // reflects the new tier without requiring a manual refresh.
   //
-  // Race: the user-scoped entitlements endpoint and the plan-scoped one are
-  // separate queries, and the RC webhook → DB write typically lands a beat
-  // after the purchase callback resolves. An immediate refetch can catch the
-  // pre-webhook state on one query while the other lands fresh, leaving the
-  // account menu showing "Free" while gating shows the new tier. So we
-  // invalidate twice — once now, again after ~3s to catch the webhook.
+  // Race: the RC webhook → DB write typically lands a beat after the RC
+  // purchase callback resolves, and may take longer under load. A single
+  // immediate refetch catches the pre-webhook state and leaves the UI
+  // showing "Free". Invalidate on a bounded schedule covering ~10s; the
+  // first hit that lands post-webhook sets the correct tier, and
+  // subsequent invalidations against stale state are cheap no-ops.
   const refreshTier = () => {
     const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.plan.current() });
@@ -78,7 +74,8 @@ export default function PaywallScreen() {
       });
     };
     invalidate();
-    setTimeout(invalidate, 3000);
+    const schedule = [1500, 3500, 6500, 10000];
+    for (const delay of schedule) setTimeout(invalidate, delay);
   };
 
   useEffect(() => {
@@ -171,11 +168,16 @@ export default function PaywallScreen() {
     }
   };
 
-  // Price comes from RC's package (store-driven); fall back to the spec's
-  // anchor price if loading hasn't finished yet so the CTA isn't blank.
-  const priceString = pkg?.product?.priceString ?? "$4.99";
-  const ctaCopy = `Subscribe for ${priceString} / month`;
-  const disclosure = `Your subscription renews automatically at ${priceString} / month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`;
+  // Price comes from RC's package (store-driven). While offerings are still
+  // loading, show a price-free CTA so we never render the wrong currency
+  // or an outdated anchor price before the store responds.
+  const priceString = pkg?.product?.priceString ?? null;
+  const ctaCopy = priceString
+    ? `Subscribe for ${priceString} / month`
+    : "Subscribe";
+  const disclosure = priceString
+    ? `Your subscription renews automatically at ${priceString} / month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`
+    : `Your subscription renews automatically each month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`;
 
   const VariantComponent = VARIANTS[variant];
 
@@ -184,7 +186,6 @@ export default function PaywallScreen() {
   return (
     <View style={{ flex: 1 }}>
       <VariantComponent
-        priceString={priceString}
         ctaCopy={ctaCopy}
         disclosure={disclosure}
         loading={loadingOfferings}
