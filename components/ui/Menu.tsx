@@ -23,7 +23,6 @@ import {
   Animated,
   Dimensions,
   Image,
-  InteractionManager,
   Modal,
   Platform,
   Pressable,
@@ -507,13 +506,15 @@ function AccountView({
                 <Pressable
                   onPress={() => {
                     // Close the menu Modal first so RC's Customer Center
-                    // isn't hidden underneath it. Defer presenting until
-                    // after in-flight interactions/animations settle so we
-                    // don't race the Modal dismiss animation.
+                    // isn't hidden underneath it, then present after a
+                    // short delay. RN Modal's dismiss animation doesn't
+                    // reliably register with InteractionManager, so a
+                    // timeout is the pragmatic wait here — without it,
+                    // presentCustomerCenter silently no-ops.
                     onClose();
-                    InteractionManager.runAfterInteractions(() => {
+                    setTimeout(() => {
                       void presentCustomerCenter();
-                    });
+                    }, 300);
                   }}
                   style={({ pressed }) => [
                     styles.accountField,
