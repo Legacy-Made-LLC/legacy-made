@@ -144,6 +144,13 @@ export default Sentry.wrap(function RootLayout() {
                                   >
                                     <Stack.Screen name="index" />
                                     <Stack.Screen name="(app)" />
+                                    <Stack.Screen
+                                      name="(modals)"
+                                      options={{
+                                        presentation: "fullScreenModal",
+                                        animation: "slide_from_bottom",
+                                      }}
+                                    />
                                     <Stack.Screen name="(auth)" />
                                     <Stack.Screen
                                       name="(onboarding)"
