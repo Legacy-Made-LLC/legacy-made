@@ -179,7 +179,7 @@ export default function PaywallActivatingScreen() {
             </Pressable>
             <Pressable
               onPress={() =>
-                WebBrowser.openBrowserAsync(EXTERNAL_LINKS.contactSupport)
+                WebBrowser.openBrowserAsync(EXTERNAL_LINKS.support)
               }
               style={({ pressed }) => [
                 styles.secondaryButton,

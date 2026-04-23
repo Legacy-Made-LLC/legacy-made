@@ -678,14 +678,9 @@ export function Menu({ visible, onClose }: MenuProps) {
   // Support items with external links
   const supportItems = [
     {
-      label: "Help & FAQ",
-      url: EXTERNAL_LINKS.helpFaq,
+      label: "Help & Support",
+      url: EXTERNAL_LINKS.support,
       icon: "help-circle-outline" as const,
-    },
-    {
-      label: "Contact Support",
-      url: EXTERNAL_LINKS.contactSupport,
-      icon: "chatbubble-outline" as const,
     },
     {
       label: "Privacy Policy",
