@@ -5,13 +5,15 @@
  * Set EXPO_PUBLIC_* env vars to override in different environments.
  */
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_BASE_URL ?? "https://mylegacymade.com";
+const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL ?? "https://mylegacymade.com";
+const APP_BASE_URL =
+  process.env.EXPO_PUBLIC_APP_BASE_URL ?? "https://app.mylegacymade.com";
 
 export const EXTERNAL_LINKS = {
-  // Support & Help
-  helpFaq: process.env.EXPO_PUBLIC_HELP_URL ?? `${BASE_URL}/help`,
-  contactSupport: process.env.EXPO_PUBLIC_SUPPORT_URL ?? `${BASE_URL}/support`,
+  // Single Help & Support surface — covers cancel, restore, refunds,
+  // account deletion, and a contact form. Lives on the SSR web app
+  // (app.mylegacymade.com), not the marketing site.
+  support: process.env.EXPO_PUBLIC_SUPPORT_URL ?? `${APP_BASE_URL}/support`,
 
   // Legal
   privacyPolicy:
