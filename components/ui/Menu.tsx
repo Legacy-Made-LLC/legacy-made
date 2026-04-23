@@ -637,30 +637,6 @@ export function Menu({ visible, onClose }: MenuProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const viewSlideAnim = useRef(new Animated.Value(0)).current;
 
-  // Your Plan navigation items
-  const planItems = [
-    {
-      label: "Information Vault",
-      route: "/(app)/(tabs)/information",
-      icon: "document-text-outline" as const,
-    },
-    {
-      label: "Wishes & Guidance",
-      route: "/(app)/(tabs)/wishes",
-      icon: "heart-outline" as const,
-    },
-    {
-      label: "Legacy Messages",
-      route: "/(app)/(tabs)/legacy",
-      icon: "videocam-outline" as const,
-    },
-    {
-      label: "Family",
-      route: "/(app)/(tabs)/family",
-      icon: "people-outline" as const,
-    },
-  ];
-
   // Security items
   const securityItems = [
     {
@@ -830,18 +806,6 @@ export function Menu({ visible, onClose }: MenuProps) {
                 contentContainerStyle={styles.menuScrollContent}
                 showsVerticalScrollIndicator={false}
               >
-                {/* Your Plan Section */}
-                <MenuSection title="YOUR PLAN">
-                  {planItems.map((item) => (
-                    <MenuItem
-                      key={item.label}
-                      label={item.label}
-                      icon={item.icon}
-                      onPress={() => handleNavigation(item.route)}
-                    />
-                  ))}
-                </MenuSection>
-
                 {/* Security Section */}
                 <MenuSection title="SECURITY">
                   {securityItems.map((item) => (
@@ -877,11 +841,11 @@ export function Menu({ visible, onClose }: MenuProps) {
                 </MenuSection>
               </ScrollView>
 
-              {/* Fixed Footer with Sign Out */}
+              {/* Fixed Footer: Log Out (left) + version (right) on one row */}
               <View
                 style={[
                   styles.mainMenuFooter,
-                  { paddingBottom: insets.bottom + spacing.lg },
+                  { paddingBottom: insets.bottom + spacing.sm },
                 ]}
               >
                 <Pressable
@@ -898,23 +862,22 @@ export function Menu({ visible, onClose }: MenuProps) {
                   />
                   <Text style={styles.mainSignOutText}>Log Out</Text>
                 </Pressable>
-                <View style={styles.footerVersionRow}>
+                <Pressable
+                  onPress={() => setBuildInfoVisible(true)}
+                  hitSlop={12}
+                  accessibilityLabel="Build information"
+                  accessibilityRole="button"
+                  style={styles.footerVersionRow}
+                >
                   <Text style={styles.footerText}>
-                    Version {Constants.expoConfig?.version ?? "1"}
+                    v{Constants.expoConfig?.version ?? "1"}
                   </Text>
-                  <Pressable
-                    onPress={() => setBuildInfoVisible(true)}
-                    hitSlop={12}
-                    accessibilityLabel="Build information"
-                    accessibilityRole="button"
-                  >
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={16}
-                      color={colors.textTertiary}
-                    />
-                  </Pressable>
-                </View>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={14}
+                    color={colors.textTertiary}
+                  />
+                </Pressable>
               </View>
             </View>
 
@@ -1239,17 +1202,20 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
 
-  // Main Menu Footer
+  // Main Menu Footer — Log Out + version on a single compact row
   mainMenuFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
   mainSignOutButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   mainSignOutButtonPressed: {
     opacity: 0.7,
@@ -1258,14 +1224,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     fontFamily: typography.fontFamily.medium,
     color: colors.error,
-    marginLeft: spacing.md,
+    marginLeft: spacing.sm,
   },
   footerVersionRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: spacing.xs,
-    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   footerText: {
     fontSize: typography.sizes.caption,
