@@ -62,12 +62,16 @@ export function SortControl({
   }, [isExpanded, onSearchQueryChange]);
 
   const sortPillsStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(isExpanded.value ? 0 : 1, { duration: ANIM_DURATION * 0.6 }),
+    opacity: withTiming(isExpanded.value ? 0 : 1, {
+      duration: ANIM_DURATION * 0.6,
+    }),
     pointerEvents: isExpanded.value ? ("none" as const) : ("auto" as const),
   }));
 
   const searchPillStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(isExpanded.value ? 0 : 1, { duration: ANIM_DURATION * 0.6 }),
+    opacity: withTiming(isExpanded.value ? 0 : 1, {
+      duration: ANIM_DURATION * 0.6,
+    }),
     pointerEvents: isExpanded.value ? ("none" as const) : ("auto" as const),
   }));
 
@@ -75,7 +79,9 @@ export function SortControl({
     opacity: withTiming(isExpanded.value ? 1 : 0, { duration: ANIM_DURATION }),
     transform: [
       {
-        scaleX: withTiming(isExpanded.value ? 1 : 0.3, { duration: ANIM_DURATION }),
+        scaleX: withTiming(isExpanded.value ? 1 : 0.3, {
+          duration: ANIM_DURATION,
+        }),
       },
     ],
   }));
@@ -95,11 +101,7 @@ export function SortControl({
               accessibilityRole="button"
               accessibilityLabel="Search entries"
             >
-              <Ionicons
-                name="search"
-                size={13}
-                color={colors.textSecondary}
-              />
+              <Ionicons name="search" size={13} color={colors.textSecondary} />
               <Text style={styles.searchPillText}>Search</Text>
             </Pressable>
           </Animated.View>
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
   },
   searchPillText: {
     fontSize: typography.sizes.caption,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
   },
   pillRow: {
@@ -240,7 +242,7 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: typography.sizes.caption,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
   },
   pillTextActive: {
     color: "#FFFFFF",

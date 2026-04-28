@@ -358,13 +358,14 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily.semibold,
     marginBottom: spacing.sm,
     lineHeight: typography.sizes.body * typography.lineHeights.normal,
     textAlign: "center",
   },
   detail: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.relaxed,
     textAlign: "center",
@@ -383,6 +384,7 @@ const styles = StyleSheet.create({
   },
   tipsTriggerText: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
   },
   tipsContent: {
@@ -395,12 +397,14 @@ const styles = StyleSheet.create({
   },
   tipBullet: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     marginRight: spacing.sm,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
   },
   tipText: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     lineHeight: typography.sizes.bodySmall * typography.lineHeights.normal,
     flex: 1,

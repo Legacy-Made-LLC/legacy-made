@@ -43,23 +43,32 @@ export function EmptyState({
 
   return (
     <View style={[styles.container, style]}>
-      <Ionicons
-        name={icon}
-        size={40}
-        color={iconColor}
-        style={styles.icon}
-      />
+      <Ionicons name={icon} size={40} color={iconColor} style={styles.icon} />
       <Text style={styles.title}>{title}</Text>
-      <Text style={[styles.description, !hasButton && !hasSecondary && styles.descriptionNoButton]}>{description}</Text>
+      <Text
+        style={[
+          styles.description,
+          !hasButton && !hasSecondary && styles.descriptionNoButton,
+        ]}
+      >
+        {description}
+      </Text>
       {hasButton && (
         <Button
           title={buttonTitle}
           onPress={onButtonPress}
-          style={[styles.button, buttonColor ? { backgroundColor: buttonColor } : undefined]}
+          style={[
+            styles.button,
+            buttonColor ? { backgroundColor: buttonColor } : undefined,
+          ]}
         />
       )}
       {hasSecondary && (
-        <Pressable onPress={onSecondaryAction} hitSlop={8} style={styles.secondaryAction}>
+        <Pressable
+          onPress={onSecondaryAction}
+          hitSlop={8}
+          style={styles.secondaryAction}
+        >
           <Text style={styles.secondaryActionText}>{secondaryActionLabel}</Text>
         </Pressable>
       )}
@@ -82,13 +91,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.sizes.titleLarge,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: "center",
   },
   description: {
     fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     textAlign: "center",
     lineHeight: typography.sizes.body * typography.lineHeights.relaxed,

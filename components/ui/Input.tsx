@@ -29,7 +29,12 @@ interface InputProps extends Omit<TextInputProps, "style"> {
   disabled?: boolean;
 }
 
-export function Input({ label, containerStyle, disabled, ...props }: InputProps) {
+export function Input({
+  label,
+  containerStyle,
+  disabled,
+  ...props
+}: InputProps) {
   const borderColor = useSharedValue(colors.border);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -65,7 +70,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1,

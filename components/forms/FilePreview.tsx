@@ -115,7 +115,12 @@ export function FilePreview({
     file.isEncrypted === true &&
     file.isRemote === true;
   const { localUri: decryptedUri, isLoading: isDecrypting } =
-    useEncryptedFileView(needsDecryption ? file.id : undefined, file.mimeType, file.uri, file.isEncrypted);
+    useEncryptedFileView(
+      needsDecryption ? file.id : undefined,
+      file.mimeType,
+      file.uri,
+      file.isEncrypted,
+    );
 
   // Decrypt encrypted video thumbnails
   const needsThumbnailDecryption =
@@ -179,7 +184,8 @@ export function FilePreview({
         // and lets the user open in any compatible app.
         await Sharing.shareAsync(documentUri, {
           mimeType: file.mimeType,
-          UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : undefined,
+          UTI:
+            file.mimeType === "application/pdf" ? "com.adobe.pdf" : undefined,
         });
       } else {
         // Unencrypted remote files can be opened directly in the browser
@@ -849,7 +855,7 @@ const styles = StyleSheet.create({
   deletingText: {
     color: "#FFFFFF",
     fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     marginTop: spacing.sm,
   },
   previewArea: {
@@ -882,7 +888,7 @@ const styles = StyleSheet.create({
   durationText: {
     color: "#FFFFFF",
     fontSize: typography.sizes.caption,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
   },
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -893,7 +899,7 @@ const styles = StyleSheet.create({
   progressText: {
     color: "#FFFFFF",
     fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily.semibold,
     marginTop: spacing.sm,
   },
   processingOverlay: {
@@ -905,7 +911,7 @@ const styles = StyleSheet.create({
   processingText: {
     color: "#FFFFFF",
     fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     marginTop: spacing.sm,
   },
   menuButton: {
@@ -995,7 +1001,7 @@ const styles = StyleSheet.create({
   },
   fileName: {
     fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textPrimary,
   },
   fileMeta: {
@@ -1062,7 +1068,7 @@ const styles = StyleSheet.create({
   },
   compactFileName: {
     fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textPrimary,
   },
   compactMeta: {
