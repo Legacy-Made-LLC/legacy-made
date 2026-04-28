@@ -120,7 +120,11 @@ export function Select({
     <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
       <AnimatedPressable
-        style={[styles.selectButton, disabled && styles.selectButtonDisabled, animatedStyle]}
+        style={[
+          styles.selectButton,
+          disabled && styles.selectButtonDisabled,
+          animatedStyle,
+        ]}
         onPress={disabled ? undefined : handleOpen}
       >
         <Text
@@ -225,7 +229,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -246,11 +250,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.sizes.caption,
+    fontFamily: typography.fontFamily.regular,
     color: colors.error,
     marginTop: spacing.xs,
   },
   selectText: {
     fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textPrimary,
     flex: 1,
   },

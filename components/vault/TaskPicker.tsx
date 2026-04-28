@@ -22,10 +22,7 @@ interface TaskPickerProps {
   progress?: Record<string, TaskProgressData>;
 }
 
-export function TaskPicker({
-  section,
-  progress = {},
-}: TaskPickerProps) {
+export function TaskPicker({ section, progress = {} }: TaskPickerProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -101,7 +98,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: typography.sizes.titleMedium,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },

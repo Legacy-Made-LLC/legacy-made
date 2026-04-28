@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
   message: {
     marginTop: spacing.md,
     fontSize: typography.sizes.body,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     textAlign: "center",
   },
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: typography.sizes.titleLarge,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: "center",

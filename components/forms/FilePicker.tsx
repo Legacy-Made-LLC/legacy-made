@@ -174,7 +174,10 @@ export function FilePicker({
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
-        toast.error({ title: "Share failed", message: `Could not share file: ${message}` });
+        toast.error({
+          title: "Share failed",
+          message: `Could not share file: ${message}`,
+        });
       } finally {
         setSharingIds((prev) => {
           const next = new Set(prev);
@@ -567,14 +570,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   selectButton: {
     fontSize: typography.sizes.body,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.primary,
   },
   bulkActionBar: {
@@ -589,7 +592,7 @@ const styles = StyleSheet.create({
   },
   selectionCount: {
     fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textPrimary,
   },
   bulkActions: {
@@ -605,7 +608,7 @@ const styles = StyleSheet.create({
   },
   bulkActionText: {
     fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.primary,
   },
   bulkActionTextDisabled: {
@@ -642,7 +645,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: typography.sizes.body,
     color: colors.primary,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
   },
   addButtonTextDisabled: {
     color: colors.textTertiary,
@@ -679,7 +682,7 @@ const styles = StyleSheet.create({
   },
   optionsTitle: {
     fontSize: typography.sizes.titleMedium,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily.semibold,
     color: colors.textPrimary,
     textAlign: "center",
     marginBottom: spacing.lg,

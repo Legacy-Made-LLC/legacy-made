@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import type { AnyFieldApi } from '@tanstack/react-form';
-import { colors, typography, spacing, borderRadius } from '@/constants/theme';
+import React from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import type { AnyFieldApi } from "@tanstack/react-form";
+import { colors, typography, spacing, borderRadius } from "@/constants/theme";
 
 interface FormTypeSelectorProps<T extends string> {
   field: AnyFieldApi;
@@ -14,7 +14,8 @@ export function FormTypeSelector<T extends string>({
   label,
   options,
 }: FormTypeSelectorProps<T>) {
-  const hasError = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+  const hasError =
+    field.state.meta.isTouched && field.state.meta.errors.length > 0;
   const errorMessage = hasError ? field.state.meta.errors[0] : null;
 
   return (
@@ -24,7 +25,10 @@ export function FormTypeSelector<T extends string>({
         {options.map((type) => (
           <Pressable
             key={type}
-            style={[styles.typeButton, field.state.value === type && styles.typeButtonSelected]}
+            style={[
+              styles.typeButton,
+              field.state.value === type && styles.typeButtonSelected,
+            ]}
             onPress={() => field.handleChange(type)}
           >
             <Text
@@ -38,7 +42,9 @@ export function FormTypeSelector<T extends string>({
           </Pressable>
         ))}
       </View>
-      {errorMessage && <Text style={styles.errorText}>{String(errorMessage)}</Text>}
+      {errorMessage && (
+        <Text style={styles.errorText}>{String(errorMessage)}</Text>
+      )}
     </View>
   );
 }
@@ -49,15 +55,15 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   typeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginHorizontal: -spacing.xs,
   },
   typeButton: {
@@ -73,11 +79,12 @@ const styles = StyleSheet.create({
   },
   typeButtonText: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
   },
   typeButtonTextSelected: {
     color: colors.surface,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
   },
   errorText: {
     fontSize: typography.sizes.caption,

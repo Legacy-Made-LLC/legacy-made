@@ -1,6 +1,11 @@
-import { colors, componentStyles, spacing, typography } from '@/constants/theme';
-import type { AnyFieldApi } from '@tanstack/react-form';
-import React, { useState } from 'react';
+import {
+  colors,
+  componentStyles,
+  spacing,
+  typography,
+} from "@/constants/theme";
+import type { AnyFieldApi } from "@tanstack/react-form";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,17 +14,20 @@ import {
   type StyleProp,
   type TextInputProps,
   type ViewStyle,
-} from 'react-native';
+} from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { getErrorMessage } from './form-utils';
+} from "react-native-reanimated";
+import { getErrorMessage } from "./form-utils";
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-export interface FormInputProps extends Omit<TextInputProps, 'style' | 'value' | 'onChangeText' | 'onBlur' | 'onChange'> {
+export interface FormInputProps extends Omit<
+  TextInputProps,
+  "style" | "value" | "onChangeText" | "onBlur" | "onChange"
+> {
   field: AnyFieldApi;
   label: string;
   containerStyle?: StyleProp<ViewStyle>;
@@ -29,12 +37,22 @@ export interface FormInputProps extends Omit<TextInputProps, 'style' | 'value' |
   disabled?: boolean;
 }
 
-export function FormInput({ field, label, containerStyle, onValueChange, disabled, ...props }: FormInputProps) {
+export function FormInput({
+  field,
+  label,
+  containerStyle,
+  onValueChange,
+  disabled,
+  ...props
+}: FormInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const borderColor = useSharedValue(colors.border);
 
-  const hasError = field.state.meta.isTouched && field.state.meta.errors.length > 0;
-  const errorMessage = hasError ? getErrorMessage(field.state.meta.errors[0]) : null;
+  const hasError =
+    field.state.meta.isTouched && field.state.meta.errors.length > 0;
+  const errorMessage = hasError
+    ? getErrorMessage(field.state.meta.errors[0])
+    : null;
 
   const animatedStyle = useAnimatedStyle(() => ({
     borderColor: borderColor.value,
@@ -65,7 +83,7 @@ export function FormInput({ field, label, containerStyle, onValueChange, disable
       <Text style={styles.label}>{label}</Text>
       <AnimatedTextInput
         {...props}
-        value={field.state.value ?? ''}
+        value={field.state.value ?? ""}
         onChangeText={(text) => {
           if (onValueChange) {
             onValueChange(text);
@@ -90,9 +108,9 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },

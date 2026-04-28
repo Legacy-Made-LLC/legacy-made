@@ -23,8 +23,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regularItalic,
     color: colors.textTertiary,
-    fontStyle: "italic",
     textAlign: "center",
   },
 });

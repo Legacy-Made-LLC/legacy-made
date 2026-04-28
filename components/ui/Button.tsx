@@ -5,7 +5,13 @@ import {
   typography,
 } from "@/constants/theme";
 import React from "react";
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -117,7 +123,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily.semibold,
   },
   primaryText: {
     color: colors.surface,

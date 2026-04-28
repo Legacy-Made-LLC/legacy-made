@@ -31,7 +31,13 @@ interface TextAreaProps extends Omit<TextInputProps, "style" | "multiline"> {
   disabled?: boolean;
 }
 
-export function TextArea({ label, containerStyle, minHeight, disabled, ...props }: TextAreaProps) {
+export function TextArea({
+  label,
+  containerStyle,
+  minHeight,
+  disabled,
+  ...props
+}: TextAreaProps) {
   const borderColor = useSharedValue(colors.border);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -54,7 +60,12 @@ export function TextArea({ label, containerStyle, minHeight, disabled, ...props 
         multiline
         editable={!disabled}
         textAlignVertical="top"
-        style={[styles.textArea, minHeight != null && { minHeight }, disabled && styles.disabled, animatedStyle]}
+        style={[
+          styles.textArea,
+          minHeight != null && { minHeight },
+          disabled && styles.disabled,
+          animatedStyle,
+        ]}
         placeholderTextColor={colors.textTertiary}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -69,7 +80,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1,

@@ -29,7 +29,7 @@ export const formStyles = StyleSheet.create({
   },
   label: {
     fontSize: typography.sizes.label,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -54,6 +54,7 @@ export const formStyles = StyleSheet.create({
   },
   typeButtonText: {
     fontSize: typography.sizes.bodySmall,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
   },
   typeButtonTextSelected: {

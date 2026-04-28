@@ -27,7 +27,7 @@ export const listStyles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: typography.sizes.titleMedium,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -46,7 +46,7 @@ export const listStyles = StyleSheet.create({
   },
   addText: {
     fontSize: typography.sizes.body,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.fontFamily.medium,
     color: colors.featureLegacy,
   },
   sortRow: {
