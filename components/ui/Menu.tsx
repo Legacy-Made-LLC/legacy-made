@@ -5,6 +5,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { useKeyValue } from "@/contexts/KeyValueContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
+import { useEntitlementSource } from "@/hooks/useEntitlementSource";
 import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
@@ -165,6 +166,8 @@ function AccountView({
   } = useEntitlements();
   const { showUpgradePrompt } = useUpgradePrompt();
   const { presentCustomerCenter, isDisabled: rcDisabled } = useRevenueCat();
+  const { source: entitlementSource, providerName } = useEntitlementSource();
+  const isB2BMember = entitlementSource === "b2b";
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -522,7 +525,16 @@ function AccountView({
                 </View>
               </>
             )}
-            {!isFree && tier !== "lifetime" && !rcDisabled && (
+            {isB2BMember && providerName && (
+              <>
+                <View style={styles.accountFieldDivider} />
+                <View style={styles.accountField}>
+                  <Text style={styles.fieldLabel}>Provided by</Text>
+                  <Text style={styles.fieldValue}>{providerName}</Text>
+                </View>
+              </>
+            )}
+            {!isFree && tier !== "lifetime" && !rcDisabled && !isB2BMember && (
               <>
                 <View style={styles.accountFieldDivider} />
                 <Pressable

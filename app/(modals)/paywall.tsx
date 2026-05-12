@@ -26,6 +26,10 @@ import {
   type PaywallVariantProps,
 } from "@/components/paywall";
 import { EXTERNAL_LINKS } from "@/constants/links";
+import {
+  shouldHidePaywall,
+  useEntitlementSource,
+} from "@/hooks/useEntitlementSource";
 import { logger } from "@/lib/logger";
 import { DEFAULT_PAYWALL_VARIANT, parseVariant } from "@/lib/paywall";
 import { queryKeys } from "@/lib/queryKeys";
@@ -50,6 +54,18 @@ export default function PaywallScreen() {
   const { entitlements } = useApi();
   const queryClient = useQueryClient();
   const { user } = useUser();
+  const { source } = useEntitlementSource();
+
+  // Defense in depth: even if a caller bypasses the UpgradePrompt gate
+  // and pushes /paywall directly, B2B and lifetime users should never
+  // see it — their tier doesn't have an upgrade path through RC.
+  useEffect(() => {
+    if (shouldHidePaywall(source) && router.canGoBack()) {
+      router.back();
+    } else if (shouldHidePaywall(source)) {
+      router.replace("/");
+    }
+  }, [source]);
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [variant, setVariant] = useState<PaywallVariant>(
