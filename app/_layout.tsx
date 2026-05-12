@@ -163,6 +163,12 @@ export default Sentry.wrap(function RootLayout() {
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="team-invitation"
+                                      options={{
+                                        headerShown: false,
+                                      }}
+                                    />
+                                    <Stack.Screen
                                       name="settings"
                                       options={{ headerShown: false }}
                                     />
@@ -178,11 +184,13 @@ export default Sentry.wrap(function RootLayout() {
                         </PlanProvider>
                       </OnboardingProvider>
                     </KeyValueProvider>
+                    {/* Inside RevenueCatProvider so useRevenueCat() resolves,
+                        and inside QueryProvider so useEntitlementSource()
+                        (used to gate b2b/lifetime) resolves. Rendering order
+                        within the tree is what controls overlay z-index;
+                        provider nesting doesn't affect it. */}
+                    <GlobalUpgradePrompt />
                   </QueryProvider>
-                  {/* Rendered inside RevenueCatProvider so the upgrade
-                      prompt's useRevenueCat() call resolves; rendered
-                      after QueryProvider so it overlays everything. */}
-                  <GlobalUpgradePrompt />
                 </RevenueCatProvider>
               </ClerkProvider>
             </UpgradePromptProvider>
