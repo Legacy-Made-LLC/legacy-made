@@ -529,6 +529,16 @@ export interface QuotaInfo {
  */
 export type SubscriptionStatus = "active" | "in_grace_period" | "expired";
 
+/**
+ * Which lane granted the effective tier. Mobile-side branching:
+ *   - 'd2c'      → user has a paid RC subscription. Show Manage Subscription, paywalls work normally.
+ *   - 'b2b'      → user is a member of an active master subscription.
+ *                  HIDE paywalls + upgrade CTAs, show "provided by [providerName]".
+ *   - 'lifetime' → manually-granted lifetime tier. Show "Lifetime", no Manage.
+ *   - 'none'     → free tier with no active subscription anywhere.
+ */
+export type EntitlementSource = "d2c" | "b2b" | "lifetime" | "none";
+
 export interface EntitlementInfo {
   /** Current subscription tier */
   tier: SubscriptionTier;
@@ -554,6 +564,16 @@ export interface EntitlementInfo {
     /** True when the user cancelled but retains access through currentPeriodEnd. */
     cancellationPending: boolean;
   };
+  /**
+   * Which lane granted the effective tier. Drives paywall + "Manage
+   * Subscription" UI — only `d2c` should see RC upgrade affordances.
+   * Optional at runtime to tolerate pre-B2B API deployments (treat as 'none').
+   */
+  entitlementSource?: EntitlementSource;
+  /** Set when entitlementSource === 'b2b'. */
+  masterSubscriptionId?: string;
+  /** Master subscription display_name; set when entitlementSource === 'b2b'. */
+  providerName?: string;
 }
 
 /**
