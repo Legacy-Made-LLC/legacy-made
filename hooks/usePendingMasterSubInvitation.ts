@@ -13,6 +13,7 @@
  * invite links back-to-back.
  */
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { ApiClientError } from "@/api/client";
@@ -20,6 +21,7 @@ import { useApi } from "@/api/useApi";
 import { toast } from "@/hooks/useToast";
 import { globalStorage } from "@/lib/kv";
 import { logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/queryKeys";
 
 export const PENDING_MASTER_SUB_INVITATION_TOKEN_KEY =
   "legacy_made_pending_master_sub_invitation_token";
@@ -48,12 +50,18 @@ async function processToken(
 
 export function usePendingMasterSubInvitation() {
   const { masterSubInvitations, isSignedIn } = useApi();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isSignedIn) return;
     processToken(async (token) => {
       try {
         const result = await masterSubInvitations.accept(token);
+        // Refresh all entitlement queries so pillar locks + quotas
+        // reflect the new B2B membership immediately on landing.
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entitlements.all(),
+        });
         toast.success({
           title: "Invitation accepted",
           message: `Welcome to ${result.masterSubscription.displayName}.`,
@@ -72,5 +80,5 @@ export function usePendingMasterSubInvitation() {
         err,
       );
     });
-  }, [isSignedIn, masterSubInvitations]);
+  }, [isSignedIn, masterSubInvitations, queryClient]);
 }

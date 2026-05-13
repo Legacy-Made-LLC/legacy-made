@@ -168,9 +168,11 @@ export default function TeamInvitationScreen() {
     setAccepting(true);
     try {
       const result = await masterSubInvitations.accept(token);
-      // Refresh entitlement context so source flips to 'b2b'
+      // Refresh ALL entitlement queries — pillar locks + quotas read
+      // from queryKeys.entitlements.forPlan(planId), not just current().
+      // Invalidating the .all() prefix covers both.
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.entitlements.current(),
+        queryKey: queryKeys.entitlements.all(),
       });
       const preview = state.preview;
       setState({ kind: "done", outcome: "accepted", preview });
