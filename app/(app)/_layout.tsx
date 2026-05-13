@@ -28,6 +28,7 @@ import { useAccessRevocationGuard } from "@/hooks/useAccessRevocationGuard";
 import { ReminderEnablePrompt } from "@/components/notifications/ReminderEnablePrompt";
 import { useAutoMigration } from "@/hooks/useAutoMigration";
 import { usePendingInvitation } from "@/hooks/usePendingInvitation";
+import { usePendingMasterSubInvitation } from "@/hooks/usePendingMasterSubInvitation";
 import { usePreferences } from "@/hooks/queries/usePreferencesQuery";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useReminderPrompt } from "@/hooks/useReminderPrompt";
@@ -163,6 +164,7 @@ const AppContent = React.memo(function AppContent() {
 
   // Accept any pending invitation that was stored before auth redirect
   usePendingInvitation();
+  usePendingMasterSubInvitation();
 
   // Migrate pre-E2EE data with user-facing modal (temporary — remove after all users migrated)
   const {
