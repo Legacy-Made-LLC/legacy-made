@@ -26,7 +26,7 @@ import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -69,7 +69,14 @@ type ScreenState =
     };
 
 export default function TeamInvitationScreen() {
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const { token, justAccepted } = useLocalSearchParams<{
+    token: string;
+    justAccepted?: string;
+  }>();
+  // True when usePendingMasterSubInvitation routed us back here after an
+  // auto-accept following sign-in. Drives the celebration framing vs.
+  // the neutral "you've already accepted" copy.
+  const isJustAccepted = justAccepted === "1";
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
@@ -95,7 +102,16 @@ export default function TeamInvitationScreen() {
       .preview(token)
       .then((preview) => {
         if (preview.status === "active") {
-          setState({ kind: "done", outcome: "already_accepted", preview });
+          // If we just routed back here from the auto-accept hook, show
+          // the celebratory "accepted" framing rather than the neutral
+          // "already accepted" one. The advisory fires from a separate
+          // effect that watches `state` (so this load callback doesn't
+          // need to capture the advisory function in its deps).
+          setState({
+            kind: "done",
+            outcome: isJustAccepted ? "accepted" : "already_accepted",
+            preview,
+          });
         } else if (preview.status === "removed") {
           setState({ kind: "done", outcome: "removed", preview });
         } else {
@@ -120,29 +136,42 @@ export default function TeamInvitationScreen() {
           });
         }
       });
-  }, [token, masterSubInvitations]);
+  }, [token, masterSubInvitations, isJustAccepted]);
 
-  const showD2CAdvisoryIfNeeded = async (providerName: string) => {
-    if (!customerInfo) return;
-    if (!hasEntitlement(RC_ENTITLEMENT_INDIVIDUAL)) return;
+  const showD2CAdvisoryIfNeeded = useCallback(
+    (providerName: string) => {
+      if (!customerInfo) return;
+      if (!hasEntitlement(RC_ENTITLEMENT_INDIVIDUAL)) return;
 
-    const dismissKey = `${ADVISORY_DISMISSED_KEY_PREFIX}${customerInfo.originalAppUserId}`;
-    if (kv.getString(dismissKey)) return;
+      const dismissKey = `${ADVISORY_DISMISSED_KEY_PREFIX}${customerInfo.originalAppUserId}`;
+      if (kv.getString(dismissKey)) return;
 
-    kv.set(dismissKey, "1");
+      kv.set(dismissKey, "1");
 
-    Alert.alert(
-      "You have a personal subscription",
-      `Your access is now provided by ${providerName}, so your personal Legacy Made subscription is redundant. You may want to cancel it to avoid being charged.\n\nLegacy Made can't cancel App Store / Play Store subscriptions for you — you'll need to do it in the store's subscription settings.`,
-      [
-        { text: "Not now", style: "cancel" },
-        {
-          text: "Open subscription settings",
-          onPress: () => Linking.openURL(getManageSubscriptionUrl()),
-        },
-      ],
-    );
-  };
+      Alert.alert(
+        "You have a personal subscription",
+        `Your access is now provided by ${providerName}, so your personal Legacy Made subscription is redundant. You may want to cancel it to avoid being charged.\n\nLegacy Made can't cancel App Store / Play Store subscriptions for you — you'll need to do it in the store's subscription settings.`,
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Open subscription settings",
+            onPress: () => Linking.openURL(getManageSubscriptionUrl()),
+          },
+        ],
+      );
+    },
+    [customerInfo, hasEntitlement, kv],
+  );
+
+  // Fire the active-D2C advisory whenever the screen settles into a
+  // "just accepted" state — covers both the in-modal accept path and the
+  // post-sign-in auto-accept handoff. The advisory itself is idempotent
+  // (KV-keyed dismiss flag), so re-mounts don't re-prompt.
+  useEffect(() => {
+    if (state.kind === "done" && state.outcome === "accepted") {
+      showD2CAdvisoryIfNeeded(state.preview?.providerName ?? "your provider");
+    }
+  }, [state, showD2CAdvisoryIfNeeded]);
 
   const handleAccept = async () => {
     if (!token) return;
@@ -180,7 +209,7 @@ export default function TeamInvitationScreen() {
         title: "Welcome aboard",
         message: `Access provided by ${result.masterSubscription.displayName}.`,
       });
-      await showD2CAdvisoryIfNeeded(result.masterSubscription.displayName);
+      // Advisory fires automatically via the state-watching effect above.
     } catch (err) {
       const message =
         err instanceof ApiClientError

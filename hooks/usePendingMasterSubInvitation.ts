@@ -14,6 +14,7 @@
  */
 
 import { useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { useEffect } from "react";
 
 import { ApiClientError } from "@/api/client";
@@ -56,15 +57,18 @@ export function usePendingMasterSubInvitation() {
     if (!isSignedIn) return;
     processToken(async (token) => {
       try {
-        const result = await masterSubInvitations.accept(token);
+        await masterSubInvitations.accept(token);
         // Refresh all entitlement queries so pillar locks + quotas
         // reflect the new B2B membership immediately on landing.
         await queryClient.invalidateQueries({
           queryKey: queryKeys.entitlements.all(),
         });
-        toast.success({
-          title: "Invitation accepted",
-          message: `Welcome to ${result.masterSubscription.displayName}.`,
+        // Route back to the team-invitation screen with a justAccepted
+        // flag so the user sees a persistent celebration state rather
+        // than a 3s toast during the noisy auth → home transition.
+        router.replace({
+          pathname: "/team-invitation",
+          params: { token, justAccepted: "1" },
         });
       } catch (err) {
         const message =
