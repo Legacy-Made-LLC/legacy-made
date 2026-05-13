@@ -21,6 +21,10 @@ import { FullWindowOverlay } from "react-native-screens";
 
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
+import {
+  shouldHidePaywall,
+  useEntitlementSource,
+} from "@/hooks/useEntitlementSource";
 import { logger } from "@/lib/logger";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
 
@@ -52,6 +56,11 @@ export function UpgradePrompt({
   const insets = useSafeAreaInsets();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const { presentPaywall, isDisabled: rcDisabled } = useRevenueCat();
+  const { source } = useEntitlementSource();
+  // Gate the paywall: B2B members and lifetime users never see upgrade
+  // affordances. Their tier comes from somewhere else (master sub owner's
+  // bill, or a manual lifetime grant) and an "upgrade" prompt is wrong.
+  const hidePaywallForSource = shouldHidePaywall(source);
 
   // Latch the visibility transition so the effect only fires once per
   // false → true cycle. Without this, parents that pass inline-arrow
@@ -67,6 +76,14 @@ export function UpgradePrompt({
     }
     if (handledVisibleRef.current) return;
     handledVisibleRef.current = true;
+
+    // If the current entitlement source can't be upgraded (B2B / lifetime),
+    // silently no-op. Callers throughout the app fire this freely from
+    // quota-limit moments; gating here keeps every call site clean.
+    if (hidePaywallForSource) {
+      onClose();
+      return;
+    }
 
     // For the standard upgrade path (non-shared-plan), skip the intermediary
     // sheet and go straight to the paywall. Only shared-plan viewers —
@@ -88,6 +105,7 @@ export function UpgradePrompt({
   }, [
     visible,
     hideUpgradeAction,
+    hidePaywallForSource,
     onUpgrade,
     rcDisabled,
     presentPaywall,

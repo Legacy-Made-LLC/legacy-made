@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/expo";
 import { useMemo, useRef } from "react";
 import { createAccessInvitationsService } from "./accessInvitations";
 import { createApiClient } from "./client";
+import { createMasterSubInvitationsService } from "./masterSubscriptionInvitations";
 import { createEntitlementsService } from "./entitlements";
 import { createEntriesService } from "./entries";
 import { createFilesService } from "./files";
@@ -94,6 +95,10 @@ export function useApi() {
     return createAccessInvitationsService(client);
   }, [client]);
 
+  const masterSubInvitations = useMemo(() => {
+    return createMasterSubInvitationsService(client);
+  }, [client]);
+
   const preferences = useMemo(() => {
     return createPreferencesService(client);
   }, [client]);
@@ -127,6 +132,8 @@ export function useApi() {
     keys,
     /** Access invitations service for accepting/declining invitations */
     accessInvitations,
+    /** Master subscription (B2B) invitations service */
+    masterSubInvitations,
     /** User preferences (reminders, timezone) service */
     preferences,
     /** Push token registration service */
