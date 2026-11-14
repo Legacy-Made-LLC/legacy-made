@@ -12,7 +12,7 @@ const ROWS: { label: string; free: string; individual: string }[] = [
   { label: "Important information items", free: "5", individual: "Unlimited" },
   { label: "Wishes & Guidance", free: "—", individual: "Unlimited" },
   { label: "Legacy Messages", free: "—", individual: "Unlimited" },
-  { label: "Trusted contacts", free: "—", individual: "1" },
+  { label: "Trusted contacts", free: "—", individual: "3" },
   { label: "Document & media storage", free: "—", individual: "500 MB" },
 ];
 
@@ -64,6 +64,7 @@ export function PaywallComparison(props: PaywallVariantProps) {
       <View style={styles.spacer} />
 
       <PaywallFooter
+        subscriptionLabel={props.subscriptionLabel}
         ctaCopy={props.ctaCopy}
         disclosure={props.disclosure}
         loading={props.loading}

@@ -41,7 +41,7 @@ const PILLARS: Pillar[] = [
 const STATS: { value: string; label: string }[] = [
   { value: "∞", label: "info, wishes, messages" },
   { value: "500 MB", label: "secure storage" },
-  { value: "1", label: "trusted contact" },
+  { value: "3", label: "trusted contacts" },
 ];
 
 function LockIcon() {
@@ -139,6 +139,7 @@ export function PaywallPillars(props: PaywallVariantProps) {
       <View style={styles.spacer} />
 
       <PaywallFooter
+        subscriptionLabel={props.subscriptionLabel}
         ctaCopy={props.ctaCopy}
         disclosure={props.disclosure}
         loading={props.loading}

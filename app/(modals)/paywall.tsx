@@ -27,7 +27,12 @@ import {
 } from "@/components/paywall";
 import { EXTERNAL_LINKS } from "@/constants/links";
 import { logger } from "@/lib/logger";
-import { DEFAULT_PAYWALL_VARIANT, parseVariant } from "@/lib/paywall";
+import {
+  type BillingPeriod,
+  DEFAULT_PAYWALL_VARIANT,
+  parseVariant,
+  pickSubscriptionPackage,
+} from "@/lib/paywall";
 import { queryKeys } from "@/lib/queryKeys";
 import { RC_ENTITLEMENT_INDIVIDUAL } from "@/providers/RevenueCatProvider";
 
@@ -52,6 +57,7 @@ export default function PaywallScreen() {
   const { user } = useUser();
 
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
+  const [period, setPeriod] = useState<BillingPeriod>("year");
   const [variant, setVariant] = useState<PaywallVariant>(
     DEFAULT_PAYWALL_VARIANT,
   );
@@ -77,13 +83,14 @@ export default function PaywallScreen() {
 
         if (cancelled) return;
 
-        const monthly = offering?.monthly ?? null;
-        if (!monthly) {
+        const choice = pickSubscriptionPackage(offering);
+        if (!choice) {
           setError(
             "Subscriptions aren't available right now. Please try again later.",
           );
         } else {
-          setPkg(monthly);
+          setPkg(choice.pkg);
+          setPeriod(choice.period);
           setVariant(parseVariant(offering?.metadata?.variant));
         }
       } catch (err) {
@@ -235,11 +242,12 @@ export default function PaywallScreen() {
   // or an outdated anchor price before the store responds.
   const priceString = pkg?.product?.priceString ?? null;
   const ctaCopy = priceString
-    ? `Subscribe for ${priceString} / month`
+    ? `Subscribe for ${priceString} / ${period}`
     : "Subscribe";
   const disclosure = priceString
-    ? `Your subscription renews automatically at ${priceString} / month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`
-    : `Your subscription renews automatically each month unless cancelled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`;
+    ? `Your subscription renews automatically at ${priceString} / ${period} unless canceled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`
+    : `Your subscription renews automatically each ${period} unless canceled at least 24 hours before the period ends. ${MANAGE_INSTRUCTION}`;
+  const subscriptionLabel = `Legacy Made Individual · ${period === "year" ? "annual" : "monthly"}`;
 
   const VariantComponent = VARIANTS[variant];
 
@@ -248,6 +256,7 @@ export default function PaywallScreen() {
   return (
     <View style={{ flex: 1 }}>
       <VariantComponent
+        subscriptionLabel={subscriptionLabel}
         ctaCopy={ctaCopy}
         disclosure={disclosure}
         loading={loadingOfferings}
