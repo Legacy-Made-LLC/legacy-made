@@ -213,7 +213,6 @@ export function usePushNotifications() {
         userStorage.set(PUSH_TOKEN_STORAGE_KEY, token);
 
         // Register with backend
-        if (isEnded(forSessionId)) return null;
         const platform = Platform.OS === "ios" ? "ios" : "android";
         await withTimeout(
           pushTokens.register(token, platform),
