@@ -324,13 +324,14 @@ export default function RemindersScreen() {
   const [pendingToggle, setPendingToggle] = useState<boolean | null>(null);
 
   const reminders = prefs?.notifications?.reminders;
-  const isEnabled = permissionGranted && (reminders?.enabled ?? false);
+  // The switch shows the saved setting, so it can always be turned off;
+  // the options below are active only when reminders can actually arrive.
+  const savedEnabled = reminders?.enabled === true;
+  const isEnabled = permissionGranted && savedEnabled;
   // Only when reminders are on (saved setting) and notifications aren't
   // allowed; waits for the first permission read so it doesn't flash.
   const showPermissionBanner =
-    permissionStatus !== undefined &&
-    !permissionGranted &&
-    reminders?.enabled !== false;
+    permissionStatus !== undefined && !permissionGranted && savedEnabled;
 
   const askForPermission = useCallback(async () => {
     const granted = await requestPermission();
@@ -349,7 +350,7 @@ export default function RemindersScreen() {
           if (canAsk) {
             await askForPermission();
           } else {
-            Linking.openSettings();
+            await Linking.openSettings();
           }
         }
 
@@ -429,8 +430,9 @@ export default function RemindersScreen() {
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Reminders</Text>
           <Switch
-            value={pendingToggle ?? isEnabled}
+            value={pendingToggle ?? savedEnabled}
             onValueChange={handleToggle}
+            disabled={pendingToggle !== null}
             trackColor={{
               false: colors.controlTrackOff,
               true: colors.primaryStrong,
@@ -438,10 +440,15 @@ export default function RemindersScreen() {
             ios_backgroundColor={colors.controlTrackOff}
             accessibilityLabel="Reminders"
             accessibilityHint={
-              permissionGranted
+              permissionGranted || savedEnabled
                 ? undefined
-                : "Notifications need to be allowed first"
+                : canAsk
+                  ? "Asks to allow notifications"
+                  : "Opens Settings to allow notifications"
             }
+            // Keep Android's thumb white on the dark track; iOS keeps its
+            // default thumb (with shadow)
+            thumbColor={Platform.OS === "android" ? colors.surface : undefined}
           />
         </View>
         <Text style={styles.toggleDescription}>

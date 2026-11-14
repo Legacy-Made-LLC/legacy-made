@@ -61,6 +61,8 @@ type NotificationData =
 
 const EAS_PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId;
 
+const PERMISSION_QUERY_KEY = ["notifications.permissionStatus"];
+
 // ── Storage key ──────────────────────────────────────────────────────────────
 export const PUSH_TOKEN_STORAGE_KEY = "legacy_made_push_token";
 
@@ -74,52 +76,90 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Registration state per user ID for this JS session, shared by every
-// component using the hook. A pending entry holds the in-flight promise so
-// sign-out can wait for it; "done" means the backend accepted the token. A
-// failed attempt clears the entry so the next foreground retries.
+// Registration state per Clerk session, shared by every component using the
+// hook. Keying by session (not user) means every sign-in starts fresh,
+// whichever way the previous session ended.
+// - pending: in flight; sign-out can wait for it.
+// - done: the backend accepted the token.
+// - ended: the session is signing out; never register for it again.
+// A failed attempt clears the entry so the next foreground retries.
 type Registration =
-  { status: "pending"; promise: Promise<void> } | { status: "done" };
+  | { status: "pending"; promise: Promise<void> }
+  | { status: "done" }
+  | { status: "ended" };
 const registrations = new Map<string, Registration>();
+
+// A registration that hasn't finished by then is treated as failed, so a
+// stalled native or network call can't block retries or sign-out.
+const REGISTRATION_TIMEOUT_MS = 20_000;
+// How long sign-out waits for an in-flight registration before moving on.
+const SIGN_OUT_WAIT_MS = 3_000;
 
 // expo-notifications caches a failed native token request for the rest of
 // the JS session, so retries after such a failure keep failing. Report the
 // first failure to Sentry; log later ones at info level.
 let registrationFailureReported = false;
 
+/** Resolve with `promise`'s value, or reject after `ms` milliseconds. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Timed out after ${ms} ms`)),
+      ms,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /**
- * Finish any in-flight token registration for this user, then forget their
- * registration state so the next sign-in on this device registers again.
+ * Stop token registration for a signing-out session.
  *
- * Call on sign-out before unregistering the token, so a registration that
- * lands after the unregister can't leave the device linked to the user.
+ * - Marks the session ended, so nothing registers for it again (a foreground
+ *   refetch can still fire while sign-out is in progress).
+ * - Waits up to 3 seconds for an in-flight registration, so it can't land
+ *   after the caller unregisters the token.
  *
- * @param userId the signed-in user's Clerk ID; no-op when missing.
+ * @param sessionId the Clerk session that is signing out; no-op when missing.
  */
 export async function endPushRegistration(
-  userId: string | null | undefined,
+  sessionId: string | null | undefined,
 ): Promise<void> {
-  if (!userId) return;
-  const current = registrations.get(userId);
-  if (current?.status === "pending") await current.promise;
-  registrations.delete(userId);
+  if (!sessionId) return;
+  const current = registrations.get(sessionId);
+  registrations.set(sessionId, { status: "ended" });
+  if (current?.status === "pending") {
+    await withTimeout(current.promise, SIGN_OUT_WAIT_MS).catch(() => {
+      logger.info("Sign-out continued before push registration finished");
+    });
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function usePushNotifications() {
-  const { isSignedIn, userId } = useAuth();
+  const { isSignedIn, sessionId } = useAuth();
   const { userStorage } = useKeyValue();
   const { pushTokens } = useApi();
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data: permission, refetch: refetchPermissionStatus } = useQuery({
-    queryKey: ["notifications.permissionStatus"],
+    queryKey: PERMISSION_QUERY_KEY,
     queryFn: async () => {
       const { status, canAskAgain } = await Notifications.getPermissionsAsync();
       return { status, canAskAgain };
     },
     staleTime: 0,
+    // A local OS call: run it offline too (the default pauses until online)
+    networkMode: "always",
   });
   const permissionStatus = permission?.status;
 
@@ -134,9 +174,10 @@ export function usePushNotifications() {
     }
 
     try {
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: EAS_PROJECT_ID,
-      });
+      const tokenData = await withTimeout(
+        Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID }),
+        REGISTRATION_TIMEOUT_MS,
+      );
 
       const token = tokenData.data;
       setExpoPushToken(token);
@@ -146,7 +187,10 @@ export function usePushNotifications() {
 
       // Register with backend
       const platform = Platform.OS === "ios" ? "ios" : "android";
-      await pushTokens.register(token, platform);
+      await withTimeout(
+        pushTokens.register(token, platform),
+        REGISTRATION_TIMEOUT_MS,
+      );
 
       logger.debug("Push token registered", { token, platform });
       return token;
@@ -163,18 +207,22 @@ export function usePushNotifications() {
     }
   }, [pushTokens, userStorage]);
 
-  // ── Register once per user per session; retried after a failure ──────────
+  // ── Register once per session; retried after a failure ───────────────────
   const registerIfNeeded = useCallback(() => {
-    if (!isSignedIn || !userId || registrations.has(userId)) return;
+    if (!isSignedIn || !sessionId || registrations.has(sessionId)) return;
     const promise = registerToken().then((token) => {
+      // Only update the entry this attempt created (sign-out may have
+      // replaced it meanwhile)
+      if (registrations.get(sessionId) !== entry) return;
       if (token) {
-        registrations.set(userId, { status: "done" });
+        registrations.set(sessionId, { status: "done" });
       } else {
-        registrations.delete(userId);
+        registrations.delete(sessionId);
       }
     });
-    registrations.set(userId, { status: "pending", promise });
-  }, [isSignedIn, userId, registerToken]);
+    const entry: Registration = { status: "pending", promise };
+    registrations.set(sessionId, entry);
+  }, [isSignedIn, sessionId, registerToken]);
 
   // ── Request OS permission and (if granted) register ──────────────────────
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -185,9 +233,12 @@ export function usePushNotifications() {
       let finalStatus = existingStatus;
 
       if (existingStatus !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status, canAskAgain } =
+          await Notifications.requestPermissionsAsync();
         finalStatus = status;
-        await refetchPermissionStatus({ cancelRefetch: false });
+        // Record the answer directly; a refetch could join a read that
+        // started before the grant and show the old status.
+        queryClient.setQueryData(PERMISSION_QUERY_KEY, { status, canAskAgain });
       }
 
       if (finalStatus === "granted") {
@@ -200,7 +251,7 @@ export function usePushNotifications() {
       logger.error("Failed to request notification permission", error);
       return false;
     }
-  }, [registerIfNeeded, refetchPermissionStatus]);
+  }, [registerIfNeeded, queryClient]);
 
   // ── Unregister token from backend + clear local storage ──────────────────
   const unregisterToken = useCallback(async () => {
@@ -215,12 +266,6 @@ export function usePushNotifications() {
       logger.error("Failed to unregister push token", error);
     }
   }, [pushTokens, userStorage]);
-
-  // Any sign-out path (not only the menu's) forgets registration state, so
-  // the next sign-in on this device registers again.
-  useEffect(() => {
-    if (isSignedIn === false) registrations.clear();
-  }, [isSignedIn]);
 
   // As soon as permission is granted (at launch, or after the prompt)
   useEffect(() => {

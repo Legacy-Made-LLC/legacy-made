@@ -628,7 +628,7 @@ function AccountView({
 // Main Menu Component
 export function Menu({ visible, onClose }: MenuProps) {
   const insets = useSafeAreaInsets();
-  const { signOut, userId } = useAuth();
+  const { signOut, sessionId } = useAuth();
   const { userStorage } = useKeyValue();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -671,11 +671,11 @@ export function Menu({ visible, onClose }: MenuProps) {
   const handleSignOut = async () => {
     onClose();
     try {
-      // Best-effort: unregister push token before clearing auth. Wait for
-      // any in-flight registration first so it can't land after the
-      // unregister, and so the next sign-in here registers again.
+      // Best-effort: unregister push token before clearing auth. End this
+      // session's registration first so an in-flight one can't land after
+      // the unregister.
       try {
-        await endPushRegistration(userId);
+        await endPushRegistration(sessionId);
         const token = userStorage.getString(PUSH_TOKEN_STORAGE_KEY);
         if (token) {
           await pushTokens.unregister(token);
