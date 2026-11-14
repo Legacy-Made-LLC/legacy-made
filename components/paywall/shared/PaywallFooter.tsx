@@ -11,7 +11,7 @@ import { typography } from "@/constants/theme";
 import { PAYWALL_COLORS } from "./tokens";
 
 interface PaywallFooterProps {
-  subscriptionLabel?: string;
+  subscriptionLabel: string;
   ctaCopy: string;
   disclosure: string;
   loading: boolean;
@@ -27,7 +27,7 @@ interface PaywallFooterProps {
 }
 
 export function PaywallFooter({
-  subscriptionLabel = "Legacy Made Individual · monthly",
+  subscriptionLabel,
   ctaCopy,
   disclosure,
   loading,

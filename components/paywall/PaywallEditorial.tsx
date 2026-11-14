@@ -28,7 +28,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: "500 MB of secure storage",
-    note: "For deeds, scans, and family photos. 1 trusted contact included.",
+    note: "For deeds, scans, and family photos. 3 trusted contacts included.",
   },
 ];
 
@@ -67,6 +67,7 @@ export function PaywallEditorial(props: PaywallVariantProps) {
       <View style={styles.spacer} />
 
       <PaywallFooter
+        subscriptionLabel={props.subscriptionLabel}
         ctaCopy={props.ctaCopy}
         disclosure={props.disclosure}
         loading={props.loading}
