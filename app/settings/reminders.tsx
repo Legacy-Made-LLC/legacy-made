@@ -27,7 +27,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   LayoutAnimation,
@@ -149,7 +149,20 @@ const pillStyles = StyleSheet.create({
 
 // ── Permission Banner ───────────────────────────────────────────────────────
 
-function PermissionBanner() {
+/**
+ * Shown when reminders are on but notifications aren't allowed.
+ *
+ * - The OS can still prompt (fresh install or reinstall): the button asks.
+ * - The OS won't prompt again (denied on iOS, or the Android prompt didn't
+ *   appear): the button opens Settings.
+ */
+function PermissionBanner({
+  canAsk,
+  onAsk,
+}: {
+  canAsk: boolean;
+  onAsk: () => void;
+}) {
   return (
     <View style={bannerStyles.container}>
       <Ionicons
@@ -157,18 +170,37 @@ function PermissionBanner() {
         size={20}
         color={colors.warning}
         style={bannerStyles.icon}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       />
       <View style={bannerStyles.content}>
-        <Text style={bannerStyles.title}>Notifications are turned off</Text>
+        <Text style={bannerStyles.title}>
+          {canAsk
+            ? "Notifications aren't on yet"
+            : "Notifications are off for Legacy Made"}
+        </Text>
         <Text style={bannerStyles.body}>
-          Enable notifications in your device settings to receive reminders.
+          {canAsk
+            ? "Allow notifications so your reminders can reach you."
+            : "To get reminders, turn on notifications in Settings."}
         </Text>
         <Pressable
-          onPress={() => Linking.openSettings()}
-          style={({ pressed }) => [pressed && bannerStyles.linkPressed]}
-          hitSlop={10}
+          onPress={canAsk ? onAsk : () => Linking.openSettings()}
+          style={({ pressed }) => [
+            bannerStyles.linkButton,
+            pressed && bannerStyles.linkPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={canAsk ? "Allow notifications" : "Open Settings"}
+          accessibilityHint={
+            canAsk
+              ? "Shows the notification permission prompt"
+              : "Opens the Settings app"
+          }
         >
-          <Text style={bannerStyles.link}>Open Settings →</Text>
+          <Text style={bannerStyles.link}>
+            {canAsk ? "Allow notifications →" : "Open Settings →"}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -204,11 +236,15 @@ const bannerStyles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: typography.sizes.trigger * typography.lineHeights.relaxed,
   },
+  linkButton: {
+    minHeight: 44,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
   link: {
     fontFamily: typography.fontFamily.semibold,
     fontSize: typography.sizes.bodySmall,
-    color: colors.primary,
-    marginTop: 4,
+    color: colors.primaryStrong,
   },
   linkPressed: {
     opacity: 0.7,
@@ -274,28 +310,66 @@ export default function RemindersScreen() {
   const { data: prefs, isLoading } = usePreferences();
   const updateMutation = useUpdatePreferences();
   const mutateAsync = updateMutation.mutateAsync;
-  const { requestPermission, permissionGranted, permissionDenied } =
-    usePushNotifications();
+  const {
+    requestPermission,
+    permissionStatus,
+    permissionGranted,
+    canAskPermission,
+  } = usePushNotifications();
+  // Set when a permission request came back without a grant. On Android the
+  // OS can report "can ask again" yet show no prompt, so stop offering it.
+  const [askFailed, setAskFailed] = useState(false);
+  // Before the first permission read, try asking: requestPermission checks
+  // the current status first and only prompts if it still can.
+  const canAsk =
+    (permissionStatus === undefined || canAskPermission) && !askFailed;
+  // Holds the switch at the user's choice while the permission step runs;
+  // the save itself updates the cached setting optimistically.
+  const [pendingToggle, setPendingToggle] = useState<boolean | null>(null);
 
   const reminders = prefs?.notifications?.reminders;
-  const isEnabled = permissionGranted && (reminders?.enabled ?? false);
+  // The switch shows the saved setting, so it can always be turned off;
+  // the options below are active only when reminders can actually arrive.
+  const savedEnabled = reminders?.enabled === true;
+  const isEnabled = permissionGranted && savedEnabled;
+  // Only when reminders are on (saved setting) and notifications aren't
+  // allowed; waits for the first permission read so it doesn't flash.
+  const showPermissionBanner =
+    permissionStatus !== undefined && !permissionGranted && savedEnabled;
+
+  const askForPermission = useCallback(async () => {
+    const granted = await requestPermission();
+    if (!granted) setAskFailed(true);
+    return granted;
+  }, [requestPermission]);
 
   const handleToggle = useCallback(
     async (newValue: boolean) => {
-      // If enabling, request OS permission first
+      // Turning on without permission: ask if the OS still can, otherwise
+      // send the user to Settings. The saved setting is on either way, so
+      // reminders start as soon as notifications are allowed.
       if (newValue && !permissionGranted) {
-        await requestPermission();
+        setPendingToggle(newValue);
+        try {
+          if (canAsk) {
+            await askForPermission();
+          } else {
+            await Linking.openSettings();
+          }
+        } catch (err) {
+          logger.error("Failed to open notification settings", err);
+        } finally {
+          setPendingToggle(null);
+        }
       }
 
-      try {
-        await mutateAsync({
-          notifications: { reminders: { enabled: newValue } },
-        });
-      } catch (err) {
-        logger.error("Failed to toggle reminders", err);
-      }
+      // Not awaited: the optimistic update shows the change at once, and an
+      // offline save (paused until reconnect) must not lock the switch.
+      mutateAsync({
+        notifications: { reminders: { enabled: newValue } },
+      }).catch((err) => logger.error("Failed to toggle reminders", err));
     },
-    [permissionGranted, requestPermission, mutateAsync],
+    [permissionGranted, canAsk, askForPermission, mutateAsync],
   );
 
   const handleFrequency = useCallback(
@@ -327,14 +401,11 @@ export default function RemindersScreen() {
     [mutateAsync, reminders?.custom_time],
   );
 
-  const handleCustomTime = useDebounceCallback(
-    (custom_time: string) => {
-      mutateAsync({
-        notifications: { reminders: { custom_time } },
-      }).catch((err) => logger.error("Failed to update custom time", err));
-    },
-    500,
-  );
+  const handleCustomTime = useDebounceCallback((custom_time: string) => {
+    mutateAsync({
+      notifications: { reminders: { custom_time } },
+    }).catch((err) => logger.error("Failed to update custom time", err));
+  }, 500);
 
   if (isLoading) {
     return (
@@ -351,20 +422,41 @@ export default function RemindersScreen() {
       keyboardShouldPersistTaps="handled"
     >
       {/* Permission Banner */}
-      {permissionDenied && <PermissionBanner />}
+      {showPermissionBanner && (
+        <PermissionBanner
+          canAsk={canAsk}
+          onAsk={() => {
+            askForPermission();
+          }}
+        />
+      )}
 
       {/* Toggle Card */}
       <View style={styles.card}>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Reminders</Text>
           <Switch
-            value={isEnabled}
+            value={pendingToggle ?? savedEnabled}
             onValueChange={handleToggle}
+            // Disabled until preferences load (the saved setting is unknown)
+            // and while the permission step runs
+            disabled={!prefs || pendingToggle !== null}
             trackColor={{
-              false: colors.border,
-              true: colors.primary,
+              false: colors.controlTrackOff,
+              true: colors.primaryStrong,
             }}
-            thumbColor={colors.surface}
+            ios_backgroundColor={colors.controlTrackOff}
+            accessibilityLabel="Reminders"
+            accessibilityHint={
+              permissionGranted || savedEnabled
+                ? undefined
+                : canAsk
+                  ? "Asks to allow notifications"
+                  : "Opens Settings to allow notifications"
+            }
+            // Keep Android's thumb white on the dark track; iOS keeps its
+            // default thumb (with shadow)
+            thumbColor={Platform.OS === "android" ? colors.surface : undefined}
           />
         </View>
         <Text style={styles.toggleDescription}>

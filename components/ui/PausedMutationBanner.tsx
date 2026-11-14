@@ -12,7 +12,11 @@
 import { borderRadius, colors, spacing, typography } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import NetInfo from "@react-native-community/netinfo";
-import { onlineManager, useMutationState } from "@tanstack/react-query";
+import {
+  onlineManager,
+  useMutationState,
+  useQueryClient,
+} from "@tanstack/react-query";
 import React, { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
@@ -31,9 +35,14 @@ export function PausedMutationBanner() {
   const opacity = useSharedValue(0);
   const retryCount = useRef(0);
 
+  const mutationCache = useQueryClient().getMutationCache();
+  // A mutation waiting its turn in a scope (e.g. ordered preference saves) is
+  // also marked paused; count only those that could run but are held back by
+  // the network.
   const pausedCount = useMutationState({
     filters: { status: "pending" },
-    select: (mutation) => mutation.state.isPaused,
+    select: (mutation) =>
+      mutation.state.isPaused && mutationCache.canRun(mutation),
   }).filter(Boolean).length;
 
   const isPaused = pausedCount > 0;

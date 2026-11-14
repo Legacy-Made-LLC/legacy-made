@@ -28,15 +28,27 @@ export function usePreferences() {
   });
 }
 
+const UPDATE_PREFERENCES_KEY = ["preferences", "update"] as const;
+
 /**
  * Update notification preferences with optimistic UI.
  * Send only the fields you want to change — the API deep-merges.
+ *
+ * - Saves run one at a time, in order (shared mutation scope), so quick
+ *   successive changes reach the server in the order they were made, also
+ *   when paused offline and resumed together.
+ * - Each change applies to the cache at once. After a failure or once the
+ *   last pending save settles, preferences are refetched from the server;
+ *   no snapshot is restored, so a failed earlier save can't erase a later
+ *   optimistic change.
  */
 export function useUpdatePreferences() {
   const queryClient = useQueryClient();
   const { preferences } = useApi();
 
   return useMutation({
+    mutationKey: UPDATE_PREFERENCES_KEY,
+    scope: { id: "preferences" },
     mutationFn: (data: UpdatePreferencesPayload) => preferences.update(data),
 
     onMutate: async (data: UpdatePreferencesPayload) => {
@@ -64,21 +76,18 @@ export function useUpdatePreferences() {
           },
         );
       }
-
-      return { previous };
     },
 
-    onError: (err, _vars, context) => {
+    onError: (err) => {
       logger.error("Failed to update preferences", err);
-      if (context?.previous) {
-        queryClient.setQueryData(
-          queryKeys.preferences.current(),
-          context.previous,
-        );
-      }
     },
 
     onSettled: () => {
+      // Refetch only after the last pending save (this one still counts),
+      // so a refetch can't show a state from before a save still queued.
+      if (queryClient.isMutating({ mutationKey: UPDATE_PREFERENCES_KEY }) > 1) {
+        return;
+      }
       queryClient.invalidateQueries({
         queryKey: queryKeys.preferences.current(),
       });
