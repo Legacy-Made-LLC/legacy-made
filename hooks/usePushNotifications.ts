@@ -16,7 +16,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import Constants from "expo-constants";
 
@@ -74,9 +74,11 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Track whether we've already registered this session to avoid duplicates.
-// Maps User ID to whether we've already registered this session.
-const hasRegisteredMap = new Map<string, boolean>();
+// Registration state per user ID for this JS session, shared by every
+// component using the hook: "pending" while a registration is in flight,
+// "done" once the backend accepted the token. A failed attempt clears the
+// entry so the next foreground retries.
+const registrationState = new Map<string, "pending" | "done">();
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function usePushNotifications() {
@@ -86,20 +88,20 @@ export function usePushNotifications() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: permissionStatus, refetch: refetchPermissionStatus } = useQuery(
-    {
-      queryKey: ["notifications.permissionStatus"],
-      queryFn: async () => {
-        const { status } = await Notifications.getPermissionsAsync();
-        return status;
-      },
-      staleTime: 0,
+  const { data: permission, refetch: refetchPermissionStatus } = useQuery({
+    queryKey: ["notifications.permissionStatus"],
+    queryFn: async () => {
+      const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+      return { status, canAskAgain };
     },
-  );
+    staleTime: 0,
+  });
+  const permissionStatus = permission?.status;
 
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   // ── Register token with backend + persist locally ────────────────────────
+  // Returns the token, or null when nothing was registered.
   const registerToken = useCallback(async () => {
     if (!Device.isDevice) {
       logger.debug("Push notifications require a physical device — skipping");
@@ -169,17 +171,36 @@ export function usePushNotifications() {
     }
   }, [pushTokens, userStorage]);
 
-  // ── On mount: check permission, auto-register if already granted ─────────
+  // ── Register once per user per session; retried after a failure ──────────
+  const registerIfNeeded = useCallback(() => {
+    if (!isSignedIn || !userId || registrationState.has(userId)) return;
+    registrationState.set(userId, "pending");
+    registerToken().then((token) => {
+      if (token) {
+        registrationState.set(userId, "done");
+      } else {
+        registrationState.delete(userId);
+      }
+    });
+  }, [isSignedIn, userId, registerToken]);
+
+  // As soon as permission is granted (at launch, or after the prompt)
   useEffect(() => {
-    if (
-      !isSignedIn ||
-      hasRegisteredMap.get(userId) ||
-      permissionStatus !== "granted"
-    )
-      return;
-    hasRegisteredMap.set(userId, true);
-    registerToken();
-  }, [isSignedIn, userId, registerToken, permissionStatus]);
+    if (permissionStatus === "granted") registerIfNeeded();
+  }, [permissionStatus, registerIfNeeded]);
+
+  // Whenever the app returns to the foreground: re-read permission, so
+  // turning notifications on in iOS Settings registers without a cold start,
+  // and retry a registration that failed earlier.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      refetchPermissionStatus().then(({ data }) => {
+        if (data?.status === "granted") registerIfNeeded();
+      });
+    });
+    return () => subscription.remove();
+  }, [refetchPermissionStatus, registerIfNeeded]);
 
   // ── Invalidate query caches based on notification type ──────────────────
   const invalidateCachesForNotification = useCallback(
@@ -269,6 +290,9 @@ export function usePushNotifications() {
     permissionStatus,
     permissionDenied: permissionStatus === "denied",
     permissionGranted: permissionStatus === "granted",
+    // False once the OS won't show the prompt again (iOS after one answer);
+    // the only way to turn notifications on is then the device's Settings.
+    canAskPermission: permission?.canAskAgain ?? false,
     expoPushToken,
     requestPermission,
     unregisterToken,

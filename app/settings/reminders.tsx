@@ -149,7 +149,20 @@ const pillStyles = StyleSheet.create({
 
 // ── Permission Banner ───────────────────────────────────────────────────────
 
-function PermissionBanner() {
+/**
+ * Shown whenever notifications aren't allowed.
+ *
+ * - The OS can still prompt (fresh install or reinstall, `undetermined`):
+ *   the button asks.
+ * - The OS won't prompt again (`denied` on iOS): the button opens Settings.
+ */
+function PermissionBanner({
+  canAsk,
+  onAsk,
+}: {
+  canAsk: boolean;
+  onAsk: () => void;
+}) {
   return (
     <View style={bannerStyles.container}>
       <Ionicons
@@ -161,14 +174,19 @@ function PermissionBanner() {
       <View style={bannerStyles.content}>
         <Text style={bannerStyles.title}>Notifications are turned off</Text>
         <Text style={bannerStyles.body}>
-          Enable notifications in your device settings to receive reminders.
+          {canAsk
+            ? "Allow notifications to receive reminders."
+            : "Enable notifications in your device settings to receive reminders."}
         </Text>
         <Pressable
-          onPress={() => Linking.openSettings()}
+          onPress={canAsk ? onAsk : () => Linking.openSettings()}
           style={({ pressed }) => [pressed && bannerStyles.linkPressed]}
           hitSlop={10}
+          accessibilityRole="button"
         >
-          <Text style={bannerStyles.link}>Open Settings →</Text>
+          <Text style={bannerStyles.link}>
+            {canAsk ? "Allow notifications →" : "Open Settings →"}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -274,8 +292,15 @@ export default function RemindersScreen() {
   const { data: prefs, isLoading } = usePreferences();
   const updateMutation = useUpdatePreferences();
   const mutateAsync = updateMutation.mutateAsync;
-  const { requestPermission, permissionGranted, permissionDenied } =
-    usePushNotifications();
+  const {
+    requestPermission,
+    permissionStatus,
+    permissionGranted,
+    canAskPermission,
+  } = usePushNotifications();
+  // Wait for the first permission read so the banner doesn't flash
+  const showPermissionBanner =
+    permissionStatus !== undefined && !permissionGranted;
 
   const reminders = prefs?.notifications?.reminders;
   const isEnabled = permissionGranted && (reminders?.enabled ?? false);
@@ -327,14 +352,11 @@ export default function RemindersScreen() {
     [mutateAsync, reminders?.custom_time],
   );
 
-  const handleCustomTime = useDebounceCallback(
-    (custom_time: string) => {
-      mutateAsync({
-        notifications: { reminders: { custom_time } },
-      }).catch((err) => logger.error("Failed to update custom time", err));
-    },
-    500,
-  );
+  const handleCustomTime = useDebounceCallback((custom_time: string) => {
+    mutateAsync({
+      notifications: { reminders: { custom_time } },
+    }).catch((err) => logger.error("Failed to update custom time", err));
+  }, 500);
 
   if (isLoading) {
     return (
@@ -351,7 +373,14 @@ export default function RemindersScreen() {
       keyboardShouldPersistTaps="handled"
     >
       {/* Permission Banner */}
-      {permissionDenied && <PermissionBanner />}
+      {showPermissionBanner && (
+        <PermissionBanner
+          canAsk={canAskPermission}
+          onAsk={() => {
+            requestPermission();
+          }}
+        />
+      )}
 
       {/* Toggle Card */}
       <View style={styles.card}>
@@ -361,9 +390,10 @@ export default function RemindersScreen() {
             value={isEnabled}
             onValueChange={handleToggle}
             trackColor={{
-              false: colors.border,
+              false: colors.controlTrackOff,
               true: colors.primary,
             }}
+            ios_backgroundColor={colors.controlTrackOff}
             thumbColor={colors.surface}
           />
         </View>
