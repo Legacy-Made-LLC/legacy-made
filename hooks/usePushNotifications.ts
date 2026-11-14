@@ -63,6 +63,11 @@ const EAS_PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId;
 
 const PERMISSION_QUERY_KEY = ["notifications.permissionStatus"];
 
+type PermissionState = {
+  status: Notifications.PermissionStatus;
+  canAskAgain: boolean;
+};
+
 // ── Storage key ──────────────────────────────────────────────────────────────
 export const PUSH_TOKEN_STORAGE_KEY = "legacy_made_push_token";
 
@@ -143,6 +148,24 @@ export async function endPushRegistration(
   }
 }
 
+/**
+ * Undo `endPushRegistration` when sign-out failed and the session is still
+ * active, so the next foreground registers again.
+ *
+ * @param sessionId the Clerk session that stayed signed in.
+ */
+export function resumePushRegistration(
+  sessionId: string | null | undefined,
+): void {
+  if (sessionId && registrations.get(sessionId)?.status === "ended") {
+    registrations.delete(sessionId);
+  }
+}
+
+/** True once sign-out has started for this session. */
+const isEnded = (sessionId: string) =>
+  registrations.get(sessionId)?.status === "ended";
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function usePushNotifications() {
   const { isSignedIn, sessionId } = useAuth();
@@ -153,7 +176,7 @@ export function usePushNotifications() {
 
   const { data: permission, refetch: refetchPermissionStatus } = useQuery({
     queryKey: PERMISSION_QUERY_KEY,
-    queryFn: async () => {
+    queryFn: async (): Promise<PermissionState> => {
       const { status, canAskAgain } = await Notifications.getPermissionsAsync();
       return { status, canAskAgain };
     },
@@ -166,51 +189,58 @@ export function usePushNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   // ── Register token with backend + persist locally ────────────────────────
-  // Returns the token, or null when nothing was registered.
-  const registerToken = useCallback(async () => {
-    if (!Device.isDevice) {
-      logger.debug("Push notifications require a physical device — skipping");
-      return null;
-    }
-
-    try {
-      const tokenData = await withTimeout(
-        Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID }),
-        REGISTRATION_TIMEOUT_MS,
-      );
-
-      const token = tokenData.data;
-      setExpoPushToken(token);
-
-      // Persist for sign-out cleanup
-      userStorage.set(PUSH_TOKEN_STORAGE_KEY, token);
-
-      // Register with backend
-      const platform = Platform.OS === "ios" ? "ios" : "android";
-      await withTimeout(
-        pushTokens.register(token, platform),
-        REGISTRATION_TIMEOUT_MS,
-      );
-
-      logger.debug("Push token registered", { token, platform });
-      return token;
-    } catch (error) {
-      if (registrationFailureReported) {
-        logger.info("Push token registration failed again", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } else {
-        registrationFailureReported = true;
-        logger.error("Failed to register push token", error);
+  // Returns the token, or null when nothing was registered. Stops before
+  // storing or registering anything once the session has started signing
+  // out, since the native and network calls can't be cancelled.
+  const registerToken = useCallback(
+    async (forSessionId: string) => {
+      if (!Device.isDevice) {
+        logger.debug("Push notifications require a physical device — skipping");
+        return null;
       }
-      return null;
-    }
-  }, [pushTokens, userStorage]);
+
+      try {
+        const tokenData = await withTimeout(
+          Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID }),
+          REGISTRATION_TIMEOUT_MS,
+        );
+
+        if (isEnded(forSessionId)) return null;
+        const token = tokenData.data;
+        setExpoPushToken(token);
+
+        // Persist for sign-out cleanup
+        userStorage.set(PUSH_TOKEN_STORAGE_KEY, token);
+
+        // Register with backend
+        if (isEnded(forSessionId)) return null;
+        const platform = Platform.OS === "ios" ? "ios" : "android";
+        await withTimeout(
+          pushTokens.register(token, platform),
+          REGISTRATION_TIMEOUT_MS,
+        );
+
+        logger.debug("Push token registered", { token, platform });
+        return token;
+      } catch (error) {
+        if (registrationFailureReported) {
+          logger.info("Push token registration failed again", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        } else {
+          registrationFailureReported = true;
+          logger.error("Failed to register push token", error);
+        }
+        return null;
+      }
+    },
+    [pushTokens, userStorage],
+  );
 
   // ── Register once per session; retried after a failure ───────────────────
   const registerIfNeeded = useCallback(() => {
     if (!isSignedIn || !sessionId || registrations.has(sessionId)) return;
-    const promise = registerToken().then((token) => {
+    const promise = registerToken(sessionId).then((token) => {
       // Only update the entry this attempt created (sign-out may have
       // replaced it meanwhile)
       if (registrations.get(sessionId) !== entry) return;
@@ -227,19 +257,17 @@ export function usePushNotifications() {
   // ── Request OS permission and (if granted) register ──────────────────────
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
-
-      let finalStatus = existingStatus;
-
-      if (existingStatus !== "granted") {
-        const { status, canAskAgain } =
-          await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-        // Record the answer directly; a refetch could join a read that
-        // started before the grant and show the old status.
-        queryClient.setQueryData(PERMISSION_QUERY_KEY, { status, canAskAgain });
+      let current: PermissionState = await Notifications.getPermissionsAsync();
+      if (current.status !== "granted") {
+        current = await Notifications.requestPermissionsAsync();
       }
+      // Record the answer directly; a refetch could join a read that started
+      // before the grant and show the old status.
+      queryClient.setQueryData<PermissionState>(PERMISSION_QUERY_KEY, {
+        status: current.status,
+        canAskAgain: current.canAskAgain,
+      });
+      const finalStatus = current.status;
 
       if (finalStatus === "granted") {
         registerIfNeeded();

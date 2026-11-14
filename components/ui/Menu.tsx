@@ -8,6 +8,7 @@ import { useUpgradePrompt } from "@/data/UpgradePromptContext";
 import {
   endPushRegistration,
   PUSH_TOKEN_STORAGE_KEY,
+  resumePushRegistration,
 } from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
@@ -689,6 +690,8 @@ export function Menu({ visible, onClose }: MenuProps) {
       await signOut();
     } catch (err) {
       logger.error("Sign-out failed", err);
+      // Still signed in: let this session register its token again
+      resumePushRegistration(sessionId);
     }
   };
 

@@ -319,8 +319,12 @@ export default function RemindersScreen() {
   // Set when a permission request came back without a grant. On Android the
   // OS can report "can ask again" yet show no prompt, so stop offering it.
   const [askFailed, setAskFailed] = useState(false);
-  const canAsk = canAskPermission && !askFailed;
-  // Holds the switch at the user's choice while permission and save run
+  // Before the first permission read, try asking: requestPermission checks
+  // the current status first and only prompts if it still can.
+  const canAsk =
+    (permissionStatus === undefined || canAskPermission) && !askFailed;
+  // Holds the switch at the user's choice while the permission step runs;
+  // the save itself updates the cached setting optimistically.
   const [pendingToggle, setPendingToggle] = useState<boolean | null>(null);
 
   const reminders = prefs?.notifications?.reminders;
@@ -341,27 +345,29 @@ export default function RemindersScreen() {
 
   const handleToggle = useCallback(
     async (newValue: boolean) => {
-      setPendingToggle(newValue);
-      try {
-        // Turning on without permission: ask if the OS still can, otherwise
-        // send the user to Settings. The saved setting is on either way, so
-        // reminders start as soon as notifications are allowed.
-        if (newValue && !permissionGranted) {
+      // Turning on without permission: ask if the OS still can, otherwise
+      // send the user to Settings. The saved setting is on either way, so
+      // reminders start as soon as notifications are allowed.
+      if (newValue && !permissionGranted) {
+        setPendingToggle(newValue);
+        try {
           if (canAsk) {
             await askForPermission();
           } else {
             await Linking.openSettings();
           }
+        } catch (err) {
+          logger.error("Failed to open notification settings", err);
+        } finally {
+          setPendingToggle(null);
         }
-
-        await mutateAsync({
-          notifications: { reminders: { enabled: newValue } },
-        });
-      } catch (err) {
-        logger.error("Failed to toggle reminders", err);
-      } finally {
-        setPendingToggle(null);
       }
+
+      // Not awaited: the optimistic update shows the change at once, and an
+      // offline save (paused until reconnect) must not lock the switch.
+      mutateAsync({
+        notifications: { reminders: { enabled: newValue } },
+      }).catch((err) => logger.error("Failed to toggle reminders", err));
     },
     [permissionGranted, canAsk, askForPermission, mutateAsync],
   );
@@ -432,7 +438,9 @@ export default function RemindersScreen() {
           <Switch
             value={pendingToggle ?? savedEnabled}
             onValueChange={handleToggle}
-            disabled={pendingToggle !== null}
+            // Disabled until preferences load (the saved setting is unknown)
+            // and while the permission step runs
+            disabled={!prefs || pendingToggle !== null}
             trackColor={{
               false: colors.controlTrackOff,
               true: colors.primaryStrong,
