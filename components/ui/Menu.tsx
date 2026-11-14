@@ -5,7 +5,10 @@ import { colors, spacing, typography } from "@/constants/theme";
 import { useKeyValue } from "@/contexts/KeyValueContext";
 import { useEntitlements } from "@/data/EntitlementsProvider";
 import { useUpgradePrompt } from "@/data/UpgradePromptContext";
-import { PUSH_TOKEN_STORAGE_KEY } from "@/hooks/usePushNotifications";
+import {
+  endPushRegistration,
+  PUSH_TOKEN_STORAGE_KEY,
+} from "@/hooks/usePushNotifications";
 import { logger } from "@/lib/logger";
 import { useRevenueCat } from "@/providers/RevenueCatProvider";
 import { useAuth, useUser } from "@clerk/expo";
@@ -625,7 +628,7 @@ function AccountView({
 // Main Menu Component
 export function Menu({ visible, onClose }: MenuProps) {
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
+  const { signOut, userId } = useAuth();
   const { userStorage } = useKeyValue();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -668,8 +671,11 @@ export function Menu({ visible, onClose }: MenuProps) {
   const handleSignOut = async () => {
     onClose();
     try {
-      // Best-effort: unregister push token before clearing auth
+      // Best-effort: unregister push token before clearing auth. Wait for
+      // any in-flight registration first so it can't land after the
+      // unregister, and so the next sign-in here registers again.
       try {
+        await endPushRegistration(userId);
         const token = userStorage.getString(PUSH_TOKEN_STORAGE_KEY);
         if (token) {
           await pushTokens.unregister(token);

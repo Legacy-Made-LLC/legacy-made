@@ -75,10 +75,35 @@ Notifications.setNotificationHandler({
 });
 
 // Registration state per user ID for this JS session, shared by every
-// component using the hook: "pending" while a registration is in flight,
-// "done" once the backend accepted the token. A failed attempt clears the
-// entry so the next foreground retries.
-const registrationState = new Map<string, "pending" | "done">();
+// component using the hook. A pending entry holds the in-flight promise so
+// sign-out can wait for it; "done" means the backend accepted the token. A
+// failed attempt clears the entry so the next foreground retries.
+type Registration =
+  { status: "pending"; promise: Promise<void> } | { status: "done" };
+const registrations = new Map<string, Registration>();
+
+// expo-notifications caches a failed native token request for the rest of
+// the JS session, so retries after such a failure keep failing. Report the
+// first failure to Sentry; log later ones at info level.
+let registrationFailureReported = false;
+
+/**
+ * Finish any in-flight token registration for this user, then forget their
+ * registration state so the next sign-in on this device registers again.
+ *
+ * Call on sign-out before unregistering the token, so a registration that
+ * lands after the unregister can't leave the device linked to the user.
+ *
+ * @param userId the signed-in user's Clerk ID; no-op when missing.
+ */
+export async function endPushRegistration(
+  userId: string | null | undefined,
+): Promise<void> {
+  if (!userId) return;
+  const current = registrations.get(userId);
+  if (current?.status === "pending") await current.promise;
+  registrations.delete(userId);
+}
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function usePushNotifications() {
@@ -126,10 +151,30 @@ export function usePushNotifications() {
       logger.debug("Push token registered", { token, platform });
       return token;
     } catch (error) {
-      logger.error("Failed to register push token", error);
+      if (registrationFailureReported) {
+        logger.info("Push token registration failed again", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } else {
+        registrationFailureReported = true;
+        logger.error("Failed to register push token", error);
+      }
       return null;
     }
   }, [pushTokens, userStorage]);
+
+  // ── Register once per user per session; retried after a failure ──────────
+  const registerIfNeeded = useCallback(() => {
+    if (!isSignedIn || !userId || registrations.has(userId)) return;
+    const promise = registerToken().then((token) => {
+      if (token) {
+        registrations.set(userId, { status: "done" });
+      } else {
+        registrations.delete(userId);
+      }
+    });
+    registrations.set(userId, { status: "pending", promise });
+  }, [isSignedIn, userId, registerToken]);
 
   // ── Request OS permission and (if granted) register ──────────────────────
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -142,11 +187,11 @@ export function usePushNotifications() {
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
-        refetchPermissionStatus();
+        await refetchPermissionStatus({ cancelRefetch: false });
       }
 
       if (finalStatus === "granted") {
-        await registerToken();
+        registerIfNeeded();
         return true;
       }
 
@@ -155,7 +200,7 @@ export function usePushNotifications() {
       logger.error("Failed to request notification permission", error);
       return false;
     }
-  }, [registerToken, refetchPermissionStatus]);
+  }, [registerIfNeeded, refetchPermissionStatus]);
 
   // ── Unregister token from backend + clear local storage ──────────────────
   const unregisterToken = useCallback(async () => {
@@ -171,18 +216,11 @@ export function usePushNotifications() {
     }
   }, [pushTokens, userStorage]);
 
-  // ── Register once per user per session; retried after a failure ──────────
-  const registerIfNeeded = useCallback(() => {
-    if (!isSignedIn || !userId || registrationState.has(userId)) return;
-    registrationState.set(userId, "pending");
-    registerToken().then((token) => {
-      if (token) {
-        registrationState.set(userId, "done");
-      } else {
-        registrationState.delete(userId);
-      }
-    });
-  }, [isSignedIn, userId, registerToken]);
+  // Any sign-out path (not only the menu's) forgets registration state, so
+  // the next sign-in on this device registers again.
+  useEffect(() => {
+    if (isSignedIn === false) registrations.clear();
+  }, [isSignedIn]);
 
   // As soon as permission is granted (at launch, or after the prompt)
   useEffect(() => {
@@ -195,7 +233,9 @@ export function usePushNotifications() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
-      refetchPermissionStatus().then(({ data }) => {
+      // cancelRefetch: false lets every mounted copy of this hook share one
+      // permission read instead of cancelling each other's.
+      refetchPermissionStatus({ cancelRefetch: false }).then(({ data }) => {
         if (data?.status === "granted") registerIfNeeded();
       });
     });

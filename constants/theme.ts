@@ -53,7 +53,8 @@ export const colors = {
   border: "#E8E6E3", // Soft warm gray
   divider: "#F0EEEB", // Very light divider
 
-  // Controls
+  // Controls and text that must meet contrast on light surfaces
+  primaryStrong: "#56634F", // Dark sage: 6.38:1 on white, 6.05:1 on the warning banner
   controlTrackOff: "#8F8C88", // Switch track when off: 3.35:1 on white (WCAG 1.4.11 asks 3:1)
 };
 
